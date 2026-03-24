@@ -1,0 +1,74 @@
+syntax = "proto3";
+
+package im.common;
+
+option java_package = "com.github.moxib.pomelo.proto.common";
+option java_outer_classname = "CommonProto";
+
+// ============================================================================
+// 命令字（Cmd）枚举定义
+// ============================================================================
+enum Cmd {
+    CMD_UNKNOWN = 0x0000;
+
+    // 认证相关
+    CMD_AUTH_REQ    = 0x0001;  // C→S 认证请求
+    CMD_AUTH_RESP   = 0x0002;  // S→C 认证响应
+    CMD_LOGOUT_REQ  = 0x0003;  // C→S 登出请求
+    CMD_LOGOUT_RESP = 0x0004;  // S→C 登出响应
+
+    // 单聊相关
+    CMD_C2C_REQ    = 0x0010;  // C→S 单聊发送请求
+    CMD_C2C_RESP   = 0x0011;  // S→C 单聊发送响应
+    CMD_C2C_NOTIFY = 0x0012;  // S→C 单聊消息推送
+
+    // 群聊相关
+    CMD_C2G_REQ    = 0x0020;  // C→S 群聊发送请求
+    CMD_C2G_RESP   = 0x0021;  // S→C 群聊发送响应
+    CMD_C2G_NOTIFY = 0x0022;  // S→C 群聊消息推送
+
+    // 消息拉取
+    CMD_PULL_REQ  = 0x0030;  // C→S 拉取离线消息请求
+    CMD_PULL_RESP = 0x0031;  // S→C 拉取离线消息响应
+
+    // 控制命令
+    CMD_CTRL_REQ    = 0x0040;  // C→S 控制命令请求
+    CMD_CTRL_RESP   = 0x0041;  // S→C 控制命令响应
+    CMD_CTRL_NOTIFY = 0x0042;  // S→C 控制命令推送
+
+    // 心跳与确认
+    CMD_PING       = 0x0050;  // C→S 心跳请求
+    CMD_PONG       = 0x0051;  // S→C 心跳响应
+    CMD_ACK_REQ    = 0x0052;  // ACK消息确认请求
+    CMD_ACK_RESP   = 0x0053;  // ACK消息确认响应
+    CMD_ACK_NOTIFY = 0x0054;  // ACK消息确认推送
+}
+
+// ============================================================================
+// 消息类型（MsgType）枚举定义
+// ============================================================================
+enum MsgType {
+    MSG_TYPE_UNKNOWN = 0;
+    MSG_TYPE_TEXT    = 1;  // 纯文本
+    MSG_TYPE_IMAGE   = 2;  // 图片
+    MSG_TYPE_VOICE   = 3;  // 语音
+    MSG_TYPE_VIDEO   = 4;  // 视频
+    MSG_TYPE_FILE    = 5;  // 文件
+    MSG_TYPE_EMOJI   = 6;  // 表情
+    MSG_TYPE_SYSTEM  = 7;  // 系统消息
+}
+
+enum AckType {
+  RECEIVED = 0;  // 已收到
+  SEEN     = 1;  // 已读
+}
+
+// ============================================================================
+// 通用消息内容结构
+// ============================================================================
+message MessageContent {
+    MsgType msg_type          = 1;  // 消息类型
+    bytes content             = 2;  // 消息内容
+    int64 timestamp           = 3;  // 消息时间戳（Unix 毫秒）
+    map<string, string> ext   = 4;  // 扩展字段
+}

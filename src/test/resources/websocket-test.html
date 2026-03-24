@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pomelo IM WebSocket 测试工具</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { text-align: center; color: #333; margin-bottom: 20px; }
+    .panel { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    .panel h2 { color: #555; margin-bottom: 15px; font-size: 16px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+    .form-row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+    .form-row label { min-width: 80px; color: #666; }
+    input[type="text"], input[type="number"], textarea, select { flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    textarea { min-height: 80px; resize: vertical; font-family: monospace; }
+    button { padding: 8px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
+    button.primary { background: #007bff; color: white; }
+    button.primary:hover { background: #0056b3; }
+    button.success { background: #28a745; color: white; }
+    button.success:hover { background: #1e7e34; }
+    button.danger { background: #dc3545; color: white; }
+    button.danger:hover { background: #c82333; }
+    button:disabled { background: #ccc; cursor: not-allowed; }
+    .status { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; margin-left: 10px; }
+    .status.connected { background: #d4edda; color: #155724; }
+    .status.disconnected { background: #f8d7da; color: #721c24; }
+    .log-container { background: #1e1e1e; color: #d4d4d4; border-radius: 4px; padding: 15px; max-height: 400px; overflow-y: auto; font-family: 'Consolas', 'Monaco', monospace; font-size: 13px; }
+    .log-entry { margin-bottom: 5px; word-break: break-all; }
+    .log-entry.sent { color: #4ec9b0; }
+    .log-entry.received { color: #ce9178; }
+    .log-entry.error { color: #f48771; }
+    .log-entry.info { color: #569cd6; }
+    .log-time { color: #808080; margin-right: 10px; }
+    .quick-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .input-group { display: flex; flex-direction: column; gap: 5px; }
+    .input-group label { font-size: 12px; color: #888; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Pomelo IM WebSocket 测试工具</h1>
+
+    <!-- 连接设置 -->
+    <div class="panel">
+      <h2>连接设置</h2>
+      <div class="form-row">
+        <label>WebSocket URL:</label>
+        <input type="text" id="wsUrl" value="ws://localhost:9001/im" placeholder="ws://localhost:9001/im">
+        <button id="btnConnect" class="success" onclick="connect()">连接</button>
+        <button id="btnDisconnect" class="danger" onclick="disconnect()" disabled>断开</button>
+        <span id="connectionStatus" class="status disconnected">未连接</span>
+      </div>
+    </div>
+
+    <!-- 消息发送 -->
+    <div class="panel">
+      <h2>发送消息</h2>
+      <div class="form-row">
+        <label>CMD (16 进制):</label>
+        <input type="text" id="cmd" value="02" placeholder="02 = 登录" style="max-width: 100px;">
+      </div>
+      <div class="form-row">
+        <label>Message ID:</label>
+        <input type="text" id="messageId" value="" placeholder="自动生成">
+      </div>
+      <div class="form-row">
+        <label>VarHeaders (JSON):</label>
+        <input type="text" id="varHeaders" value='{}' placeholder='{"targetUserId": "123"}'>
+      </div>
+      <div class="input-group" style="margin-bottom: 10px;">
+        <label>Body (JSON 格式，使用 JsonCodec 编码，codecId=1):</label>
+        <textarea id="bodyJson" placeholder='{"content": "Hello"}'></textarea>
+      </div>
+      <div class="quick-actions">
+        <button class="primary" onclick="sendHeartbeat()">发送心跳 (CMD=0x01)</button>
+        <button class="primary" onclick="sendLogin()">发送登录 (CMD=0x02)</button>
+        <button class="primary" onclick="sendLogout()">发送登出 (CMD=0x03)</button>
+        <button class="primary" onclick="sendChat()">发送聊天 (CMD=0x10)</button>
+        <button class="primary" onclick="sendMessage()">发送自定义消息</button>
+      </div>
+    </div>
+
+    <!-- 消息日志 -->
+    <div class="panel">
+      <h2>消息日志</h2>
+      <div class="form-row">
+        <button onclick="clearLog()">清空日志</button>
+        <label><input type="checkbox" id="showHex" onchange="toggleHex()"> 显示原始 Hex</label>
+      </div>
+      <div id="logContainer" class="log-container"></div>
+    </div>
+  </div>
+
+  <script>
+    let ws = null;
+    const logContainer = document.getElementById('logContainer');
+    const btnConnect = document.getElementById('btnConnect');
+    const btnDisconnect = document.getElementById('btnDisconnect');
+    const statusEl = document.getElementById('connectionStatus');
+
+    // 生成 UUID
+    function generateUUID() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = Math.random() * 16 | 0;
+        const v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    // 日志输出
+    function log(type, message, hexData = null) {
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString() + '.' + String(now.getMilliseconds()).padStart(3, '0');
+      const div = document.createElement('div');
+      div.className = `log-entry ${type}`;
+
+      let content = `<span class="log-time">[${timeStr}]</span>${message}`;
+      if (hexData && document.getElementById('showHex').checked) {
+        content += `<br><span style="color: #6a9955; font-size: 11px;">HEX: ${hexData}</span>`;
+      }
+      div.innerHTML = content;
+      logContainer.appendChild(div);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function clearLog() {
+      logContainer.innerHTML = '';
+    }
+
+    function toggleHex() {
+      // 重新渲染日志
+    }
+
+    // 字节数组转 Hex 字符串
+    function bytesToHex(buffer) {
+      return Array.from(new Uint8Array(buffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join(' ');
+    }
+
+    // Hex 字符串转字节数组
+    function hexToBytes(hex) {
+      return new Uint8Array(hex.match(/[\da-f]{2}/gi).map(h => parseInt(h, 16)));
+    }
+
+    // 字符串转字节数组
+    function stringToBytes(str) {
+      return new TextEncoder().encode(str);
+    }
+
+    // 字节数组转字符串
+    function bytesToString(bytes) {
+      return new TextDecoder().decode(bytes);
+    }
+
+    // 写入变长字符串到 DataView
+    function writeVarString(view, offset, str) {
+      const bytes = stringToBytes(str);
+      view.setUint32(offset, bytes.length, false); // big endian
+      offset += 4;
+      for (let i = 0; i < bytes.length; i++) {
+        view.setUint8(offset++, bytes[i]);
+      }
+      return offset;
+    }
+
+    // 编码 ImMessage
+    function encodeImMessage(cmd, messageId, varHeaders, bodyJson) {
+      const magic = 0x504D454C; // "PMEL"
+      const version = 1;
+      const codecId = 1; // JsonCodec
+
+      const messageIdStr = messageId || generateUUID();
+      const bodyBytes = stringToBytes(bodyJson || '');
+
+      // 编码变长头
+      let headersBytes = new Uint8Array(0);
+      if (varHeaders && Object.keys(varHeaders).length > 0) {
+        const headerEntries = Object.entries(varHeaders);
+        // 计算 headers 总长度
+        let headersLen = 4; // headersCount
+        for (const [key, value] of headerEntries) {
+          headersLen += 4 + key.length + 4 + value.length;
+        }
+        headersBytes = new Uint8Array(headersLen);
+        const view = new DataView(headersBytes.buffer);
+        let offset = 0;
+        view.setUint32(offset, headerEntries.length, false);
+        offset += 4;
+        for (const [key, value] of headerEntries) {
+          offset = writeVarString(view, offset, key);
+          offset = writeVarString(view, offset, value);
+        }
+      } else {
+        headersBytes = new Uint8Array(4);
+        new DataView(headersBytes.buffer).setUint32(0, 0, false);
+      }
+
+      // 计算总长度
+      const totalLen = 4 + 1 + 1 + 4 + // magic + version + codecId + cmd (int)
+        4 + messageIdStr.length + // messageId
+        headersBytes.length + // varHeaders
+        4 + bodyBytes.length; // body
+
+      // 创建 Buffer
+      const buffer = new ArrayBuffer(totalLen + 4); // +4 for total length prefix
+      const view = new DataView(buffer);
+      let offset = 0;
+
+      // 总长度 (不包括这 4 个字节)
+      view.setUint32(offset, totalLen, false);
+      offset += 4;
+
+      // 魔数
+      view.setUint32(offset, magic, false);
+      offset += 4;
+
+      // 版本号
+      view.setUint8(offset, version);
+      offset += 1;
+
+      // codecId
+      view.setUint8(offset, codecId);
+      offset += 1;
+
+      // cmd (int 占 4 字节)
+      view.setUint32(offset, cmd, false);
+      offset += 4;
+
+      // messageId
+      offset = writeVarString(view, offset, messageIdStr);
+
+      // varHeaders
+      for (let i = 0; i < headersBytes.length; i++) {
+        view.setUint8(offset++, headersBytes[i]);
+      }
+
+      // bodyLength
+      view.setUint32(offset, bodyBytes.length, false);
+      offset += 4;
+
+      // body
+      for (let i = 0; i < bodyBytes.length; i++) {
+        view.setUint8(offset++, bodyBytes[i]);
+      }
+
+      return { buffer, messageId: messageIdStr };
+    }
+
+    // 解码 ImMessage
+    function decodeImMessage(buffer) {
+      const view = new DataView(buffer);
+      let offset = 0;
+
+      // 跳过前 4 字节的长度前缀 (TCP 协议用于处理粘包，WebSocket 不需要但编码时仍包含)
+      // const totalLen = view.getUint32(offset); // 如果需要可以打印调试
+      offset += 4;
+
+      // 魔数
+      const magic = view.getUint32(offset);
+      offset += 4;
+      if (magic !== 0x504D454C) {
+        throw new Error('Invalid magic number');
+      }
+
+      // 版本号
+      const version = view.getUint8(offset);
+      offset += 1;
+
+      // codecId
+      const codecId = view.getUint8(offset);
+      offset += 1;
+
+      // cmd (int 占 4 字节)
+      const cmd = view.getUint32(offset);
+      offset += 4;
+
+      // messageId
+      const messageIdLen = view.getUint32(offset);
+      offset += 4;
+      const messageId = bytesToString(new Uint8Array(buffer, offset, messageIdLen));
+      offset += messageIdLen;
+
+      // varHeaders
+      const headersCount = view.getUint32(offset);
+      offset += 4;
+      const varHeaders = {};
+      for (let i = 0; i < headersCount; i++) {
+        const keyLen = view.getUint32(offset);
+        offset += 4;
+        const key = bytesToString(new Uint8Array(buffer, offset, keyLen));
+        offset += keyLen;
+        const valLen = view.getUint32(offset);
+        offset += 4;
+        const val = bytesToString(new Uint8Array(buffer, offset, valLen));
+        offset += valLen;
+        varHeaders[key] = val;
+      }
+
+      // bodyLength
+      const bodyLen = view.getUint32(offset);
+      offset += 4;
+
+      // body
+      const body = bytesToString(new Uint8Array(buffer, offset, bodyLen));
+
+      return {
+        magic,
+        version,
+        codecId,
+        cmd: '0x' + cmd.toString(16).padStart(2, '0'),
+        messageId,
+        varHeaders,
+        body
+      };
+    }
+
+    // 连接 WebSocket
+    function connect() {
+      const url = document.getElementById('wsUrl').value;
+      try {
+        ws = new WebSocket(url);
+        ws.binaryType = 'arraybuffer';
+
+        ws.onopen = () => {
+          statusEl.textContent = '已连接';
+          statusEl.className = 'status connected';
+          btnConnect.disabled = true;
+          btnDisconnect.disabled = false;
+          log('info', `已连接到 ${url}`);
+        };
+
+        ws.onclose = () => {
+          statusEl.textContent = '未连接';
+          statusEl.className = 'status disconnected';
+          btnConnect.disabled = false;
+          btnDisconnect.disabled = true;
+          log('info', '连接已关闭');
+        };
+
+        ws.onerror = (e) => {
+          log('error', 'WebSocket 错误', null);
+          console.error(e);
+        };
+
+        ws.onmessage = (event) => {
+          const hexData = bytesToHex(event.data);
+          try {
+            const msg = decodeImMessage(event.data);
+            let bodyPreview = msg.body;
+            if (bodyPreview.length > 200) {
+              bodyPreview = bodyPreview.substring(0, 200) + '...';
+            }
+            log('received',
+              `CMD=${msg.cmd}, MessageId=${msg.messageId}, Headers=${JSON.stringify(msg.varHeaders)}, Body=${bodyPreview}`,
+              hexData);
+          } catch (e) {
+            log('received', `收到原始消息 (解析失败): ${e.message}`, hexData);
+          }
+        };
+      } catch (e) {
+        log('error', `连接失败：${e.message}`);
+      }
+    }
+
+    // 断开连接
+    function disconnect() {
+      if (ws) {
+        ws.close();
+        ws = null;
+      }
+    }
+
+    // 发送消息
+    function sendMessage() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        log('error', '未连接到服务器');
+        return;
+      }
+
+      const cmdStr = document.getElementById('cmd').value.trim();
+      const cmd = parseInt(cmdStr, 16);
+      const messageId = document.getElementById('messageId').value.trim();
+      const varHeadersStr = document.getElementById('varHeaders').value.trim();
+      const bodyJson = document.getElementById('bodyJson').value.trim();
+
+      let varHeaders = {};
+      if (varHeadersStr) {
+        try {
+          varHeaders = JSON.parse(varHeadersStr);
+        } catch (e) {
+          log('error', `VarHeaders JSON 解析失败：${e.message}`);
+          return;
+        }
+      }
+
+      try {
+        const { buffer, messageId: actualMsgId } = encodeImMessage(cmd, messageId || null, varHeaders, bodyJson);
+        ws.send(buffer);
+
+        const cmdHex = '0x' + cmd.toString(16).padStart(2, '0');
+        log('sent', `发送消息 CMD=${cmdHex}, MessageId=${actualMsgId}, Body=${bodyJson || '(empty)'}`, bytesToHex(buffer));
+      } catch (e) {
+        log('error', `发送失败：${e.message}`);
+      }
+    }
+
+    // 快捷发送 - 心跳
+    function sendHeartbeat() {
+      document.getElementById('cmd').value = '01';
+      document.getElementById('varHeaders').value = '{}';
+      document.getElementById('bodyJson').value = '{"type":"ping"}';
+      sendMessage();
+    }
+
+    // 快捷发送 - 登录
+    function sendLogin() {
+      document.getElementById('cmd').value = '02';
+      document.getElementById('varHeaders').value = '{}';
+      document.getElementById('bodyJson').value = '{"userId":"user_' + Math.floor(Math.random() * 1000) + '","token":"test-token"}';
+      sendMessage();
+    }
+
+    // 快捷发送 - 登出
+    function sendLogout() {
+      document.getElementById('cmd').value = '03';
+      document.getElementById('varHeaders').value = '{}';
+      document.getElementById('bodyJson').value = '{"reason":"user_logout"}';
+      sendMessage();
+    }
+
+    // 快捷发送 - 聊天
+    function sendChat() {
+      document.getElementById('cmd').value = '10';
+      document.getElementById('varHeaders').value = '{"targetUserId":"user_' + (Math.floor(Math.random() * 100) + 1) + '"}';
+      document.getElementById('bodyJson').value = '{"content":"Hello, this is a test message!","timestamp":' + Date.now() + '}';
+      sendMessage();
+    }
+
+    // 初始化
+    document.getElementById('messageId').value = generateUUID();
+  </script>
+</body>
+</html>

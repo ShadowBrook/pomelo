@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package im.ack;
+
+option java_package = "com.github.moxib.pomelo.proto.ack";
+option java_outer_classname = "AckProto";
+
+import "common/common.proto";
+
+// ============================================================================
+// ACK 消息确认
+// ============================================================================
+
+message AckReq {
+  repeated uint32 message_ids = 1;  //收到的的消息 ID 列表
+  common.AckType ack_type     = 2;  //ACK 类型：1=已收到，2=已读
+}
+
+message AckResp {
+  common.AckType ack_type = 1;  //ACK 类型：1=已收到，2=已读
+}
+
+message AckNotify {
+  repeated uint32 message_ids = 1;  //  已确认的消息 ID 列表
+  common.AckType ack_type     = 2;  //ACK 类型：1=已收到，2=已读
+}
