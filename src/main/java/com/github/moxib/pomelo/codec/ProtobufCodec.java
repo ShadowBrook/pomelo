@@ -17,7 +17,12 @@ import com.google.protobuf.Parser;
  */
 public class ProtobufCodec<T extends Message> implements MessageCodec<T> {
 
-    private static final byte CODEC_ID = 0;
+    public static final byte CODEC_ID = 0;
+
+    /** 判断 codecId 是否为 Protobuf */
+    public static boolean isProtobuf(byte codecId) {
+      return codecId == CODEC_ID;
+    }
 
     /**
      * Cmd 到 Parser 的映射表 (cmd 值范围 0-255)

@@ -1,28 +1,33 @@
 package com.github.moxib.pomelo.gateway.handler;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.proto.pull.PullProto;
-import io.vertx.core.Vertx;
+import com.github.moxib.pomelo.service.MessageRepository;
+import com.github.moxib.pomelo.service.MessageService;
 import com.github.moxib.pomelo.utils.IdGenerator;
+import com.fasterxml.jackson.databind.JsonNode;
+import io.vertx.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.CMD_PULL_RESP_VALUE;
 
 /**
- * 离线消息拉取处理器
- * 处理客户端拉取离线/历史消息的请求
+ * 离线消息拉取处理器。
+ * 用户上线后通过 PullReq 拉取未完全送达的消息（status < 2）。
  */
 public class PullMessageHandler extends AbstractMessageHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(PullMessageHandler.class);
 
   public PullMessageHandler(Vertx vertx, CodecRegistry codecRegistry,
-                            SessionRegistry sessionRegistry, MessageRepository messageRepo, IdGenerator idGenerator) {
-    super(vertx, codecRegistry, sessionRegistry, messageRepo, idGenerator);
+                             SessionRegistry sessionRegistry, MessageRepository messageRepo,
+                             MessageService messageService, IdGenerator idGenerator) {
+    super(vertx, codecRegistry, sessionRegistry, messageRepo, messageService, idGenerator);
   }
 
   @Override
@@ -36,8 +41,7 @@ public class PullMessageHandler extends AbstractMessageHandler {
         PullProto.PullReq req = this.<PullProto.PullReq>decodeBody(message);
         sinceSeq = req.getLastMsgId();
         limit = req.getLimit();
-        // PullReq does not carry userId in protobuf; retrieve it from auth headers
-        java.util.Map<String, String> headers = message.getVarHeaders();
+        Map<String, String> headers = message.getVarHeaders();
         userId = headers != null ? headers.get("userId") : null;
       } else {
         JsonNode json = parseJsonBody(message);
@@ -47,20 +51,18 @@ public class PullMessageHandler extends AbstractMessageHandler {
       }
 
       if (userId == null || userId.isEmpty()) {
-        LOG.error("无法解析 userId，连接: {}", connection.remoteAddress());
         sendErrorResponse(connection, message, 401, "未认证用户");
         return;
       }
 
-      LOG.info("收到拉取消息请求，userId: {}, limit: {}, sinceSeq: {}", userId, limit, sinceSeq);
+      LOG.info("拉取消息请求: userId={} sinceSeq={} limit={}", userId, sinceSeq, limit);
 
-      messageRepo.pullOfflineMessages(userId, sinceSeq, limit)
-        .onSuccess(messages -> {
-          PullProto.PullResp resp = PullProto.PullResp.newBuilder()
+      messageService.pullOfflineMessages(userId, sinceSeq, limit)
+        .onSuccess(records -> {
+          PullProto.PullResp.Builder respBuilder = PullProto.PullResp.newBuilder()
             .setCode(0)
             .setMessage("success")
-            .setHasMore(messages != null && messages.size() >= limit)
-            .build();
+            .setHasMore(records != null && records.size() >= limit);
 
           ImMessage response = ImMessage.builder()
             .magic(ImMessage.MAGIC_NUMBER)
@@ -68,18 +70,19 @@ public class PullMessageHandler extends AbstractMessageHandler {
             .codecId(message.getCodecId())
             .cmd(CMD_PULL_RESP_VALUE)
             .messageId(message.getMessageId())
-            .body(encodeProtobuf(resp))
+            .body(encodeProtobuf(respBuilder.build()))
             .build();
 
           sendResponse(connection, response);
         })
         .onFailure(e -> {
           LOG.error("拉取离线消息失败", e);
-          sendErrorResponse(connection, message, 500, "拉取离线消息失败：" + e.getMessage());
+          sendErrorResponse(connection, message, 500, "拉取失败：" + e.getMessage());
         });
+
     } catch (Exception e) {
-      LOG.error("处理拉取消息请求失败", e);
-      sendErrorResponse(connection, message, 500, "处理拉取消息请求失败：" + e.getMessage());
+      LOG.error("处理拉取请求失败", e);
+      sendErrorResponse(connection, message, 500, "处理失败：" + e.getMessage());
     }
   }
 }

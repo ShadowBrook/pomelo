@@ -62,9 +62,10 @@ public class ImMessage {
     // 变长头
     encodeHeaders(buffer);
     // 消息体长度
-    buffer.appendInt(bodyLength);
+    int actualBodyLen = body != null ? body.length : bodyLength;
+    buffer.appendInt(actualBodyLen);
     // 消息体
-    if (body != null && bodyLength > 0) {
+    if (body != null && actualBodyLen > 0) {
       buffer.appendBytes(body);
     }
 

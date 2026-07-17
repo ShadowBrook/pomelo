@@ -1,7 +1,11 @@
 package com.github.moxib.pomelo.gateway.handler;
 
+import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.proto.ctrl.CtrlProto;
+import com.github.moxib.pomelo.service.MessageRepository;
+import com.github.moxib.pomelo.service.MessageService;
+import com.github.moxib.pomelo.utils.IdGenerator;
 import io.vertx.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,33 +13,26 @@ import org.slf4j.LoggerFactory;
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.CMD_CTRL_RESP_VALUE;
 
 /**
- * 控制命令请求处理器
- * 处理客户端的控制命令请求，如踢下线、强制登出、通知、同步等
+ * 控制命令请求处理器。
  */
 public class CtrlReqHandler extends AbstractMessageHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(CtrlReqHandler.class);
 
-  public CtrlReqHandler(Vertx vertx) {
-    super(vertx);
+  public CtrlReqHandler(Vertx vertx, CodecRegistry codecRegistry,
+                         SessionRegistry sessionRegistry, MessageRepository messageRepo,
+                         MessageService messageService, IdGenerator idGenerator) {
+    super(vertx, codecRegistry, sessionRegistry, messageRepo, messageService, idGenerator);
   }
 
   @Override
   public void handle(Connection connection, ImMessage message) {
     try {
-      // 解码 Protobuf 消息
-      CtrlProto.CtrlReq req = decodeProtobuf(message.getBody(), CtrlProto.CtrlReq.class);
-
+      CtrlProto.CtrlReq req = decodeBody(message);
       LOG.info("收到控制命令请求，ctrlType: {}", req.getCtrlType());
 
-      // TODO: 实现具体的控制命令处理逻辑
-      // 根据 CtrlType 处理不同的控制命令：
-      // - CTRL_TYPE_KICK_OFFLINE: 踢下线
-      // - CTRL_TYPE_FORCE_LOGOUT: 强制登出
-      // - CTRL_TYPE_NOTIFY: 通知
-      // - CTRL_TYPE_SYNC: 同步
+      // TODO: 实现具体的控制命令处理
 
-      // 构建控制命令响应
       CtrlProto.CtrlResp resp = CtrlProto.CtrlResp.newBuilder()
         .setCode(0)
         .setMessage("success")

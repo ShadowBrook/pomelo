@@ -1,41 +1,86 @@
 package com.github.moxib.pomelo.gateway.handler;
 
+import com.github.moxib.pomelo.codec.CodecRegistry;
+import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.proto.auth.AuthProto;
+import com.github.moxib.pomelo.service.MessageRepository;
+import com.github.moxib.pomelo.service.MessageService;
+import com.github.moxib.pomelo.utils.IdGenerator;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.vertx.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
 /**
- * 登录消息处理器
- * 处理客户端的登录请求
+ * 登录消息处理器。
+ * 支持 Protobuf 和 JSON 双协议，登录后注册 Session（含 codecId）。
  */
 public class LoginHandler extends AbstractMessageHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(LoginHandler.class);
 
-  public LoginHandler(Vertx vertx) {
-    super(vertx);
+  public LoginHandler(Vertx vertx, CodecRegistry codecRegistry,
+                       SessionRegistry sessionRegistry, MessageRepository messageRepo,
+                       MessageService messageService, IdGenerator idGenerator) {
+    super(vertx, codecRegistry, sessionRegistry, messageRepo, messageService, idGenerator);
   }
 
   @Override
   public void handle(Connection connection, ImMessage message) {
-    String body = getBodyAsString(message);
-    LOG.info("收到登录请求，userId: {}", body);
+    try {
+      byte codecId = message.getCodecId();
+      String userId;
 
-    // TODO: 实现具体的登录逻辑，如验证用户凭证、获取用户信息等
-    // 这里是示例响应
+      if (codecId == ProtobufCodec.CODEC_ID) {
+        AuthProto.AuthReq req = decodeBody(message);
+        // AuthReq 没有 userId 字段，从 varHeaders 取
+        Map<String, String> headers = message.getVarHeaders();
+        userId = headers != null ? headers.get("userId") : null;
+      } else {
+        JsonNode json = parseJsonBody(message);
+        userId = json.has("userId") ? json.get("userId").asText() : null;
+        if (userId == null) {
+          Map<String, String> headers = message.getVarHeaders();
+          userId = headers != null ? headers.get("userId") : null;
+        }
+      }
 
-    // 构建登录响应
-    ImMessage response = ImMessage.builder()
-      .magic(ImMessage.MAGIC_NUMBER)
-      .version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId(message.getCodecId())
-      .cmd(0x02) // 登录响应 cmd
-      .messageId(message.getMessageId())
-      .varHeaders(java.util.Map.of("status", "success"))
-      .body("登录成功".getBytes(java.nio.charset.StandardCharsets.UTF_8))
-      .build();
+      if (userId == null || userId.isEmpty()) {
+        sendErrorResponse(connection, message, 400, "userId 不能为空");
+        return;
+      }
 
-    sendResponse(connection, response);
+      LOG.info("登录请求: userId={} codec={}", userId, codecId == 0 ? "Protobuf" : "JSON");
+
+      // 注册用户会话 + codecId
+      sessionRegistry.register(userId, connection, codecId);
+
+      // 构建响应
+      Object respBody;
+      if (codecId == ProtobufCodec.CODEC_ID) {
+        respBody = AuthProto.AuthResp.newBuilder()
+          .setCode(0)
+          .setMessage("success")
+          .setUserId(userId)
+          .build();
+      } else {
+        ObjectNode json = jsonBody();
+        json.put("code", 0);
+        json.put("message", "success");
+        json.put("userId", userId);
+        respBody = json;
+      }
+
+      ImMessage response = buildResponse(message, 0x02, respBody);
+      sendResponse(connection, response);
+
+    } catch (Exception e) {
+      LOG.error("登录处理失败", e);
+      sendErrorResponse(connection, message, 500, "登录失败：" + e.getMessage());
+    }
   }
 }
