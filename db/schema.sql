@@ -63,6 +63,8 @@ CREATE INDEX idx_c2c_conversation ON im_message_c2c (recipient_id, sender_id, cr
 CREATE INDEX idx_c2c_created_at_brin ON im_message_c2c USING BRIN (created_at);
 -- 按 seq 排序拉取（全局有序）
 CREATE INDEX idx_c2c_seq ON im_message_c2c (seq);
+-- 部分索引：仅索引未完全送达的消息，用于离线拉取，体积极小
+CREATE INDEX CONCURRENTLY idx_c2c_pending ON im_message_c2c (recipient_id, created_at) WHERE status < 2;
 
 
 -- 3. 群聊消息表

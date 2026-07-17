@@ -100,3 +100,7 @@ Generated Java classes are output to `src/main/java/com/github/moxib/pomelo/prot
 - Currently `MainVerticle` only deploys `WsGatewayVerticle`. To use TCP, deploy `TcpGatewayVerticle` instead or alongside it.
 - Ports are configurable via system properties: `gateway.tcp.port` (default 9000), `gateway.websocket.port` (default 9001).
 - Editing `.proto` files requires running `./mvnw protobuf:compile` (or `./mvnw clean compile`) to regenerate Java sources.
+
+## Coding Style
+
+- **No fully-qualified class names in code body** — always use imports. For example, write `Map<String, String> headers = ...` not `java.util.Map<String, String> headers = ...`. The only exceptions are generated protobuf code (under `proto/` package) which is auto-generated and should not be manually edited.
