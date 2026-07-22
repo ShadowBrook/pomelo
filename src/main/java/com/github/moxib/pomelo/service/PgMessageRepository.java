@@ -1,10 +1,9 @@
 package com.github.moxib.pomelo.service;
 
 import com.github.moxib.pomelo.service.model.MessageRecord;
+import com.github.moxib.pomelo.service.model.UserIdInfo;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.pgclient.PgBuilder;
-import io.vertx.pgclient.PgConnectOptions;
 import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.Tuple;
@@ -13,19 +12,22 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * 基于 PostgreSQL 的 MessageRepository 实现。
+ * sender_id / recipient_id 使用 im_user.id (BIGINT)。
  */
 public class PgMessageRepository implements MessageRepository {
 
   private static final Logger LOG = LoggerFactory.getLogger(PgMessageRepository.class);
 
   private static final String SAVE_SQL = """
-    INSERT INTO im_message_c2c (id, sender_id, recipient_id, msg_type, content, seq, status, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (id) DO NOTHING
+    INSERT INTO im_message_c2c (id, sender_id, recipient_id, conversation_id, msg_type, content, seq, status, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO NOTHING
     """;
 
   private static final String UPDATE_STATUS_SQL = """
@@ -37,35 +39,37 @@ public class PgMessageRepository implements MessageRepository {
     """;
 
   private static final String PULL_PENDING_SQL = """
-    SELECT id, sender_id, recipient_id, msg_type, content, seq, status, created_at
+    SELECT id, sender_id, recipient_id, conversation_id, msg_type, content, seq, status, created_at
     FROM im_message_c2c WHERE recipient_id = $1 AND seq > $2 AND status < 2 ORDER BY seq LIMIT $3
     """;
 
   private static final String FIND_BY_ID_SQL = """
-    SELECT id, sender_id, recipient_id, msg_type, content, seq, status, created_at
+    SELECT id, sender_id, recipient_id, conversation_id, msg_type, content, seq, status, created_at
     FROM im_message_c2c WHERE id = $1
     """;
 
   private static final String FIND_BY_IDS_SQL = """
-    SELECT id, sender_id, recipient_id, msg_type, content, seq, status, created_at
+    SELECT id, sender_id, recipient_id, conversation_id, msg_type, content, seq, status, created_at
     FROM im_message_c2c WHERE id = ANY($1)
+    """;
+
+  private static final String PULL_CONVERSATION_SQL = """
+    SELECT id, sender_id, recipient_id, conversation_id, msg_type, content, seq, status, created_at
+    FROM im_message_c2c WHERE conversation_id = $1 AND seq < $2 ORDER BY seq DESC LIMIT $3
+    """;
+
+  private static final String FIND_USER_ID_SQL = """
+    SELECT id FROM im_user WHERE user_id = $1
+    """;
+
+  private static final String FIND_USER_IDS_BY_IDS_SQL = """
+    SELECT id, user_id, user_name, nickname FROM im_user WHERE id = ANY($1)
     """;
 
   private final Pool pool;
 
   public PgMessageRepository(Vertx vertx) {
-    PgConnectOptions opts = new PgConnectOptions()
-      .setHost("localhost")
-      .setPort(5432)
-      .setDatabase("pomelo_db")
-      .setUser("pomelo")
-      .setPassword("pomelo123");
-    this.pool = PgBuilder.pool()
-      .connectingTo(opts)
-      .using(vertx)
-      .build();
-    LOG.info("PgMessageRepository 已连接 PostgreSQL: {}:{}/{}",
-      opts.getHost(), opts.getPort(), opts.getDatabase());
+    this.pool = PgPoolFactory.get(vertx);
   }
 
   @Override
@@ -75,6 +79,7 @@ public class PgMessageRepository implements MessageRepository {
         record.getId(),
         record.getSenderId(),
         record.getRecipientId(),
+        record.getConversationId(),
         record.getMsgType(),
         record.getContent(),
         record.getSeq(),
@@ -116,14 +121,12 @@ public class PgMessageRepository implements MessageRepository {
   }
 
   @Override
-  public Future<List<MessageRecord>> pullPending(String userId, long sinceSeq, int limit) {
+  public Future<List<MessageRecord>> pullPending(long recipientId, long sinceSeq, int limit) {
     return pool.preparedQuery(PULL_PENDING_SQL)
-      .execute(Tuple.of(userId, sinceSeq, limit))
+      .execute(Tuple.of(recipientId, sinceSeq, limit))
       .map(rows -> {
         List<MessageRecord> list = new ArrayList<>();
-        for (Row row : rows) {
-          list.add(rowToRecord(row));
-        }
+        for (Row row : rows) list.add(rowToRecord(row));
         return list;
       });
   }
@@ -145,27 +148,60 @@ public class PgMessageRepository implements MessageRepository {
       .execute(Tuple.tuple().addArrayOfLong(ids))
       .map(rows -> {
         List<MessageRecord> list = new ArrayList<>();
-        for (Row row : rows) {
-          list.add(rowToRecord(row));
-        }
+        for (Row row : rows) list.add(rowToRecord(row));
         return list;
+      });
+  }
+
+  @Override
+  public Future<List<MessageRecord>> pullConversation(String conversationId, long beforeSeq, int limit) {
+    return pool.preparedQuery(PULL_CONVERSATION_SQL)
+      .execute(Tuple.of(conversationId, beforeSeq == 0 ? Long.MAX_VALUE : beforeSeq, limit))
+      .map(rows -> {
+        List<MessageRecord> list = new ArrayList<>();
+        for (Row row : rows) list.add(rowToRecord(row));
+        return list;
+      });
+  }
+
+  @Override
+  public Future<Long> findUserId(String userId) {
+    return pool.preparedQuery(FIND_USER_ID_SQL)
+      .execute(Tuple.of(userId))
+      .map(rows -> rows.size() > 0 ? rows.iterator().next().getLong("id") : 0L);
+  }
+
+  @Override
+  public Future<Map<Long, UserIdInfo>> findUserIdsByIds(List<Long> ids) {
+    if (ids == null || ids.isEmpty()) {
+      return Future.succeededFuture(Collections.emptyMap());
+    }
+    Long[] idArray = ids.stream().distinct().toArray(Long[]::new);
+    return pool.preparedQuery(FIND_USER_IDS_BY_IDS_SQL)
+      .execute(Tuple.tuple().addArrayOfLong(idArray))
+      .map(rows -> {
+        Map<Long, UserIdInfo> result = new HashMap<>();
+        for (Row row : rows) {
+          result.put(row.getLong("id"), new UserIdInfo(
+            row.getString("user_id"),
+            row.getString("user_name"),
+            row.getString("nickname")));
+        }
+        return result;
       });
   }
 
   private MessageRecord rowToRecord(Row row) {
     return MessageRecord.builder()
       .id(row.getLong("id"))
-      .senderId(row.getString("sender_id"))
-      .recipientId(row.getString("recipient_id"))
+      .senderId(row.getLong("sender_id"))
+      .recipientId(row.getLong("recipient_id"))
+      .conversationId(row.getString("conversation_id"))
       .msgType(row.getInteger("msg_type"))
       .content(row.getString("content"))
       .seq(row.getLong("seq"))
       .status(row.getInteger("status"))
       .createdAt(row.getLong("created_at"))
       .build();
-  }
-
-  public Future<Void> close() {
-    return pool.close().onSuccess(v -> LOG.info("PgMessageRepository 已关闭"));
   }
 }

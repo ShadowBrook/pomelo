@@ -40,22 +40,29 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-
 <div class="header">
   <span class="title">Pomelo IM</span>
   <span class="status-dot offline" id="status-dot"></span>
-  <input id="user-id" placeholder="用户ID" value="alice">
+  <input id="user-name" placeholder="用户名" value="alice">
   <input id="nickname" placeholder="昵称" value="Alice">
-  <button class="btn btn-primary" id="btn-connect" onclick="toggleConnect()">连接</button>
+  <button class="btn btn-primary" id="btn-connect">连接</button>
   <span class="sep">|</span>
   <span class="recipient-row">发给: <input id="recipient-id" placeholder="对方ID" value="bob"></span>
+  <select id="codec-select" style="margin-left:8px;padding:4px 6px;background:#0f3460;border:1px solid #444;border-radius:4px;color:#eee;font-size:11px">
+    <option value="json">JSON</option>
+    <option value="protobuf">Protobuf</option>
+  </select>
 </div>
 
 <div class="msgs" id="msgs"></div>
 
 <div class="input-row">
-  <input id="msg-input" placeholder="输入消息..." onkeydown="if(event.key==='Enter')send()">
-  <button class="btn btn-primary" onclick="send()">发送</button>
+  <input id="msg-input" placeholder="输入消息...">
+  <button class="btn btn-primary" id="btn-send">发送</button>
 </div>
 
-<script src="im-sdk.js"></script>
-<script>
+<script type="importmap">
+{ "imports": { "protobufjs/minimal": "https://cdn.jsdelivr.net/npm/protobufjs@7.6.5/dist/minimal/protobuf.min.js" } }
+</script>
+<script type="module" src="im-sdk.js"></script>
+<script type="module">
 const STATUS_ICONS = { pending: '🕐', sending: '🔄', sent: '✓', delivered: '✓✓', seen: '✓✓', failed: '❌' };
 const STATUS_COLORS = { pending: '#888', sending: '#aaa', sent: '#aaa', delivered: '#aaa', seen: '#4ec94e', failed: '#e74c3c' };
 
@@ -100,16 +107,17 @@ async function toggleConnect() {
     logMsg('system', '已断开');
     return;
   }
-  const userId = $id('user-id').value.trim();
+  const userName = $id('user-name').value.trim();
   const nickname = $id('nickname').value.trim();
-  if (!userId) { logMsg('system', '请输入用户ID'); return; }
+  if (!userName) { logMsg('system', '请输入用户名'); return; }
 
   sdk = new ImSDK({ url: 'ws://localhost:9001' });
 
   sdk.on('connect', () => {
     $id('status-dot').className = 'status-dot online';
     $id('btn-connect').textContent = '断开';
-    logMsg('system', nickname + ' (' + userId + ') 已上线');
+    const displayName = sdk.userName || userName;
+    logMsg('system', displayName + ' (' + userName + ') 已上线');
   });
   sdk.on('disconnect', () => {
     $id('status-dot').className = 'status-dot offline';
@@ -125,8 +133,9 @@ async function toggleConnect() {
   });
   sdk.on('error', (e) => logMsg('system', '错误: ' + e));
 
+  const codec = $id('codec-select').value;
   try {
-    await sdk.connect({ userId });
+    await sdk.connect({ userId: userName, userName, codec });
   } catch (e) {
     logMsg('system', '连接失败: ' + e);
     sdk = null;
@@ -154,6 +163,11 @@ function send() {
   inp.value = '';
   inp.focus();
 }
+
+// Wire up event listeners
+$id('btn-connect').addEventListener('click', toggleConnect);
+$id('btn-send').addEventListener('click', send);
+$id('msg-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') send(); });
 </script>
 </body>
 </html>

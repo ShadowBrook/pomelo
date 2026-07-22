@@ -1,10 +1,13 @@
 package com.github.moxib.pomelo.gateway.handler;
 
 import com.github.moxib.pomelo.codec.CodecRegistry;
+import com.github.moxib.pomelo.codec.ProtobufCodec;
+import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.proto.ctrl.CtrlProto;
 import com.github.moxib.pomelo.service.MessageRepository;
 import com.github.moxib.pomelo.service.MessageService;
+import com.github.moxib.pomelo.service.model.requests.CtrlRequest;
 import com.github.moxib.pomelo.utils.IdGenerator;
 import io.vertx.core.Vertx;
 import org.slf4j.Logger;
@@ -28,29 +31,21 @@ public class CtrlReqHandler extends AbstractMessageHandler {
   @Override
   public void handle(Connection connection, ImMessage message) {
     try {
-      CtrlProto.CtrlReq req = decodeBody(message);
-      LOG.info("收到控制命令请求，ctrlType: {}", req.getCtrlType());
+      CtrlRequest req = decodeRequest(message, CtrlRequest.class);
+      LOG.info("收到控制命令请求，ctrlType: {}", req.ctrlType());
 
       // TODO: 实现具体的控制命令处理
 
-      CtrlProto.CtrlResp resp = CtrlProto.CtrlResp.newBuilder()
-        .setCode(0)
-        .setMessage("success")
-        .build();
+      byte codecId = message.getCodecId();
+      Object respBody = codecId == ProtobufCodec.CODEC_ID
+        ? CtrlProto.CtrlResp.newBuilder().setCode(0).setMessage("success").build()
+        : jsonBody().put("code", 0).put("message", "success");
 
-      ImMessage response = ImMessage.builder()
-        .magic(ImMessage.MAGIC_NUMBER)
-        .version(ImMessage.WIRE_PROTOCOL_VERSION)
-        .codecId(message.getCodecId())
-        .cmd(CMD_CTRL_RESP_VALUE)
-        .messageId(message.getMessageId())
-        .body(encodeProtobuf(resp))
-        .build();
-
+      ImMessage response = buildResponse(message, CMD_CTRL_RESP_VALUE, respBody);
       sendResponse(connection, response);
     } catch (Exception e) {
       LOG.error("处理控制命令请求失败", e);
-      sendErrorResponse(connection, message, 500, "处理控制命令失败：" + e.getMessage());
+      sendErrorResponse(connection, message, CMD_CTRL_RESP_VALUE, ErrorCode.INTERNAL_ERROR, "处理控制命令失败：" + e.getMessage());
     }
   }
 }

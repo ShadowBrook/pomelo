@@ -61,10 +61,20 @@ public final class GroupProto {
 
     /**
      * <pre>
+     * 消息 ID
+     * </pre>
+     *
+     * <code>int64 message_id = 3;</code>
+     * @return The messageId.
+     */
+    long getMessageId();
+
+    /**
+     * <pre>
      * 消息内容
      * </pre>
      *
-     * <code>.im.common.MessageContent message = 3;</code>
+     * <code>.im.common.MessageContent message = 4;</code>
      * @return Whether the message field is set.
      */
     boolean hasMessage();
@@ -73,7 +83,7 @@ public final class GroupProto {
      * 消息内容
      * </pre>
      *
-     * <code>.im.common.MessageContent message = 3;</code>
+     * <code>.im.common.MessageContent message = 4;</code>
      * @return The message.
      */
     com.github.moxib.pomelo.proto.common.CommonProto.MessageContent getMessage();
@@ -82,7 +92,7 @@ public final class GroupProto {
      * 消息内容
      * </pre>
      *
-     * <code>.im.common.MessageContent message = 3;</code>
+     * <code>.im.common.MessageContent message = 4;</code>
      */
     com.github.moxib.pomelo.proto.common.CommonProto.MessageContentOrBuilder getMessageOrBuilder();
   }
@@ -224,14 +234,29 @@ public final class GroupProto {
       }
     }
 
-    public static final int MESSAGE_FIELD_NUMBER = 3;
+    public static final int MESSAGE_ID_FIELD_NUMBER = 3;
+    private long messageId_ = 0L;
+    /**
+     * <pre>
+     * 消息 ID
+     * </pre>
+     *
+     * <code>int64 message_id = 3;</code>
+     * @return The messageId.
+     */
+    @java.lang.Override
+    public long getMessageId() {
+      return messageId_;
+    }
+
+    public static final int MESSAGE_FIELD_NUMBER = 4;
     private com.github.moxib.pomelo.proto.common.CommonProto.MessageContent message_;
     /**
      * <pre>
      * 消息内容
      * </pre>
      *
-     * <code>.im.common.MessageContent message = 3;</code>
+     * <code>.im.common.MessageContent message = 4;</code>
      * @return Whether the message field is set.
      */
     @java.lang.Override
@@ -243,7 +268,7 @@ public final class GroupProto {
      * 消息内容
      * </pre>
      *
-     * <code>.im.common.MessageContent message = 3;</code>
+     * <code>.im.common.MessageContent message = 4;</code>
      * @return The message.
      */
     @java.lang.Override
@@ -255,7 +280,7 @@ public final class GroupProto {
      * 消息内容
      * </pre>
      *
-     * <code>.im.common.MessageContent message = 3;</code>
+     * <code>.im.common.MessageContent message = 4;</code>
      */
     @java.lang.Override
     public com.github.moxib.pomelo.proto.common.CommonProto.MessageContentOrBuilder getMessageOrBuilder() {
@@ -282,8 +307,11 @@ public final class GroupProto {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, groupId_);
       }
+      if (messageId_ != 0L) {
+        output.writeInt64(3, messageId_);
+      }
       if (((bitField0_ & 0x00000001) != 0)) {
-        output.writeMessage(3, getMessage());
+        output.writeMessage(4, getMessage());
       }
       getUnknownFields().writeTo(output);
     }
@@ -300,9 +328,13 @@ public final class GroupProto {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, groupId_);
       }
+      if (messageId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(3, messageId_);
+      }
       if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
-          .computeMessageSize(3, getMessage());
+          .computeMessageSize(4, getMessage());
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -323,6 +355,8 @@ public final class GroupProto {
           .equals(other.getSenderId())) return false;
       if (!getGroupId()
           .equals(other.getGroupId())) return false;
+      if (getMessageId()
+          != other.getMessageId()) return false;
       if (hasMessage() != other.hasMessage()) return false;
       if (hasMessage()) {
         if (!getMessage()
@@ -343,6 +377,9 @@ public final class GroupProto {
       hash = (53 * hash) + getSenderId().hashCode();
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
       hash = (53 * hash) + getGroupId().hashCode();
+      hash = (37 * hash) + MESSAGE_ID_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getMessageId());
       if (hasMessage()) {
         hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
         hash = (53 * hash) + getMessage().hashCode();
@@ -492,6 +529,7 @@ public final class GroupProto {
         bitField0_ = 0;
         senderId_ = "";
         groupId_ = "";
+        messageId_ = 0L;
         message_ = null;
         if (messageBuilder_ != null) {
           messageBuilder_.dispose();
@@ -536,8 +574,11 @@ public final class GroupProto {
         if (((from_bitField0_ & 0x00000002) != 0)) {
           result.groupId_ = groupId_;
         }
-        int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000004) != 0)) {
+          result.messageId_ = messageId_;
+        }
+        int to_bitField0_ = 0;
+        if (((from_bitField0_ & 0x00000008) != 0)) {
           result.message_ = messageBuilder_ == null
               ? message_
               : messageBuilder_.build();
@@ -600,6 +641,9 @@ public final class GroupProto {
           bitField0_ |= 0x00000002;
           onChanged();
         }
+        if (other.getMessageId() != 0L) {
+          setMessageId(other.getMessageId());
+        }
         if (other.hasMessage()) {
           mergeMessage(other.getMessage());
         }
@@ -639,13 +683,18 @@ public final class GroupProto {
                 bitField0_ |= 0x00000002;
                 break;
               } // case 18
-              case 26: {
+              case 24: {
+                messageId_ = input.readInt64();
+                bitField0_ |= 0x00000004;
+                break;
+              } // case 24
+              case 34: {
                 input.readMessage(
                     getMessageFieldBuilder().getBuilder(),
                     extensionRegistry);
-                bitField0_ |= 0x00000004;
+                bitField0_ |= 0x00000008;
                 break;
-              } // case 26
+              } // case 34
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -847,6 +896,50 @@ public final class GroupProto {
         return this;
       }
 
+      private long messageId_ ;
+      /**
+       * <pre>
+       * 消息 ID
+       * </pre>
+       *
+       * <code>int64 message_id = 3;</code>
+       * @return The messageId.
+       */
+      @java.lang.Override
+      public long getMessageId() {
+        return messageId_;
+      }
+      /**
+       * <pre>
+       * 消息 ID
+       * </pre>
+       *
+       * <code>int64 message_id = 3;</code>
+       * @param value The messageId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setMessageId(long value) {
+
+        messageId_ = value;
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 消息 ID
+       * </pre>
+       *
+       * <code>int64 message_id = 3;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearMessageId() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        messageId_ = 0L;
+        onChanged();
+        return this;
+      }
+
       private com.github.moxib.pomelo.proto.common.CommonProto.MessageContent message_;
       private com.google.protobuf.SingleFieldBuilderV3<
           com.github.moxib.pomelo.proto.common.CommonProto.MessageContent, com.github.moxib.pomelo.proto.common.CommonProto.MessageContent.Builder, com.github.moxib.pomelo.proto.common.CommonProto.MessageContentOrBuilder> messageBuilder_;
@@ -855,18 +948,18 @@ public final class GroupProto {
        * 消息内容
        * </pre>
        *
-       * <code>.im.common.MessageContent message = 3;</code>
+       * <code>.im.common.MessageContent message = 4;</code>
        * @return Whether the message field is set.
        */
       public boolean hasMessage() {
-        return ((bitField0_ & 0x00000004) != 0);
+        return ((bitField0_ & 0x00000008) != 0);
       }
       /**
        * <pre>
        * 消息内容
        * </pre>
        *
-       * <code>.im.common.MessageContent message = 3;</code>
+       * <code>.im.common.MessageContent message = 4;</code>
        * @return The message.
        */
       public com.github.moxib.pomelo.proto.common.CommonProto.MessageContent getMessage() {
@@ -881,7 +974,7 @@ public final class GroupProto {
        * 消息内容
        * </pre>
        *
-       * <code>.im.common.MessageContent message = 3;</code>
+       * <code>.im.common.MessageContent message = 4;</code>
        */
       public Builder setMessage(com.github.moxib.pomelo.proto.common.CommonProto.MessageContent value) {
         if (messageBuilder_ == null) {
@@ -892,7 +985,7 @@ public final class GroupProto {
         } else {
           messageBuilder_.setMessage(value);
         }
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         onChanged();
         return this;
       }
@@ -901,7 +994,7 @@ public final class GroupProto {
        * 消息内容
        * </pre>
        *
-       * <code>.im.common.MessageContent message = 3;</code>
+       * <code>.im.common.MessageContent message = 4;</code>
        */
       public Builder setMessage(
           com.github.moxib.pomelo.proto.common.CommonProto.MessageContent.Builder builderForValue) {
@@ -910,7 +1003,7 @@ public final class GroupProto {
         } else {
           messageBuilder_.setMessage(builderForValue.build());
         }
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         onChanged();
         return this;
       }
@@ -919,11 +1012,11 @@ public final class GroupProto {
        * 消息内容
        * </pre>
        *
-       * <code>.im.common.MessageContent message = 3;</code>
+       * <code>.im.common.MessageContent message = 4;</code>
        */
       public Builder mergeMessage(com.github.moxib.pomelo.proto.common.CommonProto.MessageContent value) {
         if (messageBuilder_ == null) {
-          if (((bitField0_ & 0x00000004) != 0) &&
+          if (((bitField0_ & 0x00000008) != 0) &&
             message_ != null &&
             message_ != com.github.moxib.pomelo.proto.common.CommonProto.MessageContent.getDefaultInstance()) {
             getMessageBuilder().mergeFrom(value);
@@ -934,7 +1027,7 @@ public final class GroupProto {
           messageBuilder_.mergeFrom(value);
         }
         if (message_ != null) {
-          bitField0_ |= 0x00000004;
+          bitField0_ |= 0x00000008;
           onChanged();
         }
         return this;
@@ -944,10 +1037,10 @@ public final class GroupProto {
        * 消息内容
        * </pre>
        *
-       * <code>.im.common.MessageContent message = 3;</code>
+       * <code>.im.common.MessageContent message = 4;</code>
        */
       public Builder clearMessage() {
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = (bitField0_ & ~0x00000008);
         message_ = null;
         if (messageBuilder_ != null) {
           messageBuilder_.dispose();
@@ -961,10 +1054,10 @@ public final class GroupProto {
        * 消息内容
        * </pre>
        *
-       * <code>.im.common.MessageContent message = 3;</code>
+       * <code>.im.common.MessageContent message = 4;</code>
        */
       public com.github.moxib.pomelo.proto.common.CommonProto.MessageContent.Builder getMessageBuilder() {
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000008;
         onChanged();
         return getMessageFieldBuilder().getBuilder();
       }
@@ -973,7 +1066,7 @@ public final class GroupProto {
        * 消息内容
        * </pre>
        *
-       * <code>.im.common.MessageContent message = 3;</code>
+       * <code>.im.common.MessageContent message = 4;</code>
        */
       public com.github.moxib.pomelo.proto.common.CommonProto.MessageContentOrBuilder getMessageOrBuilder() {
         if (messageBuilder_ != null) {
@@ -988,7 +1081,7 @@ public final class GroupProto {
        * 消息内容
        * </pre>
        *
-       * <code>.im.common.MessageContent message = 3;</code>
+       * <code>.im.common.MessageContent message = 4;</code>
        */
       private com.google.protobuf.SingleFieldBuilderV3<
           com.github.moxib.pomelo.proto.common.CommonProto.MessageContent, com.github.moxib.pomelo.proto.common.CommonProto.MessageContent.Builder, com.github.moxib.pomelo.proto.common.CommonProto.MessageContentOrBuilder> 
@@ -1106,10 +1199,10 @@ public final class GroupProto {
      * 消息 ID
      * </pre>
      *
-     * <code>uint32 message_id = 3;</code>
+     * <code>int64 message_id = 3;</code>
      * @return The messageId.
      */
-    int getMessageId();
+    long getMessageId();
 
     /**
      * <pre>
@@ -1261,17 +1354,17 @@ public final class GroupProto {
     }
 
     public static final int MESSAGE_ID_FIELD_NUMBER = 3;
-    private int messageId_ = 0;
+    private long messageId_ = 0L;
     /**
      * <pre>
      * 消息 ID
      * </pre>
      *
-     * <code>uint32 message_id = 3;</code>
+     * <code>int64 message_id = 3;</code>
      * @return The messageId.
      */
     @java.lang.Override
-    public int getMessageId() {
+    public long getMessageId() {
       return messageId_;
     }
 
@@ -1384,8 +1477,8 @@ public final class GroupProto {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, message_);
       }
-      if (messageId_ != 0) {
-        output.writeUInt32(3, messageId_);
+      if (messageId_ != 0L) {
+        output.writeInt64(3, messageId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 4, groupId_);
@@ -1412,9 +1505,9 @@ public final class GroupProto {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, message_);
       }
-      if (messageId_ != 0) {
+      if (messageId_ != 0L) {
         size += com.google.protobuf.CodedOutputStream
-          .computeUInt32Size(3, messageId_);
+          .computeInt64Size(3, messageId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, groupId_);
@@ -1473,7 +1566,8 @@ public final class GroupProto {
       hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
       hash = (53 * hash) + getMessage().hashCode();
       hash = (37 * hash) + MESSAGE_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getMessageId();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getMessageId());
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
       hash = (53 * hash) + getGroupId().hashCode();
       hash = (37 * hash) + SERVER_TIME_FIELD_NUMBER;
@@ -1617,7 +1711,7 @@ public final class GroupProto {
         bitField0_ = 0;
         code_ = 0;
         message_ = "";
-        messageId_ = 0;
+        messageId_ = 0L;
         groupId_ = "";
         serverTime_ = 0L;
         seq_ = 0L;
@@ -1729,7 +1823,7 @@ public final class GroupProto {
           bitField0_ |= 0x00000002;
           onChanged();
         }
-        if (other.getMessageId() != 0) {
+        if (other.getMessageId() != 0L) {
           setMessageId(other.getMessageId());
         }
         if (!other.getGroupId().isEmpty()) {
@@ -1780,7 +1874,7 @@ public final class GroupProto {
                 break;
               } // case 18
               case 24: {
-                messageId_ = input.readUInt32();
+                messageId_ = input.readInt64();
                 bitField0_ |= 0x00000004;
                 break;
               } // case 24
@@ -1952,17 +2046,17 @@ public final class GroupProto {
         return this;
       }
 
-      private int messageId_ ;
+      private long messageId_ ;
       /**
        * <pre>
        * 消息 ID
        * </pre>
        *
-       * <code>uint32 message_id = 3;</code>
+       * <code>int64 message_id = 3;</code>
        * @return The messageId.
        */
       @java.lang.Override
-      public int getMessageId() {
+      public long getMessageId() {
         return messageId_;
       }
       /**
@@ -1970,11 +2064,11 @@ public final class GroupProto {
        * 消息 ID
        * </pre>
        *
-       * <code>uint32 message_id = 3;</code>
+       * <code>int64 message_id = 3;</code>
        * @param value The messageId to set.
        * @return This builder for chaining.
        */
-      public Builder setMessageId(int value) {
+      public Builder setMessageId(long value) {
 
         messageId_ = value;
         bitField0_ |= 0x00000004;
@@ -1986,12 +2080,12 @@ public final class GroupProto {
        * 消息 ID
        * </pre>
        *
-       * <code>uint32 message_id = 3;</code>
+       * <code>int64 message_id = 3;</code>
        * @return This builder for chaining.
        */
       public Builder clearMessageId() {
         bitField0_ = (bitField0_ & ~0x00000004);
-        messageId_ = 0;
+        messageId_ = 0L;
         onChanged();
         return this;
       }
@@ -3448,17 +3542,17 @@ public final class GroupProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\021group/group.proto\022\010im.group\032\023common/co" +
-      "mmon.proto\"Y\n\006C2GReq\022\021\n\tsender_id\030\001 \001(\t\022" +
-      "\020\n\010group_id\030\002 \001(\t\022*\n\007message\030\003 \001(\0132\031.im." +
-      "common.MessageContent\"}\n\007C2GResp\022\014\n\004code" +
-      "\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022\022\n\nmessage_id\030\003 " +
-      "\001(\r\022\020\n\010group_id\030\004 \001(\t\022\023\n\013server_time\030\005 \001" +
-      "(\003\022\020\n\003seq\030\006 \001(\003H\000\210\001\001B\006\n\004_seq\"v\n\tC2GNotif" +
-      "y\022\021\n\tsender_id\030\001 \001(\t\022\020\n\010group_id\030\002 \001(\t\022*" +
-      "\n\007message\030\003 \001(\0132\031.im.common.MessageConte" +
-      "nt\022\020\n\003seq\030\005 \001(\003H\000\210\001\001B\006\n\004_seqB1\n#com.gith" +
-      "ub.moxib.pomelo.proto.groupB\nGroupProtob" +
-      "\006proto3"
+      "mmon.proto\"m\n\006C2GReq\022\021\n\tsender_id\030\001 \001(\t\022" +
+      "\020\n\010group_id\030\002 \001(\t\022\022\n\nmessage_id\030\003 \001(\003\022*\n" +
+      "\007message\030\004 \001(\0132\031.im.common.MessageConten" +
+      "t\"}\n\007C2GResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 " +
+      "\001(\t\022\022\n\nmessage_id\030\003 \001(\003\022\020\n\010group_id\030\004 \001(" +
+      "\t\022\023\n\013server_time\030\005 \001(\003\022\020\n\003seq\030\006 \001(\003H\000\210\001\001" +
+      "B\006\n\004_seq\"v\n\tC2GNotify\022\021\n\tsender_id\030\001 \001(\t" +
+      "\022\020\n\010group_id\030\002 \001(\t\022*\n\007message\030\003 \001(\0132\031.im" +
+      ".common.MessageContent\022\020\n\003seq\030\005 \001(\003H\000\210\001\001" +
+      "B\006\n\004_seqB1\n#com.github.moxib.pomelo.prot" +
+      "o.groupB\nGroupProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -3470,7 +3564,7 @@ public final class GroupProto {
     internal_static_im_group_C2GReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_C2GReq_descriptor,
-        new java.lang.String[] { "SenderId", "GroupId", "Message", });
+        new java.lang.String[] { "SenderId", "GroupId", "MessageId", "Message", });
     internal_static_im_group_C2GResp_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_im_group_C2GResp_fieldAccessorTable = new

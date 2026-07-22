@@ -12,15 +12,15 @@ import "common/common.proto";
 // ============================================================================
 
 message AckReq {
-  repeated uint32 message_ids = 1;  //收到的的消息 ID 列表
-  common.AckType ack_type     = 2;  //ACK 类型：1=已收到，2=已读
+  repeated int64 message_ids = 1;  // 消息 ID 列表 (snowflake 64-bit)
+  common.AckType ack_type    = 2;  // ACK 类型：0=已收到，1=已读
 }
 
 message AckResp {
-  common.AckType ack_type = 1;  //ACK 类型：1=已收到，2=已读
+  common.AckType ack_type = 1;  // ACK 类型：0=已收到，1=已读
 }
 
 message AckNotify {
-  repeated uint32 message_ids = 1;  //  已确认的消息 ID 列表
-  common.AckType ack_type     = 2;  //ACK 类型：1=已收到，2=已读
+  repeated int64 message_ids = 1;  // 已确认的消息 ID 列表 (snowflake 64-bit)
+  common.AckType ack_type    = 2;  // ACK 类型：0=已收到，1=已读
 }

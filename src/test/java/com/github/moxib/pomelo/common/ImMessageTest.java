@@ -124,13 +124,17 @@ public class ImMessageTest {
   @DisplayName("测试魔数验证 - 无效魔数抛出异常")
   void testInvalidMagicNumber() {
     Buffer buffer = Buffer.buffer(1024);
-    buffer.appendInt(0xDEADBEEF); // 错误的魔数
+    // 错误的魔数
+    buffer.appendInt(0xDEADBEEF);
     buffer.appendByte((byte) 1);
     buffer.appendByte((byte) 1);
     buffer.appendByte((byte) 1);
-    buffer.appendInt(0); // messageId length
-    buffer.appendInt(0); // headers count
-    buffer.appendInt(0); // body length
+    // messageId length
+    buffer.appendInt(0);
+    // headers count
+    buffer.appendInt(0);
+    // body length
+    buffer.appendInt(0);
 
     ImMessage message = new ImMessage();
     assertThrows(IllegalArgumentException.class, () -> {
@@ -142,7 +146,8 @@ public class ImMessageTest {
   @DisplayName("测试协议版本验证 - 不支持的版本号抛出异常")
   void testUnsupportedProtocolVersion() {
     ImMessage original = ImMessage.builder()
-        .version((byte) 99) // 不支持的版本号
+        // 不支持的版本号
+        .version((byte) 99)
         .codecId((byte) 1)
         .cmd((byte) 1)
         .messageId("msg-test")

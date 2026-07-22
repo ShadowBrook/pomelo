@@ -498,7 +498,7 @@ public class ProtobufCodecTest {
 
         assertEquals(original.getSenderId(), decoded.getSenderId());
         assertEquals(original.getRecipientId(), decoded.getRecipientId());
-        assertEquals(original.getMessage().getContent(), decoded.getMessage().getContent());
+        assertEquals(original.getMessage().getContent().toStringUtf8(), decoded.getMessage().getContent().toStringUtf8());
         assertEquals(original.getMessage().getMsgType(), decoded.getMessage().getMsgType());
     }
 

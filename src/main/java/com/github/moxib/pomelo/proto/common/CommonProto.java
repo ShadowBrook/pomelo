@@ -190,6 +190,102 @@ public final class CommonProto {
      * <code>CMD_ACK_NOTIFY = 84;</code>
      */
     CMD_ACK_NOTIFY(84),
+    /**
+     * <pre>
+     * 好友关系
+     * </pre>
+     *
+     * <code>CMD_FRIEND_SEARCH_REQ = 96;</code>
+     */
+    CMD_FRIEND_SEARCH_REQ(96),
+    /**
+     * <pre>
+     * S→C 搜索用户响应
+     * </pre>
+     *
+     * <code>CMD_FRIEND_SEARCH_RESP = 97;</code>
+     */
+    CMD_FRIEND_SEARCH_RESP(97),
+    /**
+     * <pre>
+     * C→S 添加好友请求
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ADD_REQ = 98;</code>
+     */
+    CMD_FRIEND_ADD_REQ(98),
+    /**
+     * <pre>
+     * S→C 添加好友响应
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ADD_RESP = 99;</code>
+     */
+    CMD_FRIEND_ADD_RESP(99),
+    /**
+     * <pre>
+     * S→C 好友申请推送
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ADD_NOTIFY = 100;</code>
+     */
+    CMD_FRIEND_ADD_NOTIFY(100),
+    /**
+     * <pre>
+     * C→S 接受好友请求
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ACCEPT_REQ = 101;</code>
+     */
+    CMD_FRIEND_ACCEPT_REQ(101),
+    /**
+     * <pre>
+     * S→C 接受好友响应
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ACCEPT_RESP = 102;</code>
+     */
+    CMD_FRIEND_ACCEPT_RESP(102),
+    /**
+     * <pre>
+     * S→C 接受好友推送
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ACCEPT_NOTIFY = 103;</code>
+     */
+    CMD_FRIEND_ACCEPT_NOTIFY(103),
+    /**
+     * <pre>
+     * C→S 删除好友请求
+     * </pre>
+     *
+     * <code>CMD_FRIEND_DELETE_REQ = 104;</code>
+     */
+    CMD_FRIEND_DELETE_REQ(104),
+    /**
+     * <pre>
+     * S→C 删除好友响应
+     * </pre>
+     *
+     * <code>CMD_FRIEND_DELETE_RESP = 105;</code>
+     */
+    CMD_FRIEND_DELETE_RESP(105),
+    /**
+     * <pre>
+     * S→C 删除好友推送
+     * </pre>
+     *
+     * <code>CMD_FRIEND_DELETE_NOTIFY = 106;</code>
+     */
+    CMD_FRIEND_DELETE_NOTIFY(106),
+    /**
+     * <pre>
+     * S→C 通用错误响应
+     * </pre>
+     *
+     * <code>CMD_ERROR = 65535;</code>
+     */
+    CMD_ERROR(65535),
     UNRECOGNIZED(-1),
     ;
 
@@ -357,6 +453,102 @@ public final class CommonProto {
      * <code>CMD_ACK_NOTIFY = 84;</code>
      */
     public static final int CMD_ACK_NOTIFY_VALUE = 84;
+    /**
+     * <pre>
+     * 好友关系
+     * </pre>
+     *
+     * <code>CMD_FRIEND_SEARCH_REQ = 96;</code>
+     */
+    public static final int CMD_FRIEND_SEARCH_REQ_VALUE = 96;
+    /**
+     * <pre>
+     * S→C 搜索用户响应
+     * </pre>
+     *
+     * <code>CMD_FRIEND_SEARCH_RESP = 97;</code>
+     */
+    public static final int CMD_FRIEND_SEARCH_RESP_VALUE = 97;
+    /**
+     * <pre>
+     * C→S 添加好友请求
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ADD_REQ = 98;</code>
+     */
+    public static final int CMD_FRIEND_ADD_REQ_VALUE = 98;
+    /**
+     * <pre>
+     * S→C 添加好友响应
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ADD_RESP = 99;</code>
+     */
+    public static final int CMD_FRIEND_ADD_RESP_VALUE = 99;
+    /**
+     * <pre>
+     * S→C 好友申请推送
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ADD_NOTIFY = 100;</code>
+     */
+    public static final int CMD_FRIEND_ADD_NOTIFY_VALUE = 100;
+    /**
+     * <pre>
+     * C→S 接受好友请求
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ACCEPT_REQ = 101;</code>
+     */
+    public static final int CMD_FRIEND_ACCEPT_REQ_VALUE = 101;
+    /**
+     * <pre>
+     * S→C 接受好友响应
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ACCEPT_RESP = 102;</code>
+     */
+    public static final int CMD_FRIEND_ACCEPT_RESP_VALUE = 102;
+    /**
+     * <pre>
+     * S→C 接受好友推送
+     * </pre>
+     *
+     * <code>CMD_FRIEND_ACCEPT_NOTIFY = 103;</code>
+     */
+    public static final int CMD_FRIEND_ACCEPT_NOTIFY_VALUE = 103;
+    /**
+     * <pre>
+     * C→S 删除好友请求
+     * </pre>
+     *
+     * <code>CMD_FRIEND_DELETE_REQ = 104;</code>
+     */
+    public static final int CMD_FRIEND_DELETE_REQ_VALUE = 104;
+    /**
+     * <pre>
+     * S→C 删除好友响应
+     * </pre>
+     *
+     * <code>CMD_FRIEND_DELETE_RESP = 105;</code>
+     */
+    public static final int CMD_FRIEND_DELETE_RESP_VALUE = 105;
+    /**
+     * <pre>
+     * S→C 删除好友推送
+     * </pre>
+     *
+     * <code>CMD_FRIEND_DELETE_NOTIFY = 106;</code>
+     */
+    public static final int CMD_FRIEND_DELETE_NOTIFY_VALUE = 106;
+    /**
+     * <pre>
+     * S→C 通用错误响应
+     * </pre>
+     *
+     * <code>CMD_ERROR = 65535;</code>
+     */
+    public static final int CMD_ERROR_VALUE = 65535;
 
 
     public final int getNumber() {
@@ -404,6 +596,18 @@ public final class CommonProto {
         case 82: return CMD_ACK_REQ;
         case 83: return CMD_ACK_RESP;
         case 84: return CMD_ACK_NOTIFY;
+        case 96: return CMD_FRIEND_SEARCH_REQ;
+        case 97: return CMD_FRIEND_SEARCH_RESP;
+        case 98: return CMD_FRIEND_ADD_REQ;
+        case 99: return CMD_FRIEND_ADD_RESP;
+        case 100: return CMD_FRIEND_ADD_NOTIFY;
+        case 101: return CMD_FRIEND_ACCEPT_REQ;
+        case 102: return CMD_FRIEND_ACCEPT_RESP;
+        case 103: return CMD_FRIEND_ACCEPT_NOTIFY;
+        case 104: return CMD_FRIEND_DELETE_REQ;
+        case 105: return CMD_FRIEND_DELETE_RESP;
+        case 106: return CMD_FRIEND_DELETE_NOTIFY;
+        case 65535: return CMD_ERROR;
         default: return null;
       }
     }
@@ -1928,6 +2132,698 @@ java.lang.String defaultValue) {
 
   }
 
+  public interface ErrorBodyOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:im.common.ErrorBody)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <pre>
+     * 错误码
+     * </pre>
+     *
+     * <code>int32 code = 1;</code>
+     * @return The code.
+     */
+    int getCode();
+
+    /**
+     * <pre>
+     * 错误描述
+     * </pre>
+     *
+     * <code>string message = 2;</code>
+     * @return The message.
+     */
+    java.lang.String getMessage();
+    /**
+     * <pre>
+     * 错误描述
+     * </pre>
+     *
+     * <code>string message = 2;</code>
+     * @return The bytes for message.
+     */
+    com.google.protobuf.ByteString
+        getMessageBytes();
+  }
+  /**
+   * <pre>
+   * ============================================================================
+   * 通用错误响应体
+   * ============================================================================
+   * </pre>
+   *
+   * Protobuf type {@code im.common.ErrorBody}
+   */
+  public static final class ErrorBody extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:im.common.ErrorBody)
+      ErrorBodyOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use ErrorBody.newBuilder() to construct.
+    private ErrorBody(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private ErrorBody() {
+      message_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new ErrorBody();
+    }
+
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.github.moxib.pomelo.proto.common.CommonProto.internal_static_im_common_ErrorBody_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.github.moxib.pomelo.proto.common.CommonProto.internal_static_im_common_ErrorBody_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody.class, com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody.Builder.class);
+    }
+
+    public static final int CODE_FIELD_NUMBER = 1;
+    private int code_ = 0;
+    /**
+     * <pre>
+     * 错误码
+     * </pre>
+     *
+     * <code>int32 code = 1;</code>
+     * @return The code.
+     */
+    @java.lang.Override
+    public int getCode() {
+      return code_;
+    }
+
+    public static final int MESSAGE_FIELD_NUMBER = 2;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object message_ = "";
+    /**
+     * <pre>
+     * 错误描述
+     * </pre>
+     *
+     * <code>string message = 2;</code>
+     * @return The message.
+     */
+    @java.lang.Override
+    public java.lang.String getMessage() {
+      java.lang.Object ref = message_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        message_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * 错误描述
+     * </pre>
+     *
+     * <code>string message = 2;</code>
+     * @return The bytes for message.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getMessageBytes() {
+      java.lang.Object ref = message_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        message_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (code_ != 0) {
+        output.writeInt32(1, code_);
+      }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, message_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (code_ != 0) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(1, code_);
+      }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, message_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody)) {
+        return super.equals(obj);
+      }
+      com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody other = (com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody) obj;
+
+      if (getCode()
+          != other.getCode()) return false;
+      if (!getMessage()
+          .equals(other.getMessage())) return false;
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + CODE_FIELD_NUMBER;
+      hash = (53 * hash) + getCode();
+      hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
+      hash = (53 * hash) + getMessage().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     * ============================================================================
+     * 通用错误响应体
+     * ============================================================================
+     * </pre>
+     *
+     * Protobuf type {@code im.common.ErrorBody}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:im.common.ErrorBody)
+        com.github.moxib.pomelo.proto.common.CommonProto.ErrorBodyOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.github.moxib.pomelo.proto.common.CommonProto.internal_static_im_common_ErrorBody_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.github.moxib.pomelo.proto.common.CommonProto.internal_static_im_common_ErrorBody_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody.class, com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody.Builder.class);
+      }
+
+      // Construct using com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody.newBuilder()
+      private Builder() {
+
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        bitField0_ = 0;
+        code_ = 0;
+        message_ = "";
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.github.moxib.pomelo.proto.common.CommonProto.internal_static_im_common_ErrorBody_descriptor;
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody getDefaultInstanceForType() {
+        return com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody build() {
+        com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody buildPartial() {
+        com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody result = new com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody(this);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartial0(com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody result) {
+        int from_bitField0_ = bitField0_;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.code_ = code_;
+        }
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          result.message_ = message_;
+        }
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody) {
+          return mergeFrom((com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody other) {
+        if (other == com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody.getDefaultInstance()) return this;
+        if (other.getCode() != 0) {
+          setCode(other.getCode());
+        }
+        if (!other.getMessage().isEmpty()) {
+          message_ = other.message_;
+          bitField0_ |= 0x00000002;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 8: {
+                code_ = input.readInt32();
+                bitField0_ |= 0x00000001;
+                break;
+              } // case 8
+              case 18: {
+                message_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000002;
+                break;
+              } // case 18
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.unwrapIOException();
+        } finally {
+          onChanged();
+        } // finally
+        return this;
+      }
+      private int bitField0_;
+
+      private int code_ ;
+      /**
+       * <pre>
+       * 错误码
+       * </pre>
+       *
+       * <code>int32 code = 1;</code>
+       * @return The code.
+       */
+      @java.lang.Override
+      public int getCode() {
+        return code_;
+      }
+      /**
+       * <pre>
+       * 错误码
+       * </pre>
+       *
+       * <code>int32 code = 1;</code>
+       * @param value The code to set.
+       * @return This builder for chaining.
+       */
+      public Builder setCode(int value) {
+
+        code_ = value;
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 错误码
+       * </pre>
+       *
+       * <code>int32 code = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearCode() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        code_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object message_ = "";
+      /**
+       * <pre>
+       * 错误描述
+       * </pre>
+       *
+       * <code>string message = 2;</code>
+       * @return The message.
+       */
+      public java.lang.String getMessage() {
+        java.lang.Object ref = message_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          message_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 错误描述
+       * </pre>
+       *
+       * <code>string message = 2;</code>
+       * @return The bytes for message.
+       */
+      public com.google.protobuf.ByteString
+          getMessageBytes() {
+        java.lang.Object ref = message_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          message_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 错误描述
+       * </pre>
+       *
+       * <code>string message = 2;</code>
+       * @param value The message to set.
+       * @return This builder for chaining.
+       */
+      public Builder setMessage(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        message_ = value;
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 错误描述
+       * </pre>
+       *
+       * <code>string message = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearMessage() {
+        message_ = getDefaultInstance().getMessage();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 错误描述
+       * </pre>
+       *
+       * <code>string message = 2;</code>
+       * @param value The bytes for message to set.
+       * @return This builder for chaining.
+       */
+      public Builder setMessageBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        message_ = value;
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:im.common.ErrorBody)
+    }
+
+    // @@protoc_insertion_point(class_scope:im.common.ErrorBody)
+    private static final com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody();
+    }
+
+    public static com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<ErrorBody>
+        PARSER = new com.google.protobuf.AbstractParser<ErrorBody>() {
+      @java.lang.Override
+      public ErrorBody parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
+      }
+    };
+
+    public static com.google.protobuf.Parser<ErrorBody> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<ErrorBody> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.github.moxib.pomelo.proto.common.CommonProto.ErrorBody getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_im_common_MessageContent_descriptor;
   private static final 
@@ -1938,6 +2834,11 @@ java.lang.String defaultValue) {
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_im_common_MessageContent_ExtEntry_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_im_common_ErrorBody_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_im_common_ErrorBody_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -1952,23 +2853,32 @@ java.lang.String defaultValue) {
       "n.MsgType\022\017\n\007content\030\002 \001(\014\022\021\n\ttimestamp\030" +
       "\003 \001(\003\022/\n\003ext\030\004 \003(\0132\".im.common.MessageCo" +
       "ntent.ExtEntry\032*\n\010ExtEntry\022\013\n\003key\030\001 \001(\t\022" +
-      "\r\n\005value\030\002 \001(\t:\0028\001*\204\003\n\003Cmd\022\017\n\013CMD_UNKNOW" +
-      "N\020\000\022\020\n\014CMD_AUTH_REQ\020\001\022\021\n\rCMD_AUTH_RESP\020\002" +
-      "\022\022\n\016CMD_LOGOUT_REQ\020\003\022\023\n\017CMD_LOGOUT_RESP\020" +
-      "\004\022\017\n\013CMD_C2C_REQ\020\020\022\020\n\014CMD_C2C_RESP\020\021\022\022\n\016" +
-      "CMD_C2C_NOTIFY\020\022\022\017\n\013CMD_C2G_REQ\020 \022\020\n\014CMD" +
-      "_C2G_RESP\020!\022\022\n\016CMD_C2G_NOTIFY\020\"\022\020\n\014CMD_P" +
-      "ULL_REQ\0200\022\021\n\rCMD_PULL_RESP\0201\022\020\n\014CMD_CTRL" +
-      "_REQ\020@\022\021\n\rCMD_CTRL_RESP\020A\022\023\n\017CMD_CTRL_NO" +
-      "TIFY\020B\022\014\n\010CMD_PING\020P\022\014\n\010CMD_PONG\020Q\022\017\n\013CM" +
-      "D_ACK_REQ\020R\022\020\n\014CMD_ACK_RESP\020S\022\022\n\016CMD_ACK" +
-      "_NOTIFY\020T*\252\001\n\007MsgType\022\024\n\020MSG_TYPE_UNKNOW" +
-      "N\020\000\022\021\n\rMSG_TYPE_TEXT\020\001\022\022\n\016MSG_TYPE_IMAGE" +
-      "\020\002\022\022\n\016MSG_TYPE_VOICE\020\003\022\022\n\016MSG_TYPE_VIDEO" +
-      "\020\004\022\021\n\rMSG_TYPE_FILE\020\005\022\022\n\016MSG_TYPE_EMOJI\020" +
-      "\006\022\023\n\017MSG_TYPE_SYSTEM\020\007*!\n\007AckType\022\014\n\010REC" +
-      "EIVED\020\000\022\010\n\004SEEN\020\001B3\n$com.github.moxib.po" +
-      "melo.proto.commonB\013CommonProtob\006proto3"
+      "\r\n\005value\030\002 \001(\t:\0028\001\"*\n\tErrorBody\022\014\n\004code\030" +
+      "\001 \001(\005\022\017\n\007message\030\002 \001(\t*\302\005\n\003Cmd\022\017\n\013CMD_UN" +
+      "KNOWN\020\000\022\020\n\014CMD_AUTH_REQ\020\001\022\021\n\rCMD_AUTH_RE" +
+      "SP\020\002\022\022\n\016CMD_LOGOUT_REQ\020\003\022\023\n\017CMD_LOGOUT_R" +
+      "ESP\020\004\022\017\n\013CMD_C2C_REQ\020\020\022\020\n\014CMD_C2C_RESP\020\021" +
+      "\022\022\n\016CMD_C2C_NOTIFY\020\022\022\017\n\013CMD_C2G_REQ\020 \022\020\n" +
+      "\014CMD_C2G_RESP\020!\022\022\n\016CMD_C2G_NOTIFY\020\"\022\020\n\014C" +
+      "MD_PULL_REQ\0200\022\021\n\rCMD_PULL_RESP\0201\022\020\n\014CMD_" +
+      "CTRL_REQ\020@\022\021\n\rCMD_CTRL_RESP\020A\022\023\n\017CMD_CTR" +
+      "L_NOTIFY\020B\022\014\n\010CMD_PING\020P\022\014\n\010CMD_PONG\020Q\022\017" +
+      "\n\013CMD_ACK_REQ\020R\022\020\n\014CMD_ACK_RESP\020S\022\022\n\016CMD" +
+      "_ACK_NOTIFY\020T\022\031\n\025CMD_FRIEND_SEARCH_REQ\020`" +
+      "\022\032\n\026CMD_FRIEND_SEARCH_RESP\020a\022\026\n\022CMD_FRIE" +
+      "ND_ADD_REQ\020b\022\027\n\023CMD_FRIEND_ADD_RESP\020c\022\031\n" +
+      "\025CMD_FRIEND_ADD_NOTIFY\020d\022\031\n\025CMD_FRIEND_A" +
+      "CCEPT_REQ\020e\022\032\n\026CMD_FRIEND_ACCEPT_RESP\020f\022" +
+      "\034\n\030CMD_FRIEND_ACCEPT_NOTIFY\020g\022\031\n\025CMD_FRI" +
+      "END_DELETE_REQ\020h\022\032\n\026CMD_FRIEND_DELETE_RE" +
+      "SP\020i\022\034\n\030CMD_FRIEND_DELETE_NOTIFY\020j\022\017\n\tCM" +
+      "D_ERROR\020\377\377\003*\252\001\n\007MsgType\022\024\n\020MSG_TYPE_UNKN" +
+      "OWN\020\000\022\021\n\rMSG_TYPE_TEXT\020\001\022\022\n\016MSG_TYPE_IMA" +
+      "GE\020\002\022\022\n\016MSG_TYPE_VOICE\020\003\022\022\n\016MSG_TYPE_VID" +
+      "EO\020\004\022\021\n\rMSG_TYPE_FILE\020\005\022\022\n\016MSG_TYPE_EMOJ" +
+      "I\020\006\022\023\n\017MSG_TYPE_SYSTEM\020\007*!\n\007AckType\022\014\n\010R" +
+      "ECEIVED\020\000\022\010\n\004SEEN\020\001B3\n$com.github.moxib." +
+      "pomelo.proto.commonB\013CommonProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -1986,6 +2896,12 @@ java.lang.String defaultValue) {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_common_MessageContent_ExtEntry_descriptor,
         new java.lang.String[] { "Key", "Value", });
+    internal_static_im_common_ErrorBody_descriptor =
+      getDescriptor().getMessageTypes().get(1);
+    internal_static_im_common_ErrorBody_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_im_common_ErrorBody_descriptor,
+        new java.lang.String[] { "Code", "Message", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

@@ -3,6 +3,7 @@ package com.github.moxib.pomelo.utils;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
+import io.vertx.redis.client.Redis;
 import io.vertx.redis.client.RedisOptions;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,7 +59,9 @@ class RedisIdGeneratorTest {
 
         RedisOptions options = new RedisOptions()
                 .setConnectionString(connectionString);
-        idGenerator = new RedisIdGenerator(vertx, options, "test:seq:id:generator");
+        Redis redis = Redis.createClient(vertx, options);
+
+        idGenerator = new RedisIdGenerator(vertx, redis, "test:seq:id:generator");
     }
 
     @AfterEach
@@ -236,7 +239,8 @@ class RedisIdGeneratorTest {
     @DisplayName("测试跨批次 ID 生成")
     void testCrossBatch(VertxTestContext testContext) throws Exception {
         int allocationSize = 100;
-        int totalIds = 500; // 超过 5 个批次
+        // 超过 5 个批次
+        int totalIds = 500;
 
         CountDownLatch initLatch = new CountDownLatch(1);
         AtomicBoolean initSuccess = new AtomicBoolean(false);

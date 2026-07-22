@@ -1,8 +1,9 @@
 /**
- * Pomelo IM Client SDK v0.2
+ * Pomelo IM Client SDK v0.3
  *
  * 特性：
  * - WebSocket 二进制线协议（与服务端 ImMessage 兼容）
+ * - 双 codec 支持：JSON（默认）+ Protobuf（connect 时选 codec: 'protobuf'）
  * - 发送队列 + 指数退避重试（5s→10s→20s，最多 3 次）
  * - 消息状态追踪（pending → sending → sent → delivered → seen → failed）
  * - ACK 自动机（收到消息自动回 RECEIVED，200ms 批量聚合）
@@ -11,17 +12,19 @@
  *
  * 用法：
  *   const sdk = new ImSDK({ url: 'ws://localhost:9001' });
- *   await sdk.connect({ userId: 'alice', token: 'test-token' });
- *   const msgId = sdk.sendMessage({ recipientId: 'bob', msgType: 1, content: 'Hello!' });
- *   sdk.onMessage((msg) => console.log('新消息:', msg));
- *   sdk.onStatusChange((msg) => updateUI(msg));
+ *   await sdk.connect({ userId: 'alice', userName: 'Alice', codec: 'protobuf' });
+ *   sdk.onMessage((msg) => console.log(msg));
  */
+import { im as proto } from './proto.js';
+
 class ImSDK {
 
   constructor(options) {
     this.url = options.url || 'ws://localhost:9001';
     this.userId = null;
+    this.userName = null;
     this.token = null;
+    this.codec = options.codec || 'json'; // 'json' | 'protobuf'
 
     // --- Connection ---
     this.ws = null;
@@ -51,11 +54,15 @@ class ImSDK {
 
     // --- Event listeners ---
     this._listeners = {
-      message: [],       // 收到新消息 (msg)
-      connect: [],       // 连接建立
-      disconnect: [],    // 连接断开 ({ code, reason })
-      error: [],         // 错误 (Error)
-      statusChange: [],  // 消息状态变化 (msg)
+      message: [],
+      connect: [],
+      disconnect: [],
+      error: [],
+      statusChange: [],
+      friendRequest: [],
+      friendAccepted: [],
+      friendDeleted: [],
+      searchResult: [],
     };
 
     // --- Protocol constants ---
@@ -71,6 +78,10 @@ class ImSDK {
       PULL_REQ:   0x0030, PULL_RESP:   0x0031,
       PING:       0x0050, PONG:        0x0051,
       ACK_REQ:    0x0052, ACK_RESP:    0x0053, ACK_NOTIFY: 0x0054,
+      FRIEND_SEARCH_REQ: 0x0060, FRIEND_SEARCH_RESP: 0x0061,
+      FRIEND_ADD_REQ:    0x0062, FRIEND_ADD_RESP: 0x0063, FRIEND_ADD_NOTIFY: 0x0064,
+      FRIEND_ACCEPT_REQ: 0x0065, FRIEND_ACCEPT_RESP: 0x0066, FRIEND_ACCEPT_NOTIFY: 0x0067,
+      FRIEND_DELETE_REQ: 0x0068, FRIEND_DELETE_RESP: 0x0069, FRIEND_DELETE_NOTIFY: 0x006A,
     };
 
     this.AckType = { RECEIVED: 0, SEEN: 1 };
@@ -83,7 +94,9 @@ class ImSDK {
   /** 连接 */
   async connect(auth) {
     this.userId = auth.userId;
+    this.userName = auth.userName || auth.userId;
     this.token = auth.token || 'test-token';
+    if (auth.codec === 'protobuf') this.codec = 'protobuf';
 
     return new Promise((resolve, reject) => {
       try {
@@ -159,6 +172,37 @@ class ImSDK {
     this._sendAck(messageIds, this.AckType.SEEN);
   }
 
+  /** 搜索用户 */
+  searchUsers(keyword) {
+    if (!this.connected) throw new Error('Not connected');
+    const buf = this._encodeMessage(this.CMD.FRIEND_SEARCH_REQ, 'search-' + Date.now(), { keyword });
+    this.ws.send(buf);
+  }
+
+  /** 添加好友 */
+  addFriend(friendId) {
+    if (!this.connected) throw new Error('Not connected');
+    const body = { userId: this.userId, friendId };
+    const buf = this._encodeMessage(this.CMD.FRIEND_ADD_REQ, 'add-' + Date.now(), body);
+    this.ws.send(buf);
+  }
+
+  /** 接受好友申请 */
+  acceptFriend(friendId) {
+    if (!this.connected) throw new Error('Not connected');
+    const body = { userId: this.userId, friendId };
+    const buf = this._encodeMessage(this.CMD.FRIEND_ACCEPT_REQ, 'accept-' + Date.now(), body);
+    this.ws.send(buf);
+  }
+
+  /** 删除好友 */
+  deleteFriend(friendId) {
+    if (!this.connected) throw new Error('Not connected');
+    const body = { userId: this.userId, friendId };
+    const buf = this._encodeMessage(this.CMD.FRIEND_DELETE_REQ, 'delete-' + Date.now(), body);
+    this.ws.send(buf);
+  }
+
   /** 注册事件监听 */
   on(event, fn) {
     if (this._listeners[event]) this._listeners[event].push(fn);
@@ -170,6 +214,18 @@ class ImSDK {
 
   /** 消息状态变化回调 */
   onStatusChange(fn) { return this.on('statusChange', fn); }
+
+  /** 收到好友申请 */
+  onFriendRequest(fn) { return this.on('friendRequest', fn); }
+
+  /** 好友申请被接受 */
+  onFriendAccepted(fn) { return this.on('friendAccepted', fn); }
+
+  /** 被好友删除 */
+  onFriendDeleted(fn) { return this.on('friendDeleted', fn); }
+
+  /** 搜索结果回调 */
+  onSearchResult(fn) { return this.on('searchResult', fn); }
 
   // ================================================================
   // Send Queue (client-side)
@@ -187,6 +243,7 @@ class ImSDK {
     this.pending.set(String(msg.id), msg);
 
     const body = {
+      messageId: msg.id,
       senderId: this.userId,
       recipientId: msg.recipientId,
       message: { msgType: msg.msgType, content: msg.content }
@@ -262,6 +319,7 @@ class ImSDK {
       id: raw.id,
       senderId: raw.senderId,
       recipientId: raw.recipientId,
+      conversationId: raw.conversationId,
       msgType: raw.message ? raw.message.msgType : raw.msgType,
       content: raw.message ? raw.message.content : raw.content,
       seq: raw.seq,
@@ -326,6 +384,7 @@ class ImSDK {
     const body = {
       token: this.token,
       userId: this.userId,
+      userName: this.userName,
       deviceId: this.deviceId || 'web',
       platform: this.platform || 'web',
       appVersion: this.appVersion || '1.0.0'
@@ -370,50 +429,59 @@ class ImSDK {
   // ================================================================
 
   _encodeMessage(cmd, messageId, body) {
+    const isPb = this.codec === 'protobuf';
     const te = new TextEncoder();
-    const bodyJson = body ? te.encode(JSON.stringify(body)) : new Uint8Array(0);
+
+    // Encode body
+    let bodyBytes;
+    if (body == null) {
+      bodyBytes = new Uint8Array(0);
+    } else if (isPb) {
+      const ProtoType = this._getProtoType(cmd);
+      if (ProtoType) {
+        const err = ProtoType.verify(body);
+        if (err) throw new Error('Proto verify failed for cmd 0x' + cmd.toString(16) + ': ' + err);
+        bodyBytes = ProtoType.encode(ProtoType.create(body)).finish();
+      } else {
+        bodyBytes = te.encode(JSON.stringify(body)); // fallback
+      }
+    } else {
+      bodyBytes = te.encode(JSON.stringify(body));
+    }
+
     const msgIdBytes = te.encode(messageId);
-
-    // varHeaders: include userId for auth
     const hdrEntries = this.userId ? { userId: this.userId } : {};
-    const hdrJson = te.encode(JSON.stringify(hdrEntries));
 
-    // Calculate total size
-    let hdrSize = 4; // header count
+    let hdrSize = 4;
     for (const [k, v] of Object.entries(hdrEntries)) {
       hdrSize += 4 + te.encode(k).length + 4 + te.encode(v).length;
     }
 
-    const size = 4 + 1 + 1 + 4 + 4 + msgIdBytes.length + hdrSize + 4 + bodyJson.length;
+    const size = 4 + 1 + 1 + 4 + 4 + msgIdBytes.length + hdrSize + 4 + bodyBytes.length;
     const buf = new ArrayBuffer(size + 4);
     const v = new DataView(buf);
     const bytes = new Uint8Array(buf);
     let p = 0;
 
-    v.setInt32(p, size, false); p += 4;                        // total length
-    v.setInt32(p, this.MAGIC, false); p += 4;                  // magic "PMEL"
-    v.setUint8(p, this.VERSION); p += 1;                       // version
-    v.setUint8(p, this.CODEC_JSON); p += 1;                    // codecId=JSON
-    v.setInt32(p, cmd, false); p += 4;                         // cmd
+    v.setInt32(p, size, false); p += 4;
+    v.setInt32(p, this.MAGIC, false); p += 4;
+    v.setUint8(p, this.VERSION); p += 1;
+    v.setUint8(p, isPb ? this.CODEC_PROTOBUF : this.CODEC_JSON); p += 1;
+    v.setInt32(p, cmd, false); p += 4;
 
-    // messageId
     v.setInt32(p, msgIdBytes.length, false); p += 4;
     bytes.set(msgIdBytes, p); p += msgIdBytes.length;
 
-    // varHeaders
     const hdrKeys = Object.entries(hdrEntries);
     v.setInt32(p, hdrKeys.length, false); p += 4;
     for (const [k, val] of hdrKeys) {
       const kb = te.encode(k), vb = te.encode(val);
-      v.setInt32(p, kb.length, false); p += 4;
-      bytes.set(kb, p); p += kb.length;
-      v.setInt32(p, vb.length, false); p += 4;
-      bytes.set(vb, p); p += vb.length;
+      v.setInt32(p, kb.length, false); p += 4; bytes.set(kb, p); p += kb.length;
+      v.setInt32(p, vb.length, false); p += 4; bytes.set(vb, p); p += vb.length;
     }
 
-    // body
-    v.setInt32(p, bodyJson.length, false); p += 4;
-    bytes.set(bodyJson, p);
+    v.setInt32(p, bodyBytes.length, false); p += 4;
+    bytes.set(bodyBytes, p);
 
     return buf;
   }
@@ -421,7 +489,7 @@ class ImSDK {
   _decodeMessage(buf) {
     const v = new DataView(buf);
     const td = new TextDecoder();
-    let p = 4; // skip total length
+    let p = 4;
 
     const magic = v.getInt32(p, false); p += 4;
     if (magic !== this.MAGIC) throw new Error('Invalid magic: ' + magic.toString(16));
@@ -446,8 +514,15 @@ class ImSDK {
     const bodyLen = v.getInt32(p, false); p += 4;
     let body = null;
     if (bodyLen > 0) {
-      const raw = td.decode(new Uint8Array(buf, p, bodyLen));
-      try { body = JSON.parse(raw); } catch (e) { body = raw; }
+      const raw = new Uint8Array(buf, p, bodyLen);
+      if (codecId === this.CODEC_PROTOBUF) {
+        const ProtoType = this._getProtoType(cmd);
+        if (ProtoType) {
+          try { body = ProtoType.toObject(ProtoType.decode(raw), { longs: Number, enums: String }); } catch (e) { body = null; }
+        }
+      } else {
+        try { body = JSON.parse(td.decode(raw)); } catch (e) { body = td.decode(raw); }
+      }
     }
 
     return { cmd, messageId, body };
@@ -476,7 +551,9 @@ class ImSDK {
           break;
 
         case this.CMD.AUTH_RESP:
-          console.log('[ImSDK] 认证成功');
+          if (msg.body && msg.body.userId) this.userId = msg.body.userId;
+          if (msg.body && msg.body.userName) this.userName = msg.body.userName;
+          console.log('[ImSDK] 认证成功 userId=' + this.userId);
           break;
 
         case this.CMD.ACK_RESP:
@@ -484,7 +561,34 @@ class ImSDK {
           break;
 
         case this.CMD.PONG:
-          // heartbeat ok
+          break;
+
+        case this.CMD.FRIEND_SEARCH_RESP:
+          this._emit('searchResult', msg.body);
+          break;
+
+        case this.CMD.FRIEND_ADD_RESP:
+          console.log('[ImSDK] 好友申请已发送:', msg.body);
+          break;
+
+        case this.CMD.FRIEND_ADD_NOTIFY:
+          this._emit('friendRequest', msg.body);
+          break;
+
+        case this.CMD.FRIEND_ACCEPT_RESP:
+          console.log('[ImSDK] 好友已添加:', msg.body);
+          break;
+
+        case this.CMD.FRIEND_ACCEPT_NOTIFY:
+          this._emit('friendAccepted', msg.body);
+          break;
+
+        case this.CMD.FRIEND_DELETE_RESP:
+          console.log('[ImSDK] 好友已删除:', msg.body);
+          break;
+
+        case this.CMD.FRIEND_DELETE_NOTIFY:
+          this._emit('friendDeleted', msg.body);
           break;
 
         default:
@@ -512,9 +616,40 @@ class ImSDK {
       });
     }
   }
+
+  /** cmd → Protobuf type mapping */
+  _getProtoType(cmd) {
+    const P = proto;
+    switch (cmd) {
+      case this.CMD.AUTH_REQ:          return P.auth.AuthReq;
+      case this.CMD.AUTH_RESP:         return P.auth.AuthResp;
+      case this.CMD.LOGOUT_REQ:        return P.auth.LogoutReq;
+      case this.CMD.LOGOUT_RESP:       return P.auth.LogoutResp;
+      case this.CMD.C2C_REQ:           return P.chat.C2CReq;
+      case this.CMD.C2C_RESP:          return P.chat.C2CResp;
+      case this.CMD.C2C_NOTIFY:        return P.chat.C2CNotify;
+      case this.CMD.PULL_REQ:          return P.pull.PullReq;
+      case this.CMD.PULL_RESP:         return P.pull.PullResp;
+      case this.CMD.ACK_REQ:           return P.ack.AckReq;
+      case this.CMD.ACK_RESP:          return P.ack.AckResp;
+      case this.CMD.ACK_NOTIFY:        return P.ack.AckNotify;
+      case this.CMD.PING:              return P.heartbeat.Ping;
+      case this.CMD.PONG:              return P.heartbeat.Pong;
+      case this.CMD.FRIEND_SEARCH_REQ: return P.relation.SearchUserReq;
+      case this.CMD.FRIEND_SEARCH_RESP:return P.relation.SearchUserResp;
+      case this.CMD.FRIEND_ADD_REQ:    return P.relation.FriendAddReq;
+      case this.CMD.FRIEND_ADD_RESP:   return P.relation.FriendAddResp;
+      case this.CMD.FRIEND_ADD_NOTIFY: return P.relation.FriendAddNotify;
+      case this.CMD.FRIEND_ACCEPT_REQ: return P.relation.FriendAcceptReq;
+      case this.CMD.FRIEND_ACCEPT_RESP:return P.relation.FriendAcceptResp;
+      case this.CMD.FRIEND_ACCEPT_NOTIFY:return P.relation.FriendAcceptNotify;
+      case this.CMD.FRIEND_DELETE_REQ: return P.relation.FriendDeleteReq;
+      case this.CMD.FRIEND_DELETE_RESP:return P.relation.FriendDeleteResp;
+      case this.CMD.FRIEND_DELETE_NOTIFY:return P.relation.FriendDeleteNotify;
+      default: return null;
+    }
+  }
 }
 
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ImSDK };
-}
+// Export
+export { ImSDK };
