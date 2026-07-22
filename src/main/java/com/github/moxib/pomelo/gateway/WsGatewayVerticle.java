@@ -4,11 +4,13 @@ import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.gateway.handler.Connection;
 import com.github.moxib.pomelo.gateway.handler.MessageDispatcher;
 import com.github.moxib.pomelo.gateway.handler.SessionRegistry;
+import com.github.moxib.pomelo.service.RedisOnlineStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.ServerWebSocket;
+import java.net.SocketException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,11 +30,11 @@ public class WsGatewayVerticle extends VerticleBase {
   public Future<?> start() throws Exception {
     dispatcher = new MessageDispatcher(vertx);
 
-    return dispatcher.start()
-      .compose(v -> {
-        wsServer = vertx.createHttpServer();
-        return wsServer.webSocketHandler(getServerHandler()).listen(WS_PORT);
-      })
+    // 后台初始化 dispatcher（Redis 连接等），不阻塞服务器启动
+    dispatcher.start();
+
+    wsServer = vertx.createHttpServer();
+    return wsServer.webSocketHandler(getServerHandler()).listen(WS_PORT)
       .onSuccess(ar -> LOG.info("WebSocket 服务器已启动，监听端口：{}", WS_PORT))
       .onFailure(throwable -> LOG.error("WebSocket 服务器启动失败", throwable));
   }
@@ -56,14 +58,26 @@ public class WsGatewayVerticle extends VerticleBase {
 
       ws.closeHandler(closed -> {
         LOG.info("客户端断开连接：{}", ws.remoteAddress());
-        sessionRegistry.unregisterByConnection(conn);
+        String userId = sessionRegistry.unregisterByConnection(conn);
+        updateUserOffline(userId);
       });
 
       ws.exceptionHandler(throwable -> {
-        LOG.error("连接异常：{}", ws.remoteAddress(), throwable);
-        sessionRegistry.unregisterByConnection(conn);
+        if (throwable instanceof SocketException || throwable.getMessage().contains("Connection reset")) {
+          LOG.debug("客户端连接重置：{}", ws.remoteAddress());
+        } else {
+          LOG.error("连接异常：{}", ws.remoteAddress(), throwable);
+        }
+        String userId = sessionRegistry.unregisterByConnection(conn);
+        updateUserOffline(userId);
         ws.close();
       });
     };
+  }
+
+  /** Redis 标记用户离线 */
+  private void updateUserOffline(String userId) {
+    if (userId == null) return;
+    RedisOnlineStatus.get(vertx).setOffline(userId);
   }
 }

@@ -98,6 +98,11 @@
       <artifactId>redisson</artifactId>
       <version>3.27.2</version>
     </dependency>
+    <dependency>
+      <groupId>at.favre.lib</groupId>
+      <artifactId>bcrypt</artifactId>
+      <version>0.10.2</version>
+    </dependency>
 
     <dependency>
       <groupId>io.vertx</groupId>
@@ -157,6 +162,7 @@
         <version>${maven-compiler-plugin.version}</version>
         <configuration>
           <release>17</release>
+          <parameters>true</parameters>
         </configuration>
       </plugin>
       <plugin>

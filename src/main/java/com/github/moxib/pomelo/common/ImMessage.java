@@ -29,8 +29,8 @@ public class ImMessage {
   private byte[] body;
   // 协议版本常量
   public static final byte WIRE_PROTOCOL_VERSION = 1;
-  // 魔数常量
-  public static final int MAGIC_NUMBER = 0x504D454C; // "PMEL"
+  // 魔数常量 — "PMEL"
+  public static final int MAGIC_NUMBER = 0x504D454C;
 
   /**
    * 编码到 Buffer

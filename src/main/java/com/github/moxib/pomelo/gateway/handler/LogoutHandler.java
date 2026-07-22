@@ -1,20 +1,23 @@
 package com.github.moxib.pomelo.gateway.handler;
 
 import com.github.moxib.pomelo.codec.CodecRegistry;
+import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.proto.auth.AuthProto;
 import com.github.moxib.pomelo.service.MessageRepository;
 import com.github.moxib.pomelo.service.MessageService;
+import com.github.moxib.pomelo.service.RedisOnlineStatus;
+import com.github.moxib.pomelo.service.TokenService;
 import com.github.moxib.pomelo.utils.IdGenerator;
 import io.vertx.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
-import java.util.Map;
+import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.CMD_LOGOUT_RESP_VALUE;
 
 /**
  * 登出消息处理器。
- * 处理客户端登出请求，清理 Session。
+ * 清理 Session、Redis 在线状态，并撤销 JWT token。
  */
 public class LogoutHandler extends AbstractMessageHandler {
 
@@ -28,31 +31,47 @@ public class LogoutHandler extends AbstractMessageHandler {
 
   @Override
   public void handle(Connection connection, ImMessage message) {
-    String userId = getBodyAsString(message);
-    Map<String, String> headers = message.getVarHeaders();
-    if (headers != null && headers.containsKey("userId")) {
-      userId = headers.get("userId");
+    String userId = getUserIdFromHeaders(message);
+    if (userId == null) {
+      userId = getBodyAsString(message);
     }
 
     LOG.info("收到登出请求，userId: {}", userId);
 
-    // 注销用户会话
+    // 先获取 token（必须在 unregister 之前，因为 unregister 会清除 session）
+    String token;
     if (userId != null && !userId.isEmpty()) {
-      sessionRegistry.unregister(userId);
+      token = sessionRegistry.getTokenByUserId(userId);
     } else {
-      sessionRegistry.unregisterByConnection(connection);
+      token = sessionRegistry.getTokenByConnection(connection);
     }
 
-    ImMessage response = ImMessage.builder()
-      .magic(ImMessage.MAGIC_NUMBER)
-      .version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId(message.getCodecId())
-      .cmd(0x04)
-      .messageId(message.getMessageId())
-      .varHeaders(Map.of("status", "success"))
-      .body("登出成功".getBytes(StandardCharsets.UTF_8))
-      .build();
+    // 注销用户会话
+    String removedUserId;
+    if (userId != null && !userId.isEmpty()) {
+      removedUserId = sessionRegistry.unregisterByUserId(userId);
+    } else {
+      removedUserId = sessionRegistry.unregisterByConnection(connection);
+    }
 
+    // Redis 标记离线
+    if (removedUserId != null) {
+      RedisOnlineStatus.get(vertx).setOffline(removedUserId);
+    }
+
+    // 撤销 JWT token
+    if (token != null && !token.isEmpty() && !"test-token".equals(token)) {
+      TokenService.get(vertx).blacklist(token);
+      LOG.info("Token 已加入黑名单");
+    }
+
+    byte codecId = message.getCodecId();
+    Object respBody = codecId == ProtobufCodec.CODEC_ID
+      ? AuthProto.LogoutResp.newBuilder().setCode(0).setMessage("登出成功").build()
+      : jsonBody().put("code", 0).put("message", "登出成功");
+
+    ImMessage response = buildResponse(message, CMD_LOGOUT_RESP_VALUE, respBody);
+    response.getVarHeaders().put("status", "success");
     sendResponse(connection, response);
   }
 }

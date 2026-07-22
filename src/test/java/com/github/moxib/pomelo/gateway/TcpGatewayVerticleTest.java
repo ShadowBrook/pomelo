@@ -100,7 +100,8 @@ public class TcpGatewayVerticleTest {
         ImMessage heartbeatRequest = ImMessage.builder()
           .version((byte) 1)
           .codecId((byte) 1)
-          .cmd((byte) 0x01) // 心跳 cmd
+          // 心跳 cmd
+          .cmd((byte) 0x01)
           .messageId("heartbeat-001")
           .body("ping".getBytes(StandardCharsets.UTF_8))
           .build();
@@ -155,7 +156,8 @@ public class TcpGatewayVerticleTest {
         ImMessage loginRequest = ImMessage.builder()
           .version((byte) 1)
           .codecId((byte) 1)
-          .cmd((byte) 0x02) // 登录 cmd
+          // 登录 cmd
+          .cmd((byte) 0x02)
           .messageId("login-001")
           .body("{\"username\":\"test\",\"password\":\"123456\"}".getBytes(StandardCharsets.UTF_8))
           .build();
@@ -207,7 +209,8 @@ public class TcpGatewayVerticleTest {
         ImMessage chatRequest = ImMessage.builder()
           .version((byte) 1)
           .codecId((byte) 1)
-          .cmd((byte) 0x10) // 聊天消息 cmd
+          // 聊天消息 cmd
+          .cmd((byte) 0x10)
           .messageId("chat-001")
           .body("你好，这是一条聊天消息".getBytes(StandardCharsets.UTF_8))
           .build();
@@ -259,7 +262,8 @@ public class TcpGatewayVerticleTest {
         ImMessage unknownRequest = ImMessage.builder()
           .version((byte) 1)
           .codecId((byte) 1)
-          .cmd((byte) 0x99) // 未知的 cmd
+          // 未知的 cmd
+          .cmd((byte) 0x99)
           .messageId("unknown-001")
           .build();
 

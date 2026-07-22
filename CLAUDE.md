@@ -71,9 +71,17 @@ Two codec types identified by `codecId`:
 
 - `MessageHandler` — interface: `handle(Connection, ImMessage)`
 - `AbstractMessageHandler` — base class providing `sendResponse()`, `sendErrorResponse()`, `decodeProtobuf()`, `encodeProtobuf()`
-- Concrete handlers: `HeartbeatHandler`, `LoginHandler`, `LogoutHandler`, `C2CMessageHandler`, `C2GMessageHandler`, `CtrlReqHandler`, `AckReqHandler`
+- Concrete handlers: `HeartbeatHandler`, `LoginHandler`, `LogoutHandler`, `C2CMessageHandler`, `C2GMessageHandler`, `CtrlReqHandler`, `AckReqHandler`, `PullMessageHandler`, `FriendHandler`
 
-Most handlers are stubs with `// TODO` markers. Only `HeartbeatHandler`, `CtrlReqHandler`, and `AckReqHandler` decode/encode protobuf bodies; `LoginHandler` and `C2CMessageHandler` work with plain string bodies.
+### PullMessageHandler — Dual Mode
+
+`PullMessageHandler` serves two purposes via the same `PULL_REQ`/`PULL_RESP` command pair:
+
+1. **Offline message pull** (no `peerId` in body): calls `MessageService.pullOfflineMessages()` → `MessageRepository.pullPending()` — fetches messages with `status < 2` for the requesting user, ordered by seq. Used after reconnection.
+
+2. **Conversation history pull** (`peerId` present in body): calls `MessageService.pullConversationHistory(userId, peerId, beforeSeq, limit)` which computes `conversationId = buildConversationId(userId, peerId)` (sorted `userId:peerId`) and delegates to `MessageRepository.pullConversation()`. Queries by `conversation_id` with `seq < beforeSeq ORDER BY seq DESC LIMIT $3`. When `beforeSeq` is 0, treated as `Long.MAX_VALUE` (fetch latest).
+
+Both modes now include the message records in the response body (`{code, message, hasMore, messages: [...]}`) — messages are JSON-serialized with fields: `id`, `senderId`, `recipientId`, `msgType`, `content`, `seq`, `createdAt`.
 
 ### Proto Definitions
 
@@ -99,8 +107,17 @@ Generated Java classes are output to `src/main/java/com/github/moxib/pomelo/prot
 - The `ProtobufCodec` static registry is indexed by cmd value (0–255). New proto message cmd values must fit in this range and be registered both in the `ProtobufCodec` static block and in `MessageDispatcher`.
 - Currently `MainVerticle` only deploys `WsGatewayVerticle`. To use TCP, deploy `TcpGatewayVerticle` instead or alongside it.
 - Ports are configurable via system properties: `gateway.tcp.port` (default 9000), `gateway.websocket.port` (default 9001).
-- Editing `.proto` files requires running `./mvnw protobuf:compile` (or `./mvnw clean compile`) to regenerate Java sources.
+- Editing `.proto` files requires running `./mvnw protobuf:compile` (or `./mvnw clean compile`) to regenerate Java sources **and** `cd src/test/resources && npm run proto` to regenerate proto.js for the JS SDK.
 
 ## Coding Style
 
 - **No fully-qualified class names in code body** — always use imports. For example, write `Map<String, String> headers = ...` not `java.util.Map<String, String> headers = ...`. The only exceptions are generated protobuf code (under `proto/` package) which is auto-generated and should not be manually edited.
+- **No end-of-line comments** — comments must be placed on their own line above the code they describe, never trailing after code on the same line. For example:
+  ```java
+  // GOOD
+  // 下一个可用 ID
+  currentId.set(newStart + 1);
+
+  // BAD
+  currentId.set(newStart + 1); // 下一个可用 ID
+  ```

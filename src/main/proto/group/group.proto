@@ -13,13 +13,14 @@ import "common/common.proto";
 message C2GReq {
     string sender_id                 = 1;  // 发送者用户 ID
     string group_id                  = 2;  // 接受群 ID
-    im.common.MessageContent message = 3;  // 消息内容
+    int64 message_id                 = 3;  // 消息 ID
+    im.common.MessageContent message = 4;  // 消息内容
 }
 
 message C2GResp {
     int32 code         = 1;  // 响应码
     string message     = 2;  // 响应消息
-    uint32 message_id  = 3;  // 消息 ID
+    int64 message_id   = 3;  // 消息 ID
     string group_id    = 4;  // 群 ID
     int64 server_time  = 5;  // 服务器时间
     optional int64 seq = 6;  // 序列号

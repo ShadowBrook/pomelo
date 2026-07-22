@@ -4,6 +4,7 @@ import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.gateway.handler.Connection;
 import com.github.moxib.pomelo.gateway.handler.MessageDispatcher;
 import com.github.moxib.pomelo.gateway.handler.SessionRegistry;
+import com.github.moxib.pomelo.service.RedisOnlineStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.VerticleBase;
@@ -11,6 +12,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.NetServer;
 import io.vertx.core.net.NetSocket;
 import io.vertx.core.parsetools.RecordParser;
+import java.net.SocketException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +37,8 @@ public class TcpGatewayVerticle extends VerticleBase {
     return dispatcher.start()
       .compose(v -> {
         tcpServer = vertx.createNetServer();
-        return tcpServer.connectHandler(getTcpHandler()).listen(TCP_PORT);
+        return tcpServer
+          .connectHandler(getTcpHandler()).listen(TCP_PORT);
       })
       .onSuccess(ar -> LOG.info("TCP Gateway 已启动，监听端口：{}", TCP_PORT))
       .onFailure(throwable -> LOG.error("TCP Gateway 启动失败", throwable));
@@ -76,15 +79,27 @@ public class TcpGatewayVerticle extends VerticleBase {
       socket.handler(parser);
 
       socket.exceptionHandler(throwable -> {
-        LOG.error("TCP 连接异常：{}", socket.remoteAddress(), throwable);
-        sessionRegistry.unregisterByConnection(conn);
+        if (throwable instanceof SocketException || throwable.getMessage().contains("Connection reset")) {
+          LOG.debug("TCP 连接重置：{}", socket.remoteAddress());
+        } else {
+          LOG.error("TCP 连接异常：{}", socket.remoteAddress(), throwable);
+        }
+        String userId = sessionRegistry.unregisterByConnection(conn);
+        updateUserOffline(userId);
         socket.close();
       });
 
       socket.closeHandler(v -> {
         LOG.info("TCP 客户端断开连接：{}", socket.remoteAddress());
-        sessionRegistry.unregisterByConnection(conn);
+        String userId = sessionRegistry.unregisterByConnection(conn);
+        updateUserOffline(userId);
       });
     };
+  }
+
+  /** Redis 标记用户离线 */
+  private void updateUserOffline(String userId) {
+    if (userId == null) return;
+    RedisOnlineStatus.get(vertx).setOffline(userId);
   }
 }

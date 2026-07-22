@@ -21,36 +21,36 @@ public final class AckProto {
 
     /**
      * <pre>
-     *收到的的消息 ID 列表
+     * 消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @return A list containing the messageIds.
      */
-    java.util.List<java.lang.Integer> getMessageIdsList();
+    java.util.List<java.lang.Long> getMessageIdsList();
     /**
      * <pre>
-     *收到的的消息 ID 列表
+     * 消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @return The count of messageIds.
      */
     int getMessageIdsCount();
     /**
      * <pre>
-     *收到的的消息 ID 列表
+     * 消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @param index The index of the element to return.
      * @return The messageIds at the given index.
      */
-    int getMessageIds(int index);
+    long getMessageIds(int index);
 
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 2;</code>
@@ -59,7 +59,7 @@ public final class AckProto {
     int getAckTypeValue();
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 2;</code>
@@ -80,7 +80,7 @@ public final class AckProto {
       super(builder);
     }
     private AckReq() {
-      messageIds_ = emptyIntList();
+      messageIds_ = emptyLongList();
       ackType_ = 0;
     }
 
@@ -106,27 +106,27 @@ public final class AckProto {
 
     public static final int MESSAGE_IDS_FIELD_NUMBER = 1;
     @SuppressWarnings("serial")
-    private com.google.protobuf.Internal.IntList messageIds_ =
-        emptyIntList();
+    private com.google.protobuf.Internal.LongList messageIds_ =
+        emptyLongList();
     /**
      * <pre>
-     *收到的的消息 ID 列表
+     * 消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @return A list containing the messageIds.
      */
     @java.lang.Override
-    public java.util.List<java.lang.Integer>
+    public java.util.List<java.lang.Long>
         getMessageIdsList() {
       return messageIds_;
     }
     /**
      * <pre>
-     *收到的的消息 ID 列表
+     * 消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @return The count of messageIds.
      */
     public int getMessageIdsCount() {
@@ -134,15 +134,15 @@ public final class AckProto {
     }
     /**
      * <pre>
-     *收到的的消息 ID 列表
+     * 消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @param index The index of the element to return.
      * @return The messageIds at the given index.
      */
-    public int getMessageIds(int index) {
-      return messageIds_.getInt(index);
+    public long getMessageIds(int index) {
+      return messageIds_.getLong(index);
     }
     private int messageIdsMemoizedSerializedSize = -1;
 
@@ -150,7 +150,7 @@ public final class AckProto {
     private int ackType_ = 0;
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 2;</code>
@@ -161,7 +161,7 @@ public final class AckProto {
     }
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 2;</code>
@@ -192,7 +192,7 @@ public final class AckProto {
         output.writeUInt32NoTag(messageIdsMemoizedSerializedSize);
       }
       for (int i = 0; i < messageIds_.size(); i++) {
-        output.writeUInt32NoTag(messageIds_.getInt(i));
+        output.writeInt64NoTag(messageIds_.getLong(i));
       }
       if (ackType_ != com.github.moxib.pomelo.proto.common.CommonProto.AckType.RECEIVED.getNumber()) {
         output.writeEnum(2, ackType_);
@@ -210,7 +210,7 @@ public final class AckProto {
         int dataSize = 0;
         for (int i = 0; i < messageIds_.size(); i++) {
           dataSize += com.google.protobuf.CodedOutputStream
-            .computeUInt32SizeNoTag(messageIds_.getInt(i));
+            .computeInt64SizeNoTag(messageIds_.getLong(i));
         }
         size += dataSize;
         if (!getMessageIdsList().isEmpty()) {
@@ -390,7 +390,7 @@ public final class AckProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        messageIds_ = emptyIntList();
+        messageIds_ = emptyLongList();
         ackType_ = 0;
         return this;
       }
@@ -519,9 +519,9 @@ public final class AckProto {
                 done = true;
                 break;
               case 8: {
-                int v = input.readUInt32();
+                long v = input.readInt64();
                 ensureMessageIdsIsMutable();
-                messageIds_.addInt(v);
+                messageIds_.addLong(v);
                 break;
               } // case 8
               case 10: {
@@ -529,7 +529,7 @@ public final class AckProto {
                 int limit = input.pushLimit(length);
                 ensureMessageIdsIsMutable();
                 while (input.getBytesUntilLimit() > 0) {
-                  messageIds_.addInt(input.readUInt32());
+                  messageIds_.addLong(input.readInt64());
                 }
                 input.popLimit(limit);
                 break;
@@ -556,7 +556,7 @@ public final class AckProto {
       }
       private int bitField0_;
 
-      private com.google.protobuf.Internal.IntList messageIds_ = emptyIntList();
+      private com.google.protobuf.Internal.LongList messageIds_ = emptyLongList();
       private void ensureMessageIdsIsMutable() {
         if (!messageIds_.isModifiable()) {
           messageIds_ = makeMutableCopy(messageIds_);
@@ -565,23 +565,23 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *收到的的消息 ID 列表
+       * 消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @return A list containing the messageIds.
        */
-      public java.util.List<java.lang.Integer>
+      public java.util.List<java.lang.Long>
           getMessageIdsList() {
         messageIds_.makeImmutable();
         return messageIds_;
       }
       /**
        * <pre>
-       *收到的的消息 ID 列表
+       * 消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @return The count of messageIds.
        */
       public int getMessageIdsCount() {
@@ -589,63 +589,63 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *收到的的消息 ID 列表
+       * 消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @param index The index of the element to return.
        * @return The messageIds at the given index.
        */
-      public int getMessageIds(int index) {
-        return messageIds_.getInt(index);
+      public long getMessageIds(int index) {
+        return messageIds_.getLong(index);
       }
       /**
        * <pre>
-       *收到的的消息 ID 列表
+       * 消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @param index The index to set the value at.
        * @param value The messageIds to set.
        * @return This builder for chaining.
        */
       public Builder setMessageIds(
-          int index, int value) {
+          int index, long value) {
 
         ensureMessageIdsIsMutable();
-        messageIds_.setInt(index, value);
+        messageIds_.setLong(index, value);
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
        * <pre>
-       *收到的的消息 ID 列表
+       * 消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @param value The messageIds to add.
        * @return This builder for chaining.
        */
-      public Builder addMessageIds(int value) {
+      public Builder addMessageIds(long value) {
 
         ensureMessageIdsIsMutable();
-        messageIds_.addInt(value);
+        messageIds_.addLong(value);
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
        * <pre>
-       *收到的的消息 ID 列表
+       * 消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @param values The messageIds to add.
        * @return This builder for chaining.
        */
       public Builder addAllMessageIds(
-          java.lang.Iterable<? extends java.lang.Integer> values) {
+          java.lang.Iterable<? extends java.lang.Long> values) {
         ensureMessageIdsIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
             values, messageIds_);
@@ -655,14 +655,14 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *收到的的消息 ID 列表
+       * 消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearMessageIds() {
-        messageIds_ = emptyIntList();
+        messageIds_ = emptyLongList();
         bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
         return this;
@@ -671,7 +671,7 @@ public final class AckProto {
       private int ackType_ = 0;
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 2;</code>
@@ -682,7 +682,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 2;</code>
@@ -697,7 +697,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 2;</code>
@@ -710,7 +710,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 2;</code>
@@ -728,7 +728,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 2;</code>
@@ -810,7 +810,7 @@ public final class AckProto {
 
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 1;</code>
@@ -819,7 +819,7 @@ public final class AckProto {
     int getAckTypeValue();
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 1;</code>
@@ -867,7 +867,7 @@ public final class AckProto {
     private int ackType_ = 0;
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 1;</code>
@@ -878,7 +878,7 @@ public final class AckProto {
     }
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 1;</code>
@@ -1216,7 +1216,7 @@ public final class AckProto {
       private int ackType_ = 0;
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 1;</code>
@@ -1227,7 +1227,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 1;</code>
@@ -1242,7 +1242,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 1;</code>
@@ -1255,7 +1255,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 1;</code>
@@ -1273,7 +1273,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 1;</code>
@@ -1355,36 +1355,36 @@ public final class AckProto {
 
     /**
      * <pre>
-     *  已确认的消息 ID 列表
+     * 已确认的消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @return A list containing the messageIds.
      */
-    java.util.List<java.lang.Integer> getMessageIdsList();
+    java.util.List<java.lang.Long> getMessageIdsList();
     /**
      * <pre>
-     *  已确认的消息 ID 列表
+     * 已确认的消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @return The count of messageIds.
      */
     int getMessageIdsCount();
     /**
      * <pre>
-     *  已确认的消息 ID 列表
+     * 已确认的消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @param index The index of the element to return.
      * @return The messageIds at the given index.
      */
-    int getMessageIds(int index);
+    long getMessageIds(int index);
 
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 2;</code>
@@ -1393,7 +1393,7 @@ public final class AckProto {
     int getAckTypeValue();
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 2;</code>
@@ -1414,7 +1414,7 @@ public final class AckProto {
       super(builder);
     }
     private AckNotify() {
-      messageIds_ = emptyIntList();
+      messageIds_ = emptyLongList();
       ackType_ = 0;
     }
 
@@ -1440,27 +1440,27 @@ public final class AckProto {
 
     public static final int MESSAGE_IDS_FIELD_NUMBER = 1;
     @SuppressWarnings("serial")
-    private com.google.protobuf.Internal.IntList messageIds_ =
-        emptyIntList();
+    private com.google.protobuf.Internal.LongList messageIds_ =
+        emptyLongList();
     /**
      * <pre>
-     *  已确认的消息 ID 列表
+     * 已确认的消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @return A list containing the messageIds.
      */
     @java.lang.Override
-    public java.util.List<java.lang.Integer>
+    public java.util.List<java.lang.Long>
         getMessageIdsList() {
       return messageIds_;
     }
     /**
      * <pre>
-     *  已确认的消息 ID 列表
+     * 已确认的消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @return The count of messageIds.
      */
     public int getMessageIdsCount() {
@@ -1468,15 +1468,15 @@ public final class AckProto {
     }
     /**
      * <pre>
-     *  已确认的消息 ID 列表
+     * 已确认的消息 ID 列表 (snowflake 64-bit)
      * </pre>
      *
-     * <code>repeated uint32 message_ids = 1;</code>
+     * <code>repeated int64 message_ids = 1;</code>
      * @param index The index of the element to return.
      * @return The messageIds at the given index.
      */
-    public int getMessageIds(int index) {
-      return messageIds_.getInt(index);
+    public long getMessageIds(int index) {
+      return messageIds_.getLong(index);
     }
     private int messageIdsMemoizedSerializedSize = -1;
 
@@ -1484,7 +1484,7 @@ public final class AckProto {
     private int ackType_ = 0;
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 2;</code>
@@ -1495,7 +1495,7 @@ public final class AckProto {
     }
     /**
      * <pre>
-     *ACK 类型：1=已收到，2=已读
+     * ACK 类型：0=已收到，1=已读
      * </pre>
      *
      * <code>.im.common.AckType ack_type = 2;</code>
@@ -1526,7 +1526,7 @@ public final class AckProto {
         output.writeUInt32NoTag(messageIdsMemoizedSerializedSize);
       }
       for (int i = 0; i < messageIds_.size(); i++) {
-        output.writeUInt32NoTag(messageIds_.getInt(i));
+        output.writeInt64NoTag(messageIds_.getLong(i));
       }
       if (ackType_ != com.github.moxib.pomelo.proto.common.CommonProto.AckType.RECEIVED.getNumber()) {
         output.writeEnum(2, ackType_);
@@ -1544,7 +1544,7 @@ public final class AckProto {
         int dataSize = 0;
         for (int i = 0; i < messageIds_.size(); i++) {
           dataSize += com.google.protobuf.CodedOutputStream
-            .computeUInt32SizeNoTag(messageIds_.getInt(i));
+            .computeInt64SizeNoTag(messageIds_.getLong(i));
         }
         size += dataSize;
         if (!getMessageIdsList().isEmpty()) {
@@ -1724,7 +1724,7 @@ public final class AckProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        messageIds_ = emptyIntList();
+        messageIds_ = emptyLongList();
         ackType_ = 0;
         return this;
       }
@@ -1853,9 +1853,9 @@ public final class AckProto {
                 done = true;
                 break;
               case 8: {
-                int v = input.readUInt32();
+                long v = input.readInt64();
                 ensureMessageIdsIsMutable();
-                messageIds_.addInt(v);
+                messageIds_.addLong(v);
                 break;
               } // case 8
               case 10: {
@@ -1863,7 +1863,7 @@ public final class AckProto {
                 int limit = input.pushLimit(length);
                 ensureMessageIdsIsMutable();
                 while (input.getBytesUntilLimit() > 0) {
-                  messageIds_.addInt(input.readUInt32());
+                  messageIds_.addLong(input.readInt64());
                 }
                 input.popLimit(limit);
                 break;
@@ -1890,7 +1890,7 @@ public final class AckProto {
       }
       private int bitField0_;
 
-      private com.google.protobuf.Internal.IntList messageIds_ = emptyIntList();
+      private com.google.protobuf.Internal.LongList messageIds_ = emptyLongList();
       private void ensureMessageIdsIsMutable() {
         if (!messageIds_.isModifiable()) {
           messageIds_ = makeMutableCopy(messageIds_);
@@ -1899,23 +1899,23 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *  已确认的消息 ID 列表
+       * 已确认的消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @return A list containing the messageIds.
        */
-      public java.util.List<java.lang.Integer>
+      public java.util.List<java.lang.Long>
           getMessageIdsList() {
         messageIds_.makeImmutable();
         return messageIds_;
       }
       /**
        * <pre>
-       *  已确认的消息 ID 列表
+       * 已确认的消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @return The count of messageIds.
        */
       public int getMessageIdsCount() {
@@ -1923,63 +1923,63 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *  已确认的消息 ID 列表
+       * 已确认的消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @param index The index of the element to return.
        * @return The messageIds at the given index.
        */
-      public int getMessageIds(int index) {
-        return messageIds_.getInt(index);
+      public long getMessageIds(int index) {
+        return messageIds_.getLong(index);
       }
       /**
        * <pre>
-       *  已确认的消息 ID 列表
+       * 已确认的消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @param index The index to set the value at.
        * @param value The messageIds to set.
        * @return This builder for chaining.
        */
       public Builder setMessageIds(
-          int index, int value) {
+          int index, long value) {
 
         ensureMessageIdsIsMutable();
-        messageIds_.setInt(index, value);
+        messageIds_.setLong(index, value);
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
        * <pre>
-       *  已确认的消息 ID 列表
+       * 已确认的消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @param value The messageIds to add.
        * @return This builder for chaining.
        */
-      public Builder addMessageIds(int value) {
+      public Builder addMessageIds(long value) {
 
         ensureMessageIdsIsMutable();
-        messageIds_.addInt(value);
+        messageIds_.addLong(value);
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
        * <pre>
-       *  已确认的消息 ID 列表
+       * 已确认的消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @param values The messageIds to add.
        * @return This builder for chaining.
        */
       public Builder addAllMessageIds(
-          java.lang.Iterable<? extends java.lang.Integer> values) {
+          java.lang.Iterable<? extends java.lang.Long> values) {
         ensureMessageIdsIsMutable();
         com.google.protobuf.AbstractMessageLite.Builder.addAll(
             values, messageIds_);
@@ -1989,14 +1989,14 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *  已确认的消息 ID 列表
+       * 已确认的消息 ID 列表 (snowflake 64-bit)
        * </pre>
        *
-       * <code>repeated uint32 message_ids = 1;</code>
+       * <code>repeated int64 message_ids = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearMessageIds() {
-        messageIds_ = emptyIntList();
+        messageIds_ = emptyLongList();
         bitField0_ = (bitField0_ & ~0x00000001);
         onChanged();
         return this;
@@ -2005,7 +2005,7 @@ public final class AckProto {
       private int ackType_ = 0;
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 2;</code>
@@ -2016,7 +2016,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 2;</code>
@@ -2031,7 +2031,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 2;</code>
@@ -2044,7 +2044,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 2;</code>
@@ -2062,7 +2062,7 @@ public final class AckProto {
       }
       /**
        * <pre>
-       *ACK 类型：1=已收到，2=已读
+       * ACK 类型：0=已收到，1=已读
        * </pre>
        *
        * <code>.im.common.AckType ack_type = 2;</code>
@@ -2163,10 +2163,10 @@ public final class AckProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\rack/ack.proto\022\006im.ack\032\023common/common.p" +
-      "roto\"C\n\006AckReq\022\023\n\013message_ids\030\001 \003(\r\022$\n\010a" +
+      "roto\"C\n\006AckReq\022\023\n\013message_ids\030\001 \003(\003\022$\n\010a" +
       "ck_type\030\002 \001(\0162\022.im.common.AckType\"/\n\007Ack" +
       "Resp\022$\n\010ack_type\030\001 \001(\0162\022.im.common.AckTy" +
-      "pe\"F\n\tAckNotify\022\023\n\013message_ids\030\001 \003(\r\022$\n\010" +
+      "pe\"F\n\tAckNotify\022\023\n\013message_ids\030\001 \003(\003\022$\n\010" +
       "ack_type\030\002 \001(\0162\022.im.common.AckTypeB-\n!co" +
       "m.github.moxib.pomelo.proto.ackB\010AckProt" +
       "ob\006proto3"

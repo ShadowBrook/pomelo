@@ -8,17 +8,23 @@ import java.util.List;
  */
 public class AckNotifyContext {
 
-  private final String senderId;
+  // im_user.id
+  private final long senderId;
+  // 发送方 userId (NanoID, 协议层标识, 用于推送)
+  private final String senderUserId;
   private final List<Long> messageIds;
-  private final int ackType;   // 0=RECEIVED, 1=SEEN
+  // 0=RECEIVED, 1=SEEN
+  private final int ackType;
 
-  public AckNotifyContext(String senderId, List<Long> messageIds, int ackType) {
+  public AckNotifyContext(long senderId, String senderUserId, List<Long> messageIds, int ackType) {
     this.senderId = senderId;
+    this.senderUserId = senderUserId;
     this.messageIds = Collections.unmodifiableList(messageIds);
     this.ackType = ackType;
   }
 
-  public String getSenderId() { return senderId; }
+  public long getSenderId() { return senderId; }
+  public String getSenderUserId() { return senderUserId; }
   public List<Long> getMessageIds() { return messageIds; }
   public int getAckType() { return ackType; }
 }

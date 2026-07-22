@@ -42,6 +42,21 @@ enum Cmd {
     CMD_ACK_REQ    = 0x0052;  // ACK消息确认请求
     CMD_ACK_RESP   = 0x0053;  // ACK消息确认响应
     CMD_ACK_NOTIFY = 0x0054;  // ACK消息确认推送
+
+    // 好友关系
+    CMD_FRIEND_SEARCH_REQ    = 0x0060;  // C→S 搜索用户请求
+    CMD_FRIEND_SEARCH_RESP   = 0x0061;  // S→C 搜索用户响应
+    CMD_FRIEND_ADD_REQ       = 0x0062;  // C→S 添加好友请求
+    CMD_FRIEND_ADD_RESP      = 0x0063;  // S→C 添加好友响应
+    CMD_FRIEND_ADD_NOTIFY    = 0x0064;  // S→C 好友申请推送
+    CMD_FRIEND_ACCEPT_REQ    = 0x0065;  // C→S 接受好友请求
+    CMD_FRIEND_ACCEPT_RESP   = 0x0066;  // S→C 接受好友响应
+    CMD_FRIEND_ACCEPT_NOTIFY = 0x0067;  // S→C 接受好友推送
+    CMD_FRIEND_DELETE_REQ    = 0x0068;  // C→S 删除好友请求
+    CMD_FRIEND_DELETE_RESP   = 0x0069;  // S→C 删除好友响应
+    CMD_FRIEND_DELETE_NOTIFY = 0x006A;  // S→C 删除好友推送
+
+    CMD_ERROR = 0xFFFF;  // S→C 通用错误响应
 }
 
 // ============================================================================
@@ -71,4 +86,12 @@ message MessageContent {
     bytes content             = 2;  // 消息内容
     int64 timestamp           = 3;  // 消息时间戳（Unix 毫秒）
     map<string, string> ext   = 4;  // 扩展字段
+}
+
+// ============================================================================
+// 通用错误响应体
+// ============================================================================
+message ErrorBody {
+    int32 code    = 1;  // 错误码
+    string message = 2;  // 错误描述
 }

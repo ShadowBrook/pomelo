@@ -3,9 +3,9 @@ package com.github.moxib.pomelo.utils;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.redis.client.Command;
 import io.vertx.redis.client.Redis;
 import io.vertx.redis.client.RedisConnection;
-import io.vertx.redis.client.RedisOptions;
 import io.vertx.redis.client.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,12 +51,12 @@ public class RedisIdGenerator implements IdGenerator {
     private final Vertx vertx;
 
     /**
-     * Redis 客户端
+     * Redis 客户端（由外部注入，共享 RedisFactory 的客户端）
      */
     private final Redis redis;
 
     /**
-     * Redis 连接
+     * Redis 连接（lazy init，由 tryInit 时 connect）
      */
     private volatile RedisConnection connection;
 
@@ -98,14 +98,13 @@ public class RedisIdGenerator implements IdGenerator {
         local current = redis.call('GET', key)
         if current == false then
             current = 0
-        else +
+        else
             current = tonumber(current)
-        end +
+        end
         local newId = current + allocationSize
         redis.call('SET', key, newId)
         return current
       """;
-
 
     /**
      * 初始化 ID 的 Lua 脚本
@@ -124,44 +123,32 @@ public class RedisIdGenerator implements IdGenerator {
       return 0
       """;
 
-
     /**
      * 构造函数
      *
      * @param vertx Vertx 实例
+     * @param redis Redis 客户端（由 RedisFactory 提供）
      */
-    public RedisIdGenerator(Vertx vertx) {
-        this(vertx, null, "seq:id:generator");
+    public RedisIdGenerator(Vertx vertx, Redis redis) {
+        this(vertx, redis, "seq:id:generator");
     }
 
     /**
      * 构造函数
      *
      * @param vertx Vertx 实例
-     * @param redisOptions Redis 配置
-     */
-    public RedisIdGenerator(Vertx vertx, RedisOptions redisOptions) {
-        this(vertx, redisOptions, "seq:id:generator");
-    }
-
-    /**
-     * 构造函数
-     *
-     * @param vertx Vertx 实例
-     * @param redisOptions Redis 配置，可为 null 使用默认配置
+     * @param redis Redis 客户端（由 RedisFactory 提供）
      * @param redisKey Redis 中存储 ID 的 key
      */
-    public RedisIdGenerator(Vertx vertx, RedisOptions redisOptions, String redisKey) {
+    public RedisIdGenerator(Vertx vertx, Redis redis, String redisKey) {
         this.vertx = vertx;
+        this.redis = redis;
         this.redisKey = redisKey;
         this.currentId = new AtomicLong(0);
         this.batchEnd = 0;
         this.initialized = new AtomicBoolean(false);
         this.prefetching = new AtomicBoolean(false);
         this.allocationSize = DEFAULT_ALLOCATION_SIZE;
-
-        RedisOptions options = redisOptions != null ? redisOptions : new RedisOptions();
-        this.redis = Redis.createClient(vertx, options);
     }
 
     @Override
@@ -171,7 +158,7 @@ public class RedisIdGenerator implements IdGenerator {
         if (initialized.compareAndSet(false, true)) {
             this.allocationSize = allocationSize > 0 ? allocationSize : DEFAULT_ALLOCATION_SIZE;
 
-            // 连接 Redis 并初始化
+            // 从注入的 redis 客户端获取连接
             redis.connect().onComplete(connectAr -> {
                 if (connectAr.succeeded()) {
                     connection = connectAr.result();
@@ -187,13 +174,11 @@ public class RedisIdGenerator implements IdGenerator {
                         if (ar.succeeded()) {
                             long initResult = toLong(ar.result());
                             if (initResult == 1) {
-                                // 初始化成功，设置本地范围
                                 currentId.set(value);
                                 batchEnd = value + allocationSize;
                                 logger.info("RedisIdGenerator initialized: start={}, allocationSize={}", value, allocationSize);
                                 promise.complete(true);
                             } else {
-                                // 已存在，获取当前值
                                 fetchCurrentId().onComplete(fetchAr -> {
                                     if (fetchAr.succeeded()) {
                                         currentId.set(fetchAr.result());
@@ -226,10 +211,22 @@ public class RedisIdGenerator implements IdGenerator {
         Promise<Long> promise = Promise.promise();
 
         if (!initialized.get()) {
-            promise.fail(new IllegalStateException("IdGenerator not initialized"));
+            // 延迟初始化：首次调用 nextId 时自动 init
+            tryInit(0, DEFAULT_ALLOCATION_SIZE).onComplete(initAr -> {
+                if (initAr.succeeded()) {
+                    doNextId(promise);
+                } else {
+                    promise.fail(initAr.cause());
+                }
+            });
             return promise.future();
         }
 
+        doNextId(promise);
+        return promise.future();
+    }
+
+    private void doNextId(Promise<Long> promise) {
         // 尝试从本地获取
         long nextId = currentId.getAndIncrement();
 
@@ -244,19 +241,15 @@ public class RedisIdGenerator implements IdGenerator {
                     prefetching.set(false);
                     if (ar.succeeded()) {
                         long newStart = ar.result();
-                        // 返回新批次的第一个 ID
                         promise.complete(newStart);
                     } else {
                         promise.fail(ar.cause());
                     }
                 });
             } else {
-                // 等待预分配完成
                 waitForNextBatch(promise);
             }
         }
-
-        return promise.future();
     }
 
     /**
@@ -275,7 +268,7 @@ public class RedisIdGenerator implements IdGenerator {
         connection.send(req).onComplete(ar -> {
             if (ar.succeeded()) {
                 long newStart = toLong(ar.result());
-                currentId.set(newStart + 1); // 下一个可用 ID
+                currentId.set(newStart + 1);
                 batchEnd = newStart + allocationSize;
                 logger.debug("Allocated next batch: [{}, {})", newStart, batchEnd);
                 promise.complete(newStart);
@@ -293,7 +286,7 @@ public class RedisIdGenerator implements IdGenerator {
     private Future<Long> fetchCurrentId() {
         Promise<Long> promise = Promise.promise();
 
-        Request req = Request.cmd(io.vertx.redis.client.Command.GET).arg(redisKey);
+        Request req = Request.cmd(Command.GET).arg(redisKey);
         connection.send(req).onComplete(ar -> {
             if (ar.succeeded()) {
                 promise.complete(toLong(ar.result()));
@@ -309,7 +302,6 @@ public class RedisIdGenerator implements IdGenerator {
      * 等待下一批次可用
      */
     private void waitForNextBatch(Promise<Long> promise) {
-        // 简单轮询等待
         vertx.setPeriodic(10, timerId -> {
             long current = currentId.get();
             if (current < batchEnd) {
@@ -362,7 +354,6 @@ public class RedisIdGenerator implements IdGenerator {
         if (connection != null) {
             connection.close();
         }
-        redis.close();
         logger.info("RedisIdGenerator closed");
     }
 }

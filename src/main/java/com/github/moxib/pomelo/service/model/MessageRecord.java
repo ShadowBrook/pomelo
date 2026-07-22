@@ -2,22 +2,26 @@ package com.github.moxib.pomelo.service.model;
 
 /**
  * 消息持久化记录，对应 im_message_c2c 表。
+ * senderId/recipientId 使用 im_user.id (BIGINT)。
  */
 public class MessageRecord {
 
-  private final long id;          // 客户端雪花ID
-  private final String senderId;
-  private final String recipientId;
+  private final long id;
+  private final long senderId;
+  private final long recipientId;
+  // 会话ID (min_id:max_id, 如 "123:456")
+  private final String conversationId;
   private final int msgType;
   private final String content;
-  private final long seq;         // 服务端全局序列号
-  private final int status;       // 0=已发送, 1=已送达, 2=已读
+  private final long seq;
+  private final int status;
   private final long createdAt;
 
   private MessageRecord(Builder builder) {
     this.id = builder.id;
     this.senderId = builder.senderId;
     this.recipientId = builder.recipientId;
+    this.conversationId = builder.conversationId;
     this.msgType = builder.msgType;
     this.content = builder.content;
     this.seq = builder.seq;
@@ -25,14 +29,12 @@ public class MessageRecord {
     this.createdAt = builder.createdAt;
   }
 
-  public static Builder builder() {
-    return new Builder();
-  }
+  public static Builder builder() { return new Builder(); }
 
-  // ---- getters ----
   public long getId() { return id; }
-  public String getSenderId() { return senderId; }
-  public String getRecipientId() { return recipientId; }
+  public long getSenderId() { return senderId; }
+  public long getRecipientId() { return recipientId; }
+  public String getConversationId() { return conversationId; }
   public int getMsgType() { return msgType; }
   public String getContent() { return content; }
   public long getSeq() { return seq; }
@@ -41,8 +43,9 @@ public class MessageRecord {
 
   public static class Builder {
     private long id;
-    private String senderId;
-    private String recipientId;
+    private long senderId;
+    private long recipientId;
+    private String conversationId;
     private int msgType;
     private String content;
     private long seq;
@@ -50,8 +53,9 @@ public class MessageRecord {
     private long createdAt;
 
     public Builder id(long id) { this.id = id; return this; }
-    public Builder senderId(String senderId) { this.senderId = senderId; return this; }
-    public Builder recipientId(String recipientId) { this.recipientId = recipientId; return this; }
+    public Builder senderId(long senderId) { this.senderId = senderId; return this; }
+    public Builder recipientId(long recipientId) { this.recipientId = recipientId; return this; }
+    public Builder conversationId(String conversationId) { this.conversationId = conversationId; return this; }
     public Builder msgType(int msgType) { this.msgType = msgType; return this; }
     public Builder content(String content) { this.content = content; return this; }
     public Builder seq(long seq) { this.seq = seq; return this; }

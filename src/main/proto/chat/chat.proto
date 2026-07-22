@@ -13,13 +13,14 @@ import "common/common.proto";
 message C2CReq {
     string sender_id                 = 1;  // 发送者用户 ID
     string recipient_id              = 2;  // 接收者用户 ID
-    im.common.MessageContent message = 3;  // 消息内容
+    int64 message_id                 = 3;
+    im.common.MessageContent message = 4;  // 消息内容
 }
 
 message C2CResp {
     int32 code         = 1;  // 响应码
     string message     = 2;  // 响应消息
-    uint32 message_id  = 3;  // 消息 ID
+    int64 message_id   = 3;  // 消息 ID (snowflake 64-bit)
     int64 server_time  = 4;  // 服务器时间
     optional int64 seq = 5;  // 序列号
 }

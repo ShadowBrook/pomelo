@@ -1,13 +1,15 @@
 package com.github.moxib.pomelo.service;
 
 import com.github.moxib.pomelo.service.model.MessageRecord;
+import com.github.moxib.pomelo.service.model.UserIdInfo;
 import io.vertx.core.Future;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 消息持久化仓库接口（数据层）。
- * 当前由 PgMessageRepository 实现，未来可通过 EventBus/gRPC 远程调用。
+ * 所有用户标识均使用 im_user.id (BIGINT)。
  */
 public interface MessageRepository {
 
@@ -20,12 +22,21 @@ public interface MessageRepository {
   /** 批量更新消息状态，ACK 场景使用。使用 WHERE status < newStatus 防止降级 */
   Future<Void> batchUpdateStatus(List<Long> messageIds, int newStatus);
 
-  /** 拉取待处理消息（status < 该值）。用于离线拉取 */
-  Future<List<MessageRecord>> pullPending(String userId, long sinceSeq, int limit);
+  /** 拉取待处理消息（status < 2）。按接收方 im_user.id 查询 */
+  Future<List<MessageRecord>> pullPending(long recipientId, long sinceSeq, int limit);
 
-  /** 按 messageId 查询消息，用于 ACK 时查找 senderId */
+  /** 按 messageId 查询消息 */
   Future<MessageRecord> findById(long messageId);
 
-  /** 按 messageId 列表批量查询 senderId */
+  /** 按 messageId 列表批量查询 */
   Future<List<MessageRecord>> findByIds(List<Long> messageIds);
+
+  /** 拉取会话历史消息（双向，按 conversation_id 排序） */
+  Future<List<MessageRecord>> pullConversation(String conversationId, long beforeSeq, int limit);
+
+  /** 按 userId (NanoID) 查询 im_user.id */
+  Future<Long> findUserId(String userId);
+
+  /** 按 im_user.id 列表批量查询用户信息，返回 id → UserIdInfo 映射 */
+  Future<Map<Long, UserIdInfo>> findUserIdsByIds(List<Long> ids);
 }

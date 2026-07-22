@@ -2,24 +2,24 @@ package com.github.moxib.pomelo.gateway.handler;
 
 import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
+import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.proto.chat.ChatProto;
 import com.github.moxib.pomelo.service.MessageRepository;
 import com.github.moxib.pomelo.service.MessageService;
 import com.github.moxib.pomelo.service.model.C2CReqContext;
+import com.github.moxib.pomelo.service.model.requests.C2CRequest;
 import com.github.moxib.pomelo.utils.IdGenerator;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Map;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.CMD_C2C_RESP_VALUE;
 
 /**
  * 单聊消息处理器 — 支持 Protobuf + JSON 双协议。
+ * 协议层使用 userId (NanoID)，内部转换为 im_user.id (BIGINT)。
  */
 public class C2CMessageHandler extends AbstractMessageHandler {
 
@@ -35,99 +35,104 @@ public class C2CMessageHandler extends AbstractMessageHandler {
   public void handle(Connection connection, ImMessage message) {
     try {
       byte codecId = message.getCodecId();
-      String senderId;
-      String recipientId;
-      String content;
-      int msgType;
-      long timestamp;
-      long clientMsgId;
+      C2CRequest req = decodeRequest(message, C2CRequest.class);
+      C2CRequest.MessageBody msg = req.message();
+      String senderUserId = extractSenderUserId(message, req.senderId());
+      String recipientUserId = req.recipientId();
+      String content = msg.content();
+      int msgType = msg.msgType();
+      // messageId/timestamp 优先从 body 取（PB 路径），fallback 到 wire 协议（JSON 路径）
+      long clientMsgId = req.messageId() != 0 ? req.messageId() : parseWireMessageId(message);
+      long timestamp = req.timestamp() != 0 ? req.timestamp() : System.currentTimeMillis();
 
-      if (codecId == ProtobufCodec.CODEC_ID) {
-        ChatProto.C2CReq req = decodeBody(message);
-        recipientId = req.getRecipientId();
-        senderId = extractSenderId(message, req.getSenderId());
-        content = req.getMessage().getContent().toStringUtf8();
-        msgType = req.getMessage().getMsgTypeValue();
-        timestamp = req.getMessage().getTimestamp();
-      } else {
-        JsonNode json = parseJsonBody(message);
-        recipientId = json.has("recipientId") ? json.get("recipientId").asText() : null;
-        String bodySenderId = json.has("senderId") ? json.get("senderId").asText() : null;
-        senderId = extractSenderId(message, bodySenderId);
-        // JS SDK 发送的 JSON 结构为 {senderId, recipientId, message: {msgType, content}}
-        JsonNode msgNode = json.has("message") ? json.get("message") : json;
-        content = msgNode.has("content") ? msgNode.get("content").asText() : "";
-        msgType = msgNode.has("msgType") ? msgNode.get("msgType").asInt() : 1;
-        timestamp = msgNode.has("timestamp") ? msgNode.get("timestamp").asLong() : 0;
-      }
-
-      if (senderId == null || senderId.isEmpty() || recipientId == null || recipientId.isEmpty()) {
-        sendErrorResponse(connection, message, 400, "senderId 和 recipientId 不能为空");
+      if (senderUserId == null || senderUserId.isEmpty() || recipientUserId == null || recipientUserId.isEmpty()) {
+        sendErrorResponse(connection, message, CMD_C2C_RESP_VALUE, ErrorCode.BAD_REQUEST, "senderId 和 recipientId 不能为空");
         return;
       }
 
-      if (timestamp == 0) timestamp = System.currentTimeMillis();
-
-      long parsedMsgId;
-      try {
-        parsedMsgId = Long.parseLong(message.getMessageId());
-      } catch (NumberFormatException e) {
-        parsedMsgId = System.currentTimeMillis();
+      // 解析 sender numeric id（发送者必须在线）
+      long senderId = sessionRegistry.getId(senderUserId);
+      if (senderId == 0) {
+        sendErrorResponse(connection, message, CMD_C2C_RESP_VALUE, ErrorCode.UNAUTHORIZED, "发送者未登录");
+        return;
       }
-      clientMsgId = parsedMsgId;
 
-      C2CReqContext ctx = C2CReqContext.builder()
-        .messageId(clientMsgId)
-        .senderId(senderId)
-        .recipientId(recipientId)
-        .msgType(msgType)
-        .content(content)
-        .timestamp(timestamp)
-        .build();
+      final String fSenderUserId = senderUserId;
+      final String fRecipientUserId = recipientUserId;
+      final long fSenderId = senderId;
+      final long fTimestamp = timestamp;
+      final long fClientMsgId = clientMsgId;
+      final int fMsgType = msgType;
+      final String fContent = content;
+      final byte fCodecId = codecId;
 
-      LOG.info("C2C 消息: sender={} recipient={} msgType={} codec={}",
-        senderId, recipientId, msgType, codecId == 0 ? "PB" : "JSON");
+      LOG.info("C2C 消息: sender={}({}) recipient={} msgType={} codec={}",
+        fSenderUserId, fSenderId, fRecipientUserId, fMsgType, fCodecId == 0 ? "PB" : "JSON");
 
-      messageService.sendC2CMessage(ctx)
-        .onSuccess(result -> {
-          Object respBody;
-          if (codecId == ProtobufCodec.CODEC_ID) {
-            respBody = ChatProto.C2CResp.newBuilder()
-              .setCode(result.getCode())
-              .setMessage(result.getMessage())
-              .setMessageId((int) result.getMessageId())
-              .setServerTime(result.getServerTime())
-              .setSeq(result.getSeq())
-              .build();
-          } else {
-            ObjectNode json = jsonBody();
-            json.put("code", result.getCode());
-            json.put("message", result.getMessage());
-            json.put("messageId", result.getMessageId());
-            json.put("serverTime", result.getServerTime());
-            json.put("seq", result.getSeq());
-            respBody = json;
+      // 解析 recipient numeric id（在线直接取，离线查 DB）
+      resolveId(fRecipientUserId)
+        .onSuccess(recipientId -> {
+          if (recipientId == 0) {
+            sendErrorResponse(connection, message, CMD_C2C_RESP_VALUE, ErrorCode.NOT_FOUND, "接收者不存在");
+            return;
           }
 
-          ImMessage response = buildResponse(message, CMD_C2C_RESP_VALUE, respBody);
-          sendResponse(connection, response);
-          LOG.debug("C2CResp 已返回: msgId={} seq={}", clientMsgId, result.getSeq());
+          C2CReqContext ctx = C2CReqContext.builder()
+            .messageId(fClientMsgId)
+            .senderId(fSenderId)
+            .recipientId(recipientId)
+            .senderUserId(fSenderUserId)
+            .senderUserName(sessionRegistry.getUserName(fSenderId))
+            .senderNickname(sessionRegistry.getNickname(fSenderId))
+            .msgType(fMsgType)
+            .content(fContent)
+            .timestamp(fTimestamp)
+            .build();
+
+          messageService.sendC2CMessage(ctx)
+            .onSuccess(result -> {
+              Object respBody = fCodecId == ProtobufCodec.CODEC_ID
+                ? ChatProto.C2CResp.newBuilder()
+                    .setCode(result.getCode())
+                    .setMessage(result.getMessage())
+                    .setMessageId(result.getMessageId())
+                    .setServerTime(result.getServerTime())
+                    .setSeq(result.getSeq())
+                    .build()
+                : result;
+              ImMessage response = buildResponse(message, CMD_C2C_RESP_VALUE, respBody);
+              sendResponse(connection, response);
+              LOG.debug("C2CResp 已返回: msgId={} seq={}", clientMsgId, result.getSeq());
+            })
+            .onFailure(e -> {
+              LOG.error("C2C 消息处理失败", e);
+              sendErrorResponse(connection, message, CMD_C2C_RESP_VALUE, ErrorCode.INTERNAL_ERROR, "发送失败：" + e.getMessage());
+            });
         })
-        .onFailure(e -> {
-          LOG.error("C2C 消息处理失败", e);
-          sendErrorResponse(connection, message, 500, "发送失败：" + e.getMessage());
-        });
+        .onFailure(e -> sendErrorResponse(connection, message, CMD_C2C_RESP_VALUE, ErrorCode.INTERNAL_ERROR, "解析接收者失败: " + e.getMessage()));
 
     } catch (Exception e) {
       LOG.error("C2C 消息解码失败", e);
-      sendErrorResponse(connection, message, 400, "消息格式错误：" + e.getMessage());
+      sendErrorResponse(connection, message, CMD_C2C_RESP_VALUE, ErrorCode.BAD_REQUEST, "消息格式错误：" + e.getMessage());
     }
   }
 
-  /** 从 varHeaders 取 senderId（防篡改），fallback 到 body 中的值 */
-  private String extractSenderId(ImMessage message, String bodySenderId) {
-    Map<String, String> headers = message.getVarHeaders();
-    String hdrUserId = (headers != null) ? headers.get("userId") : null;
-    return (hdrUserId != null) ? hdrUserId : bodySenderId;
+  /** userId→id 解析：先查 SessionRegistry，离线则查 DB */
+  private Future<Long> resolveId(String userId) {
+    long onlineId = sessionRegistry.getId(userId);
+    if (onlineId != 0) return Future.succeededFuture(onlineId);
+    return messageRepo.findUserId(userId);
+  }
+
+  /** 从 varHeaders 取 senderUserId（防篡改），fallback 到 body 中的值 */
+  private String extractSenderUserId(ImMessage message, String bodySenderId) {
+    String hdrUserId = getUserIdFromHeaders(message);
+    return hdrUserId != null ? hdrUserId : bodySenderId;
+  }
+
+  /** 从 wire 协议 messageId 解析 client message id（JSON 路径 fallback） */
+  private long parseWireMessageId(ImMessage message) {
+    try { return Long.parseLong(message.getMessageId()); }
+    catch (NumberFormatException e) { return System.currentTimeMillis(); }
   }
 }

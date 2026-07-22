@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  * 消息业务逻辑层接口。
- * 当前由 MessageServiceImpl 同进程实现，未来可通过 EventBus/gRPC 远程调用。
+ * 所有用户标识均使用 im_user.id (BIGINT)。
  */
 public interface MessageService {
 
@@ -28,12 +28,17 @@ public interface MessageService {
    * 处理 ACK 确认：
    * 1. 批量更新消息状态
    * 2. 查询消息对应的 senderId
-   * 3. 返回 AckNotifyContext 列表（供 Handler 推送 AckNotify）
+   * 3. 返回 AckNotifyContext 列表（含 senderUserId，供 Handler 推送 AckNotify）
    */
-  Future<List<AckNotifyContext>> processAck(List<Long> messageIds, int ackType, String ackFromUserId);
+  Future<List<AckNotifyContext>> processAck(List<Long> messageIds, int ackType, long ackFromUserId, String ackFromUserIdStr);
 
   /**
    * 拉取离线消息（status < 2 的消息）。
    */
-  Future<List<MessageRecord>> pullOfflineMessages(String userId, long sinceSeq, int limit);
+  Future<List<MessageRecord>> pullOfflineMessages(long userId, long sinceSeq, int limit);
+
+  /**
+   * 拉取会话历史消息（双向，按 seq 倒序）。
+   */
+  Future<List<MessageRecord>> pullConversationHistory(long userId, long peerId, long beforeSeq, int limit);
 }
