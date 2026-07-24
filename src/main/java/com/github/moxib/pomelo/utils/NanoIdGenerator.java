@@ -1,5 +1,7 @@
 package com.github.moxib.pomelo.utils;
 
+import com.github.moxib.pomelo.config.ConfigHolder;
+
 import java.security.SecureRandom;
 
 /**
@@ -73,7 +75,8 @@ public final class NanoIdGenerator {
 
   // ---- 便捷方法 ----
 
-  private static final NanoIdGenerator DEFAULT = new NanoIdGenerator();
+  private static final NanoIdGenerator DEFAULT =
+    new NanoIdGenerator(ConfigHolder.getInt("nanoid.size", 21), DEFAULT_ALPHABET);
 
   /** 使用默认配置生成一个 NanoID（21 位）。 */
   public static String next() {

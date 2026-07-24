@@ -1,5 +1,6 @@
 package com.github.moxib.pomelo.service;
 
+import com.github.moxib.pomelo.config.ConfigHolder;
 import io.vertx.core.Vertx;
 import io.vertx.pgclient.PgBuilder;
 import io.vertx.pgclient.PgConnectOptions;
@@ -26,15 +27,16 @@ public final class PgPoolFactory {
       synchronized (PgPoolFactory.class) {
         if (instance == null) {
           PgConnectOptions opts = new PgConnectOptions()
-            .setHost("localhost")
-            .setPort(5432)
-            .setDatabase("pomelo_db")
-            .setUser("pomelo")
-            .setPassword("pomelo123");
+            .setHost(ConfigHolder.getString("database.host", "localhost"))
+            .setPort(ConfigHolder.getInt("database.port", 5432))
+            .setDatabase(ConfigHolder.getString("database.database", "pomelo_db"))
+            .setUser(ConfigHolder.getString("database.user", "pomelo"))
+            .setPassword(ConfigHolder.getString("database.password", "pomelo123"));
           PoolOptions poolOptions = new PoolOptions()
-            .setMaxSize(10).setMaxWaitQueueSize(50)
-            .setConnectionTimeout(10000)
-            .setIdleTimeout(60);
+            .setMaxSize(ConfigHolder.getInt("database.pool.maxSize", 10))
+            .setMaxWaitQueueSize(ConfigHolder.getInt("database.pool.maxWaitQueueSize", 50))
+            .setConnectionTimeout(ConfigHolder.getInt("database.pool.connectionTimeout", 10000))
+            .setIdleTimeout(ConfigHolder.getInt("database.pool.idleTimeout", 60));
           instance = PgBuilder.pool().with(poolOptions).connectingTo(opts).using(vertx).build();
           LOG.info("PgPool 已创建: {}:{}/{}", opts.getHost(), opts.getPort(), opts.getDatabase());
         }

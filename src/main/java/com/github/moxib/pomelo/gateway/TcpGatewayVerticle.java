@@ -1,6 +1,7 @@
 package com.github.moxib.pomelo.gateway;
 
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.gateway.handler.Connection;
 import com.github.moxib.pomelo.gateway.handler.MessageDispatcher;
 import com.github.moxib.pomelo.gateway.handler.SessionRegistry;
@@ -23,14 +24,15 @@ public class TcpGatewayVerticle extends VerticleBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TcpGatewayVerticle.class);
 
-  private static final int TCP_PORT = Integer.parseInt(System.getProperty("gateway.tcp.port", "9000"));
+  private int tcpPort;
 
   private NetServer tcpServer;
   private MessageDispatcher dispatcher;
 
   @Override
   public Future<?> start() {
-    LOG.info("启动 TCP Gateway，端口：{}", TCP_PORT);
+    this.tcpPort = ConfigHolder.getInt("gateway.tcp.port", 9000);
+    LOG.info("启动 TCP Gateway，端口：{}", tcpPort);
 
     dispatcher = new MessageDispatcher(vertx);
 
@@ -38,9 +40,9 @@ public class TcpGatewayVerticle extends VerticleBase {
       .compose(v -> {
         tcpServer = vertx.createNetServer();
         return tcpServer
-          .connectHandler(getTcpHandler()).listen(TCP_PORT);
+          .connectHandler(getTcpHandler()).listen(tcpPort);
       })
-      .onSuccess(ar -> LOG.info("TCP Gateway 已启动，监听端口：{}", TCP_PORT))
+      .onSuccess(ar -> LOG.info("TCP Gateway 已启动，监听端口：{}", tcpPort))
       .onFailure(throwable -> LOG.error("TCP Gateway 启动失败", throwable));
   }
 

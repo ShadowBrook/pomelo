@@ -1,5 +1,6 @@
 package com.github.moxib.pomelo.service;
 
+import com.github.moxib.pomelo.config.ConfigHolder;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -22,9 +23,13 @@ public final class RedisFactory {
   private volatile RedisConnection connection;
 
   private RedisFactory(Vertx vertx) {
+    String uri = ConfigHolder.getString("redis.uri", "redis://localhost:6379");
     RedisOptions options = new RedisOptions()
-      .setMaxPoolSize(4)
-      .setMaxWaitingHandlers(8);
+      .setMaxPoolSize(ConfigHolder.getInt("redis.maxPoolSize", 4))
+      .setMaxWaitingHandlers(ConfigHolder.getInt("redis.maxWaitingHandlers", 8));
+    if (uri != null && !uri.isBlank()) {
+      options.setConnectionString(uri);
+    }
     this.redis = Redis.createClient(vertx, options);
   }
 

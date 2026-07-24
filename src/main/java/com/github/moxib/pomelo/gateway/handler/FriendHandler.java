@@ -4,6 +4,7 @@ import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.proto.relation.RelationProto;
 import com.github.moxib.pomelo.service.MessageRepository;
 import com.github.moxib.pomelo.service.MessageService;
@@ -34,7 +35,7 @@ public class FriendHandler extends AbstractMessageHandler {
 
   private static final String SEARCH_SQL = """
     SELECT user_id, user_name, nickname, avatar FROM im_user
-    WHERE user_name LIKE $1 OR nickname LIKE $1 LIMIT 20
+    WHERE user_name LIKE $1 OR nickname LIKE $1 LIMIT $2
     """;
   private static final String INSERT_FRIEND_SQL = """
     INSERT INTO im_friend (user_id, friend_id, status, created_at)
@@ -55,12 +56,14 @@ public class FriendHandler extends AbstractMessageHandler {
     """;
 
   private final Pool pgPool;
+  private final int searchLimit;
 
   public FriendHandler(Vertx vertx, CodecRegistry codecRegistry,
                         SessionRegistry sessionRegistry, MessageRepository messageRepo,
                         MessageService messageService, IdGenerator idGenerator) {
     super(vertx, codecRegistry, sessionRegistry, messageRepo, messageService, idGenerator);
     this.pgPool = PgPoolFactory.get(vertx);
+    this.searchLimit = ConfigHolder.getInt("friend.searchLimit", 20);
   }
 
   @Override
@@ -90,7 +93,7 @@ public class FriendHandler extends AbstractMessageHandler {
     }
 
     pgPool.preparedQuery(SEARCH_SQL)
-      .execute(Tuple.of("%" + keyword + "%"))
+      .execute(Tuple.of("%" + keyword + "%", searchLimit))
       .onSuccess(rows -> sendResponse(connection,
         buildResponse(message, CMD_FRIEND_SEARCH_RESP_VALUE, buildSearchBody(codecId, rows))))
       .onFailure(e -> sendErrorResponse(connection, message, CMD_FRIEND_SEARCH_RESP_VALUE, ErrorCode.INTERNAL_ERROR, "搜索失败"));

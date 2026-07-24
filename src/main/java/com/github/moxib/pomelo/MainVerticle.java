@@ -1,6 +1,7 @@
 package com.github.moxib.pomelo;
 
 import com.github.moxib.pomelo.api.ApiVerticle;
+import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.gateway.WsGatewayVerticle;
 import com.github.moxib.pomelo.service.PgPoolFactory;
 import com.github.moxib.pomelo.service.RedisFactory;
@@ -12,10 +13,12 @@ public class MainVerticle extends VerticleBase {
 
   @Override
   public Future<?> start() {
-    return Future.all(
-      vertx.deployVerticle(new WsGatewayVerticle()),
-      vertx.deployVerticle(new ApiVerticle())
-    ).mapEmpty();
+    return ConfigHolder.load(vertx)
+      .compose(v -> Future.all(
+        vertx.deployVerticle(new WsGatewayVerticle()),
+        vertx.deployVerticle(new ApiVerticle())
+      ))
+      .mapEmpty();
   }
 
   @Override
