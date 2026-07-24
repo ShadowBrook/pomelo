@@ -1,5 +1,6 @@
 package com.github.moxib.pomelo.utils;
 
+import com.github.moxib.pomelo.config.ConfigHolder;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -34,11 +35,6 @@ import static io.vertx.redis.client.Command.EVAL;
 public class RedisIdGenerator implements IdGenerator {
 
     private static final Logger logger = LoggerFactory.getLogger(RedisIdGenerator.class);
-
-    /**
-     * 默认预分配大小
-     */
-    private static final long DEFAULT_ALLOCATION_SIZE = 5000L;
 
     /**
      * Redis 中存储 ID 的 key
@@ -130,7 +126,9 @@ public class RedisIdGenerator implements IdGenerator {
      * @param redis Redis 客户端（由 RedisFactory 提供）
      */
     public RedisIdGenerator(Vertx vertx, Redis redis) {
-        this(vertx, redis, "seq:id:generator");
+        this(vertx, redis,
+            ConfigHolder.getString("idGenerator.redisKey", "seq:id:generator"));
+        this.allocationSize = ConfigHolder.getInt("idGenerator.allocationSize", 5000);
     }
 
     /**
@@ -148,7 +146,7 @@ public class RedisIdGenerator implements IdGenerator {
         this.batchEnd = 0;
         this.initialized = new AtomicBoolean(false);
         this.prefetching = new AtomicBoolean(false);
-        this.allocationSize = DEFAULT_ALLOCATION_SIZE;
+        this.allocationSize = ConfigHolder.getInt("idGenerator.allocationSize", 5000);
     }
 
     @Override
@@ -156,7 +154,7 @@ public class RedisIdGenerator implements IdGenerator {
         Promise<Boolean> promise = Promise.promise();
 
         if (initialized.compareAndSet(false, true)) {
-            this.allocationSize = allocationSize > 0 ? allocationSize : DEFAULT_ALLOCATION_SIZE;
+            this.allocationSize = allocationSize > 0 ? allocationSize : this.allocationSize;
 
             // 从注入的 redis 客户端获取连接
             redis.connect().onComplete(connectAr -> {
@@ -212,7 +210,7 @@ public class RedisIdGenerator implements IdGenerator {
 
         if (!initialized.get()) {
             // 延迟初始化：首次调用 nextId 时自动 init
-            tryInit(0, DEFAULT_ALLOCATION_SIZE).onComplete(initAr -> {
+            tryInit(0, allocationSize).onComplete(initAr -> {
                 if (initAr.succeeded()) {
                     doNextId(promise);
                 } else {

@@ -1,0 +1,44 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.eclipse/
+.settings/
+
+# Maven build output (except fat jar)
+target/*
+!target/pomelo-*-fat.jar
+
+# Node.js (SDK build artifacts)
+node_modules/
+src/test/resources/node_modules/
+package-lock.json
+
+# Docs
+docs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+docker-compose*.yml
+Dockerfile*
+
+# Claude
+.claude/
+
+# Temp
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Proto (already compiled into jar)
+src/main/proto/
