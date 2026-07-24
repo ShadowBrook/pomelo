@@ -1,5 +1,6 @@
 package com.github.moxib.pomelo.service;
 
+import com.github.moxib.pomelo.config.ConfigHolder;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -25,13 +26,13 @@ public final class RedisOnlineStatus {
 
   private static final Logger LOG = LoggerFactory.getLogger(RedisOnlineStatus.class);
 
-  private static final String ONLINE_SET_KEY = "im:online:users";
-
   private static volatile RedisOnlineStatus instance;
   private final Vertx vertx;
+  private final String onlineSetKey;
 
   private RedisOnlineStatus(Vertx vertx) {
     this.vertx = vertx;
+    this.onlineSetKey = ConfigHolder.getString("redis.onlineSetKey", "im:online:users");
   }
 
   /** 获取单例 */
@@ -54,7 +55,7 @@ public final class RedisOnlineStatus {
   /** 用户上线 */
   public Future<Void> setOnline(String userId) {
     Promise<Void> promise = Promise.promise();
-    connection().send(Request.cmd(SADD).arg(ONLINE_SET_KEY).arg(userId))
+    connection().send(Request.cmd(SADD).arg(onlineSetKey).arg(userId))
       .onSuccess(r -> {
         LOG.debug("用户 {} 上线（Redis SET）", userId);
         promise.complete();
@@ -69,7 +70,7 @@ public final class RedisOnlineStatus {
   /** 用户下线 */
   public Future<Void> setOffline(String userId) {
     Promise<Void> promise = Promise.promise();
-    connection().send(Request.cmd(SREM).arg(ONLINE_SET_KEY).arg(userId))
+    connection().send(Request.cmd(SREM).arg(onlineSetKey).arg(userId))
       .onSuccess(r -> {
         LOG.debug("用户 {} 下线（Redis SET）", userId);
         promise.complete();
@@ -84,7 +85,7 @@ public final class RedisOnlineStatus {
   /** 检查用户是否在线 */
   public Future<Boolean> isOnline(String userId) {
     Promise<Boolean> promise = Promise.promise();
-    connection().send(Request.cmd(SISMEMBER).arg(ONLINE_SET_KEY).arg(userId))
+    connection().send(Request.cmd(SISMEMBER).arg(onlineSetKey).arg(userId))
       .onSuccess(r -> promise.complete(r != null && r.toInteger() == 1))
       .onFailure(e -> {
         LOG.warn("查询在线状态失败: {}", e.getMessage());
@@ -103,7 +104,7 @@ public final class RedisOnlineStatus {
       return Future.succeededFuture(List.of());
     }
     Promise<List<Boolean>> promise = Promise.promise();
-    Request req = Request.cmd(Command.create("SMISMEMBER")).arg(ONLINE_SET_KEY);
+    Request req = Request.cmd(Command.create("SMISMEMBER")).arg(onlineSetKey);
     for (String uid : userIds) {
       req.arg(uid);
     }

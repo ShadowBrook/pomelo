@@ -1,6 +1,7 @@
 package com.github.moxib.pomelo.gateway;
 
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.gateway.handler.Connection;
 import com.github.moxib.pomelo.gateway.handler.MessageDispatcher;
 import com.github.moxib.pomelo.gateway.handler.SessionRegistry;
@@ -21,21 +22,22 @@ public class WsGatewayVerticle extends VerticleBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(WsGatewayVerticle.class);
 
-  private static final int WS_PORT = Integer.parseInt(System.getProperty("gateway.websocket.port", "9001"));
+  private int wsPort;
 
   private HttpServer wsServer;
   private MessageDispatcher dispatcher;
 
   @Override
   public Future<?> start() throws Exception {
+    this.wsPort = ConfigHolder.getInt("gateway.websocket.port", 9001);
     dispatcher = new MessageDispatcher(vertx);
 
     // 后台初始化 dispatcher（Redis 连接等），不阻塞服务器启动
     dispatcher.start();
 
     wsServer = vertx.createHttpServer();
-    return wsServer.webSocketHandler(getServerHandler()).listen(WS_PORT)
-      .onSuccess(ar -> LOG.info("WebSocket 服务器已启动，监听端口：{}", WS_PORT))
+    return wsServer.webSocketHandler(getServerHandler()).listen(wsPort)
+      .onSuccess(ar -> LOG.info("WebSocket 服务器已启动，监听端口：{}", wsPort))
       .onFailure(throwable -> LOG.error("WebSocket 服务器启动失败", throwable));
   }
 

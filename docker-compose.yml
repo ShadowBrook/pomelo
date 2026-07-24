@@ -1,0 +1,78 @@
+services:
+  pomelo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pomelo
+    ports:
+      # HTTP API
+      - "8080:8080"
+      # WebSocket Gateway
+      - "9001:9001"
+      # TCP Gateway
+      - "9000:9000"
+    environment:
+      # 数据库配置（通过 POMELO_* 环境变量覆盖 config.yaml 默认值）
+      POMELO_DATABASE_HOST: postgres
+      POMELO_DATABASE_PORT: "5432"
+      POMELO_DATABASE_DATABASE: pomelo_db
+      POMELO_DATABASE_USER: pomelo
+      POMELO_DATABASE_PASSWORD: pomelo123
+      # Redis 配置
+      POMELO_REDIS_URI: "redis://redis:6379"
+      # JVM 参数
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    # 挂载自定义配置文件（可选，取消注释下面两行后优先于环境变量）
+    # volumes:
+    #   - ./conf/config.yaml:/app/conf/config.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pomelo-net
+
+  postgres:
+    image: postgres:latest
+    container_name: pomelo-postgres
+    environment:
+      POSTGRES_DB: pomelo_db
+      POSTGRES_USER: pomelo
+      POSTGRES_PASSWORD: pomelo123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+      # 初始化建表脚本
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pomelo -d pomelo_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pomelo-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: pomelo-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pomelo-net
+
+volumes:
+  pgdata:
+
+networks:
+  pomelo-net:
+    driver: bridge

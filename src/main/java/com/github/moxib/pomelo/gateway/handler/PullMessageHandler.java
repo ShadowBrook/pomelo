@@ -4,6 +4,7 @@ import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.proto.pull.PullProto;
 import com.github.moxib.pomelo.service.MessageRepository;
 import com.github.moxib.pomelo.service.MessageService;
@@ -35,10 +36,13 @@ public class PullMessageHandler extends AbstractMessageHandler {
 
   private static final Logger LOG = LoggerFactory.getLogger(PullMessageHandler.class);
 
+  private final int defaultPullLimit;
+
   public PullMessageHandler(Vertx vertx, CodecRegistry codecRegistry,
                              SessionRegistry sessionRegistry, MessageRepository messageRepo,
                              MessageService messageService, IdGenerator idGenerator) {
     super(vertx, codecRegistry, sessionRegistry, messageRepo, messageService, idGenerator);
+    this.defaultPullLimit = ConfigHolder.getInt("message.pullLimit", 50);
   }
 
   @Override
@@ -50,7 +54,7 @@ public class PullMessageHandler extends AbstractMessageHandler {
         ? req.userId() : getUserIdFromHeaders(message);
       String peerId = req.peerId() != null && !req.peerId().isEmpty() ? req.peerId() : null;
       long sinceSeq = req.lastMsgId();
-      int limit = req.limit() > 0 ? req.limit() : 50;
+      int limit = req.limit() > 0 ? req.limit() : defaultPullLimit;
 
       if (userId == null || userId.isEmpty()) {
         sendErrorResponse(connection, message, CMD_PULL_RESP_VALUE, ErrorCode.UNAUTHORIZED, "未认证用户");

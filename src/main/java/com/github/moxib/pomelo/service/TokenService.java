@@ -1,5 +1,6 @@
 package com.github.moxib.pomelo.service;
 
+import com.github.moxib.pomelo.config.ConfigHolder;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
@@ -26,17 +27,18 @@ public class TokenService {
 
   private static final Logger LOG = LoggerFactory.getLogger(TokenService.class);
 
-  private static final int TOKEN_TTL_SECONDS = 24 * 60 * 60; // 24 小时
-  private static final String BLACKLIST_PREFIX = "jwt:blacklist:";
-
   private static volatile TokenService instance;
 
   private final JWTAuth jwtAuth;
   private final Vertx vertx;
+  private final int tokenTtlSeconds;
+  private final String blacklistPrefix;
 
   private TokenService(Vertx vertx) {
     this.vertx = vertx;
-    String secret = System.getProperty("jwt.secret", "pomelo-dev-secret-change-in-production");
+    this.tokenTtlSeconds = ConfigHolder.getInt("jwt.ttlSeconds", 86400);
+    this.blacklistPrefix = ConfigHolder.getString("jwt.blacklistPrefix", "jwt:blacklist:");
+    String secret = ConfigHolder.getString("jwt.secret", "pomelo-dev-secret-change-in-production");
     PubSecKeyOptions keyOptions = new PubSecKeyOptions()
       .setAlgorithm("HS256")
       .setBuffer(secret);
@@ -71,7 +73,7 @@ public class TokenService {
     if (nickname != null) claims.put("nickname", nickname);
     JWTOptions options = new JWTOptions()
       .setAlgorithm("HS256")
-      .setExpiresInSeconds(TOKEN_TTL_SECONDS);
+      .setExpiresInSeconds(tokenTtlSeconds);
     return jwtAuth.generateToken(claims, options);
   }
 
@@ -126,7 +128,7 @@ public class TokenService {
     long ttl = Math.max(1, getExpiration(token) - System.currentTimeMillis() / 1000);
     RedisFactory.get(vertx).getConnection().send(
       Request.cmd(Command.SET)
-        .arg(BLACKLIST_PREFIX + jti).arg("1")
+        .arg(blacklistPrefix + jti).arg("1")
         .arg("EX").arg(String.valueOf(ttl)))
       .onSuccess(r -> LOG.debug("Token 已加入黑名单: jti={} ttl={}s", jti, ttl))
       .onFailure(e -> LOG.warn("Token 黑名单失败: {}", e.getMessage()));
@@ -144,7 +146,7 @@ public class TokenService {
     }
     RedisFactory.get(vertx).getConnection().send(
       Request.cmd(Command.EXISTS)
-        .arg(BLACKLIST_PREFIX + jti))
+        .arg(blacklistPrefix + jti))
       .onSuccess(r -> promise.complete(r != null && r.toInteger() == 1))
       .onFailure(e -> {
         LOG.warn("黑名单检查失败: {}", e.getMessage());

@@ -1,6 +1,7 @@
 package com.github.moxib.pomelo.api;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
+import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.service.PgPoolFactory;
 import com.github.moxib.pomelo.service.RedisFactory;
 import com.github.moxib.pomelo.service.RedisOnlineStatus;
@@ -32,7 +33,6 @@ import java.util.List;
 public class ApiVerticle extends VerticleBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(ApiVerticle.class);
-  private static final int PORT = Integer.parseInt(System.getProperty("api.http.port", "8080"));
 
   private static final String INSERT_USER_SQL = """
     INSERT INTO im_user (id, user_id, user_name, nickname, avatar, password, status, created_at, updated_at)
@@ -60,14 +60,19 @@ public class ApiVerticle extends VerticleBase {
     WHERE me.user_id = $1 AND f.status = 0 ORDER BY f.created_at DESC
     """;
 
-  private final SnowflakeIdGenerator snowflake =
-    new SnowflakeIdGenerator(Integer.getInteger("snowflake.worker.id", 1));
+  private int port;
+  private int bcryptCost;
+  private SnowflakeIdGenerator snowflake;
 
   private HttpServer server;
   private Pool pgPool;
 
   @Override
   public Future<?> start() {
+    this.port = ConfigHolder.getInt("api.http.port", 8080);
+    this.bcryptCost = ConfigHolder.getInt("bcrypt.cost", 12);
+    this.snowflake = new SnowflakeIdGenerator(
+      ConfigHolder.getInt("snowflake.workerId", 1));
     pgPool = PgPoolFactory.get(vertx);
 
     return RedisFactory.get(vertx).connect()
@@ -82,8 +87,8 @@ public class ApiVerticle extends VerticleBase {
         router.get("/api/friends/:userId/pending").handler(this::pending);
 
         server = vertx.createHttpServer();
-        return server.requestHandler(router).listen(PORT)
-          .onSuccess(v2 -> LOG.info("ApiVerticle 已启动，端口: {}", PORT))
+        return server.requestHandler(router).listen(port)
+          .onSuccess(v2 -> LOG.info("ApiVerticle 已启动，端口: {}", port))
           .onFailure(e -> LOG.error("ApiVerticle 启动失败", e));
       });
   }
@@ -109,7 +114,7 @@ public class ApiVerticle extends VerticleBase {
 
     long id = snowflake.nextId();
     String userId = NanoIdGenerator.next();
-    String hash = BCrypt.withDefaults().hashToString(12, password.toCharArray());
+    String hash = BCrypt.withDefaults().hashToString(bcryptCost, password.toCharArray());
     long now = System.currentTimeMillis();
 
     pgPool.preparedQuery(INSERT_USER_SQL).execute(Tuple.of(id, userId, userName, nickname, avatar, hash, now))
