@@ -92,6 +92,25 @@ public class PullService extends ServiceBase {
   }
 
   private Future<ImMessage> sendPullResp(ImMessage request, List<MessageRecord> records, int limit) {
+    if (records == null || records.isEmpty()) {
+      return Future.succeededFuture(buildPullResp(request, null, limit, java.util.Collections.emptyMap()));
+    }
+    // 收集所有待解析的 numeric id → 批量查 DB 获取 userId + userName + nickname
+    java.util.Set<Long> numericIds = new java.util.HashSet<>();
+    for (MessageRecord r : records) {
+      numericIds.add(r.getSenderId());
+      numericIds.add(r.getRecipientId());
+    }
+    return messageRepo.findUserIdsByIds(new java.util.ArrayList<>(numericIds))
+      .compose(idToInfo -> Future.succeededFuture(buildPullResp(request, records, limit, idToInfo)))
+      .recover(err -> {
+        LOG.warn("批量查用户信息失败: {}", err.getMessage());
+        return Future.succeededFuture(buildPullResp(request, records, limit, java.util.Collections.emptyMap()));
+      });
+  }
+
+  private ImMessage buildPullResp(ImMessage request, List<MessageRecord> records, int limit,
+                                   java.util.Map<Long, com.github.moxib.pomelo.logic.model.UserIdInfo> idToInfo) {
     byte codecId = request.getCodecId();
     Object respBody;
 
@@ -111,8 +130,17 @@ public class PullService extends ServiceBase {
           JsonObject msg = new JsonObject();
           arr.add(msg);
           msg.put("id", r.getId());
-          msg.put("senderId", String.valueOf(r.getSenderId()));
-          msg.put("recipientId", String.valueOf(r.getRecipientId()));
+          // 用 DB 查到的 NanoID + 显示名，fallback 到数字 ID
+          com.github.moxib.pomelo.logic.model.UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
+          com.github.moxib.pomelo.logic.model.UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());
+          msg.put("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(r.getSenderId()));
+          msg.put("recipientId", recipientInfo != null ? recipientInfo.userId() : String.valueOf(r.getRecipientId()));
+          if (senderInfo != null && senderInfo.userName() != null) {
+            msg.put("senderUserName", senderInfo.userName());
+          }
+          if (senderInfo != null && senderInfo.nickname() != null) {
+            msg.put("senderNickname", senderInfo.nickname());
+          }
           msg.put("msgType", r.getMsgType());
           msg.put("content", r.getContent() != null ? r.getContent() : "");
           msg.put("seq", r.getSeq());
@@ -122,6 +150,6 @@ public class PullService extends ServiceBase {
       respBody = json;
     }
 
-    return Future.succeededFuture(buildResponse(request, CMD_PULL_RESP_VALUE, respBody));
+    return buildResponse(request, CMD_PULL_RESP_VALUE, respBody);
   }
 }
