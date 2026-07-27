@@ -1,22 +1,30 @@
-package com.github.moxib.pomelo;
+package com.github.moxib.pomelo.gateway;
 
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+/**
+ * Gateway 部署基本验证 — 不需要 Redis，仅验证 Gateway Verticle 正常启动。
+ */
 @ExtendWith(VertxExtension.class)
 public class TestMainVerticle {
 
-  @BeforeEach
-  void deploy_verticle(Vertx vertx, VertxTestContext testContext) {
-    vertx.deployVerticle(new MainVerticle()).onComplete(testContext.succeeding(id -> testContext.completeNow()));
-  }
-
   @Test
-  void verticle_deployed(Vertx vertx, VertxTestContext testContext) throws Throwable {
-    testContext.completeNow();
+  void gatewayVerticleDeploysSuccessfully(Vertx vertx, VertxTestContext ctx) {
+    vertx.deployVerticle(new WsGatewayVerticle())
+      .onComplete(ar -> {
+        ctx.verify(() -> {
+          if (ar.succeeded()) {
+            vertx.undeploy(ar.result());
+            ctx.completeNow();
+          } else {
+            ctx.failNow(ar.cause());
+          }
+        });
+      });
   }
 }

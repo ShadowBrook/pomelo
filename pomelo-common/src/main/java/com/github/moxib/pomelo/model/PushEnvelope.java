@@ -1,26 +1,19 @@
 package com.github.moxib.pomelo.model;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-
 /**
  * Logic-Server → Gateway 的推送信封。
  * 在 EventBus 上以 JSON 编码传输，各 Gateway 节点收到后根据 targetUserId 查本地 SessionRegistry 投递。
  */
 public class PushEnvelope {
 
-  @JsonProperty("targetUserId")
   private String targetUserId;
 
-  @JsonProperty("cmd")
   private int cmd;
 
-  @JsonProperty("body")
   private byte[] body;
 
-  @JsonProperty("codecId")
   private byte codecId;
 
-  @JsonProperty("correlationMsgId")
   private String correlationMsgId;
 
   public PushEnvelope() {}
