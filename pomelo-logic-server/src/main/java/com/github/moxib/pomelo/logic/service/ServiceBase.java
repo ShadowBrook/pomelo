@@ -24,6 +24,7 @@ public abstract class ServiceBase {
       .cmd(cmd)
       .messageId(request.getMessageId())
       .body(encodeBody(codecId, cmd, body))
+      .varHeaders(new java.util.HashMap<>())
       .build();
   }
 
