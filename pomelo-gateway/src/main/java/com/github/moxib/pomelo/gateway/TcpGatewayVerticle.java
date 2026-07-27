@@ -82,7 +82,9 @@ public class TcpGatewayVerticle extends VerticleBase {
         } else {
           LOG.error("TCP 连接异常：{}", socket.remoteAddress(), throwable);
         }
+        long numericId = sessionRegistry.getNumericIdByConnection(conn);
         String userId = sessionRegistry.unregisterByConnection(conn);
+        if (numericId != 0) dispatcher.getRouteTable().unregister(String.valueOf(numericId));
         dispatcher.getRouteTable().unregister(userId);
         socket.close();
       });

@@ -148,6 +148,12 @@ public class SessionRegistry {
     return id != null ? getToken(id) : null;
   }
 
+  /** 按 connection 获取数字 id（不删除映射） */
+  public long getNumericIdByConnection(Connection connection) {
+    Long id = connectionToId.get(connection);
+    return id != null ? id : 0L;
+  }
+
   /** 按 connection 获取 token */
   public String getTokenByConnection(Connection connection) {
     Long id = connectionToId.get(connection);

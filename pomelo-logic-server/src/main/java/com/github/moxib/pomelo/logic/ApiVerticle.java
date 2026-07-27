@@ -69,7 +69,7 @@ public class ApiVerticle extends VerticleBase {
 
   @Override
   public Future<?> start() {
-    this.port = ConfigHolder.getInt("api.http.port", 8080);
+    this.port = ConfigHolder.getInt("api.http.port", 8888);
     this.bcryptCost = ConfigHolder.getInt("bcrypt.cost", 12);
     this.snowflake = new SnowflakeIdGenerator(
       ConfigHolder.getInt("snowflake.workerId", 1));

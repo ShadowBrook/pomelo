@@ -115,7 +115,7 @@ public class AckService extends ServiceBase {
         (byte) 0
       );
       pushRouter.push(env);
-      LOG.debug("AckNotify 已广播: sender={} type={} count={}", ctx.getSenderId(), ctx.getAckType(), ctx.getMessageIds().size());
+      LOG.debug("AckNotify 已发送: sender={} type={} count={}", ctx.getSenderId(), ctx.getAckType(), ctx.getMessageIds().size());
     } catch (Exception e) {
       LOG.error("推送 AckNotify 失败: {}", e.getMessage());
     }
