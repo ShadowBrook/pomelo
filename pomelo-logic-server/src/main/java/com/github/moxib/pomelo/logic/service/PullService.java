@@ -7,7 +7,6 @@ import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
-import com.github.moxib.pomelo.logic.model.UserIdInfo;
 import com.github.moxib.pomelo.logic.model.requests.PullRequest;
 import com.github.moxib.pomelo.proto.pull.PullProto;
 import io.vertx.core.Future;
