@@ -3,21 +3,9 @@
            xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xsi:schemaLocation="http://www.hazelcast.com/schema/config
            http://www.hazelcast.com/schema/config/hazelcast-config-5.3.xsd">
-
-  <cluster-name>pomelo</cluster-name>
-
   <network>
-    <port auto-increment="true" port-count="50">5701</port>
     <join>
-      <!-- 关闭组播（macOS 环境通常不可用） -->
-      <multicast enabled="false"/>
-      <!-- 使用 TCP-IP 静态成员列表 -->
-      <tcp-ip enabled="true">
-        <member>127.0.0.1:5701</member>
-        <member>127.0.0.1:5702</member>
-        <member>127.0.0.1:5703</member>
-        <member>127.0.0.1:5704</member>
-      </tcp-ip>
+      <multicast/>
     </join>
   </network>
 
