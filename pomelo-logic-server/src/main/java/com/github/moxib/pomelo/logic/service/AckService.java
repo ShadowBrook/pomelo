@@ -86,17 +86,25 @@ public class AckService extends ServiceBase {
           return Future.succeededFuture(Collections.<AckNotifyContext>emptyList());
         }
         return messageRepo.batchUpdateStatus(messageIds, newStatus)
-          .map(v -> {
+          .compose(v -> {
             Map<Long, List<Long>> senderMessages = new LinkedHashMap<>();
             for (MessageRecord r : records) {
               senderMessages.computeIfAbsent(r.getSenderId(), k -> new ArrayList<>()).add(r.getId());
             }
-            List<AckNotifyContext> results = new ArrayList<>();
-            for (Map.Entry<Long, List<Long>> entry : senderMessages.entrySet()) {
-              results.add(new AckNotifyContext(entry.getKey(), null, entry.getValue(), ackType));
-            }
-            LOG.info("ACK: updated {} msgs to status={}, notify {} senders", messageIds.size(), newStatus, results.size());
-            return results;
+            // 批量查 DB 把数字 ID 转 NanoID
+            List<Long> senderIds = new ArrayList<>(senderMessages.keySet());
+            return messageRepo.findUserIdsByIds(senderIds)
+              .map(idToInfo -> {
+                List<AckNotifyContext> results = new ArrayList<>();
+                for (Map.Entry<Long, List<Long>> entry : senderMessages.entrySet()) {
+                  long senderId = entry.getKey();
+                  var info = idToInfo.get(senderId);
+                  String senderUserId = info != null ? info.userId() : String.valueOf(senderId);
+                  results.add(new AckNotifyContext(senderId, senderUserId, entry.getValue(), ackType));
+                }
+                LOG.info("ACK: updated {} msgs to status={}, notify {} senders", messageIds.size(), newStatus, results.size());
+                return results;
+              });
           });
       });
   }
@@ -108,8 +116,9 @@ public class AckService extends ServiceBase {
       for (Long id : ctx.getMessageIds()) {
         builder.addMessageIds(id);
       }
+      String targetUserId = ctx.getSenderUserId() != null ? ctx.getSenderUserId() : String.valueOf(ctx.getSenderId());
       PushEnvelope env = new PushEnvelope(
-        String.valueOf(ctx.getSenderId()),
+        targetUserId,
         CMD_ACK_NOTIFY_VALUE,
         builder.build().toByteArray(),
         (byte) 0
