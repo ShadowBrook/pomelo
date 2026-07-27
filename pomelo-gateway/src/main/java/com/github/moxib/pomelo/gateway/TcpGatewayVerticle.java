@@ -5,7 +5,6 @@ import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.gateway.handler.Connection;
 import com.github.moxib.pomelo.gateway.handler.MessageDispatcher;
 import com.github.moxib.pomelo.gateway.handler.SessionRegistry;
-import com.github.moxib.pomelo.service.RedisOnlineStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.VerticleBase;
@@ -25,8 +24,8 @@ public class TcpGatewayVerticle extends VerticleBase {
   private static final Logger LOG = LoggerFactory.getLogger(TcpGatewayVerticle.class);
 
   private int tcpPort;
-
   private NetServer tcpServer;
+  private SessionRegistry sessionRegistry;
   private MessageDispatcher dispatcher;
 
   @Override
@@ -34,14 +33,13 @@ public class TcpGatewayVerticle extends VerticleBase {
     this.tcpPort = ConfigHolder.getInt("gateway.tcp.port", 9000);
     LOG.info("启动 TCP Gateway，端口：{}", tcpPort);
 
-    dispatcher = new MessageDispatcher(vertx);
+    this.sessionRegistry = new SessionRegistry();
+    this.dispatcher = new MessageDispatcher(vertx, sessionRegistry);
+    tcpServer = vertx.createNetServer();
 
-    return dispatcher.start()
-      .compose(v -> {
-        tcpServer = vertx.createNetServer();
-        return tcpServer
-          .connectHandler(getTcpHandler()).listen(tcpPort);
-      })
+    return tcpServer
+      .connectHandler(getTcpHandler())
+      .listen(tcpPort)
       .onSuccess(ar -> LOG.info("TCP Gateway 已启动，监听端口：{}", tcpPort))
       .onFailure(throwable -> LOG.error("TCP Gateway 启动失败", throwable));
   }
@@ -53,8 +51,6 @@ public class TcpGatewayVerticle extends VerticleBase {
   }
 
   private Handler<NetSocket> getTcpHandler() {
-    SessionRegistry sessionRegistry = dispatcher.getSessionRegistry();
-
     return socket -> {
       RecordParser parser = RecordParser.newFixed(4);
       Connection conn = Connection.from(socket);
@@ -87,21 +83,15 @@ public class TcpGatewayVerticle extends VerticleBase {
           LOG.error("TCP 连接异常：{}", socket.remoteAddress(), throwable);
         }
         String userId = sessionRegistry.unregisterByConnection(conn);
-        updateUserOffline(userId);
+        // TODO: Phase 2 — publish gateway.user.offline event to EventBus
         socket.close();
       });
 
       socket.closeHandler(v -> {
         LOG.info("TCP 客户端断开连接：{}", socket.remoteAddress());
         String userId = sessionRegistry.unregisterByConnection(conn);
-        updateUserOffline(userId);
+        // TODO: Phase 2 — publish gateway.user.offline event to EventBus
       });
     };
-  }
-
-  /** Redis 标记用户离线 */
-  private void updateUserOffline(String userId) {
-    if (userId == null) return;
-    RedisOnlineStatus.get(vertx).setOffline(userId);
   }
 }
