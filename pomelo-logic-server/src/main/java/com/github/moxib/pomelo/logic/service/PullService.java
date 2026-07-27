@@ -43,7 +43,7 @@ public class PullService extends ServiceBase {
       PullRequest req = decode(codecRegistry, message, PullRequest.class);
       String userId = req.userId() != null && !req.userId().isEmpty()
         ? req.userId() : getUserIdFromHeaders(message);
-      String peerId = req.peerId() != null && !req.peerId().isEmpty() ? req.peerId() : null;
+      String peerId = req.peerId() != null && !req.peerId().isEmpty() && !"0".equals(req.peerId()) ? req.peerId() : null;
       long sinceSeq = req.lastMsgId();
       int limit = req.limit() > 0 ? req.limit() : defaultPullLimit;
 
