@@ -37,7 +37,14 @@ public class MessageDispatcher {
    */
   private void onPushMessage(io.vertx.core.eventbus.Message<JsonObject> msg) {
     PushEnvelope env = msg.body().mapTo(PushEnvelope.class);
-    Connection conn = sessionRegistry.getConnectionByUserId(env.getTargetUserId());
+    // 先按数字 id 查，再按 NanoID userId 查
+    Connection conn = null;
+    try {
+      long targetId = Long.parseLong(env.getTargetUserId());
+      conn = sessionRegistry.getConnection(targetId);
+    } catch (NumberFormatException e) {
+      conn = sessionRegistry.getConnectionByUserId(env.getTargetUserId());
+    }
     if (conn == null) {
       LOG.debug("push target {} 不在本节点，忽略", env.getTargetUserId());
       return;
