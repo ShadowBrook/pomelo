@@ -67,7 +67,9 @@ public class LogicVerticle extends VerticleBase {
   private void dispatch(Message<Buffer> msg, java.util.function.Function<ImMessage, Future<ImMessage>> processor) {
     try {
       ImMessage request = new ImMessage();
-      request.readFromWire(msg.body());
+      // 跳过 4 字节长度前缀（encodeToWire 的格式）
+      Buffer body = msg.body();
+      request.readFromWire(body.getBuffer(4, body.length()));
       processor.apply(request).onComplete(ar -> {
         if (ar.succeeded()) {
           msg.reply(ar.result().encodeToWire());
