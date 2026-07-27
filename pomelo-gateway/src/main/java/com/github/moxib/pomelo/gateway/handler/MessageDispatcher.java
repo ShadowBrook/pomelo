@@ -132,10 +132,9 @@ public class MessageDispatcher {
     if (headers == null) return;
     String userId = headers.get("userId");
     if (userId == null) return;
-    long id = sessionRegistry.getId(userId);
-    if (id == 0) return;
-    String userName = sessionRegistry.getUserName(id);
-    String nickname = sessionRegistry.getNickname(id);
+    if (sessionRegistry.getId(userId) == 0) return;
+    String userName = sessionRegistry.getUserName(userId);
+    String nickname = sessionRegistry.getNickname(userId);
     if (userName != null && !headers.containsKey("userName")) {
       headers.put("userName", userName);
     }
