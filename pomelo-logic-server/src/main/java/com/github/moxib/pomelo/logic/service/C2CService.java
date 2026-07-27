@@ -126,6 +126,7 @@ public class C2CService extends ServiceBase {
   }
 
   private void publishC2CNotify(MessageRecord record, String senderUserId) {
+    // PB body
     CommonProto.MessageContent msgContent = CommonProto.MessageContent.newBuilder()
       .setMsgTypeValue(record.getMsgType())
       .setContent(ByteString.copyFromUtf8(record.getContent() != null ? record.getContent() : ""))
@@ -138,10 +139,25 @@ public class C2CService extends ServiceBase {
       .setMessageId(record.getId())
       .build();
 
+    // JSON body（与旧 MessageServiceImpl.pushToRecipient 的 JSON 分支对齐）
+    JsonObject json = new JsonObject();
+    json.put("senderId", senderUserId);
+    json.put("recipientId", String.valueOf(record.getRecipientId()));
+    json.put("conversationId", record.getConversationId());
+    json.put("seq", record.getSeq());
+    JsonObject jsonMsgContent = new JsonObject();
+    json.put("message", jsonMsgContent);
+    jsonMsgContent.put("msgType", record.getMsgType());
+    jsonMsgContent.put("content", record.getContent() != null ? record.getContent() : "");
+    json.put("id", record.getId());
+    json.put("messageId", record.getId());
+    json.put("createdAt", record.getCreatedAt());
+
     PushEnvelope env = new PushEnvelope(
       String.valueOf(record.getRecipientId()),
       CMD_C2C_NOTIFY_VALUE,
       notify.toByteArray(),
+      json.toBuffer().getBytes(),
       (byte) 0
     );
     vertx.eventBus().publish("gateway.push", JsonObject.mapFrom(env));

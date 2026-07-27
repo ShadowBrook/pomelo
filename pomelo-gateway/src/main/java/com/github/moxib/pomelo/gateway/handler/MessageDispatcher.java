@@ -39,8 +39,9 @@ public class MessageDispatcher {
     PushEnvelope env = msg.body().mapTo(PushEnvelope.class);
     // 先按数字 id 查，再按 NanoID userId 查
     Connection conn = null;
+    long targetId = 0;
     try {
-      long targetId = Long.parseLong(env.getTargetUserId());
+      targetId = Long.parseLong(env.getTargetUserId());
       conn = sessionRegistry.getConnection(targetId);
     } catch (NumberFormatException e) {
       conn = sessionRegistry.getConnectionByUserId(env.getTargetUserId());
@@ -49,13 +50,24 @@ public class MessageDispatcher {
       LOG.debug("push target {} 不在本节点，忽略", env.getTargetUserId());
       return;
     }
+    // 根据接收方实际 codec 选择 body：JSON 用户用 jsonBody，PB 用户用 body
+    byte recipientCodec = sessionRegistry.getCodec(targetId);
+    byte[] pushBody;
+    byte pushCodecId;
+    if (recipientCodec == 1 && env.getJsonBody() != null && env.getJsonBody().length > 0) {
+      pushBody = env.getJsonBody();
+      pushCodecId = 1;
+    } else {
+      pushBody = env.getBody();
+      pushCodecId = env.getCodecId();
+    }
     ImMessage imMsg = ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER)
       .version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId(env.getCodecId())
+      .codecId(pushCodecId)
       .cmd(env.getCmd())
       .messageId(env.getCorrelationMsgId() != null ? env.getCorrelationMsgId() : "")
-      .body(env.getBody())
+      .body(pushBody)
       .build();
     conn.write(imMsg.encodeToWire());
   }
