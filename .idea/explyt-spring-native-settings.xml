@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SpringNativeSettings">
+    <option name="linkedExternalProjectsSettings">
+      <NativeProjectSettings>
+        <option name="externalProjectPath" value="$PROJECT_DIR$/src/main/java/com/github/moxib/pomelo/MainVerticle.java" />
+        <option name="qualifiedMainClassName" value="com.github.moxib.pomelo.MainVerticle" />
+        <option name="runConfigurationName" value="MainVerticle" />
+        <option name="runConfigurationType" value="APPLICATION" />
+      </NativeProjectSettings>
+    </option>
+  </component>
+</project>
