@@ -82,6 +82,8 @@ public class MessageDispatcher {
       handleUnknownCmd(connection, message);
       return;
     }
+    // 从 SessionRegistry 补充发送者的 userName/nickname 到 varHeaders
+    enrichWithSenderInfo(message);
     Buffer wire = message.encodeToWire();
     vertx.eventBus().<Buffer>request(address, wire)
       .onSuccess(replyMsg -> {
@@ -120,6 +122,27 @@ public class MessageDispatcher {
     if (logoutUserId != null && !logoutUserId.isEmpty()) {
       sessionRegistry.unregisterByUserId(logoutUserId);
       LOG.info("Session 已注销: userId={}", logoutUserId);
+    }
+  }
+
+  /**
+   * 从 SessionRegistry 获取发送者信息，补充到 varHeaders 中，
+   * 供 logic-server 构建推送时使用（senderUserName, senderNickname）。
+   */
+  private void enrichWithSenderInfo(ImMessage message) {
+    Map<String, String> headers = message.getVarHeaders();
+    if (headers == null) return;
+    String userId = headers.get("userId");
+    if (userId == null) return;
+    long id = sessionRegistry.getId(userId);
+    if (id == 0) return;
+    String userName = sessionRegistry.getUserName(id);
+    String nickname = sessionRegistry.getNickname(id);
+    if (userName != null && !headers.containsKey("userName")) {
+      headers.put("userName", userName);
+    }
+    if (nickname != null && !headers.containsKey("nickname")) {
+      headers.put("nickname", nickname);
     }
   }
 
