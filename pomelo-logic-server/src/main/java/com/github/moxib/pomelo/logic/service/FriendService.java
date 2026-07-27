@@ -47,13 +47,15 @@ public class FriendService extends ServiceBase {
     """;
 
   private final Vertx vertx;
+  private final PushRouter pushRouter;
   private final MessageRepository messageRepo;
   private final CodecRegistry codecRegistry;
   private final Pool pgPool;
   private final int searchLimit;
 
-  public FriendService(Vertx vertx, MessageRepository messageRepo) {
+  public FriendService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo) {
     this.vertx = vertx;
+    this.pushRouter = pushRouter;
     this.messageRepo = messageRepo;
     this.pgPool = PgPoolFactory.get(vertx);
     this.searchLimit = ConfigHolder.getInt("friend.searchLimit", 20);
@@ -216,7 +218,7 @@ public class FriendService extends ServiceBase {
       buildFriendNotifyBody(cmd, String.valueOf(fromUserId)),
       (byte) 0
     );
-    vertx.eventBus().publish("gateway.push", JsonObject.mapFrom(env));
+    pushRouter.push(env);
     LOG.debug("FriendNotify 已广播: target={} cmd={}", targetUserId, cmd);
   }
 

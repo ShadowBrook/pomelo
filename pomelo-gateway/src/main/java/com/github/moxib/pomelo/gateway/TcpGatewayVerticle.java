@@ -83,7 +83,7 @@ public class TcpGatewayVerticle extends VerticleBase {
           LOG.error("TCP 连接异常：{}", socket.remoteAddress(), throwable);
         }
         String userId = sessionRegistry.unregisterByConnection(conn);
-        // TODO: Phase 2 — publish gateway.user.offline event to EventBus
+        dispatcher.getRouteTable().unregister(userId);
         socket.close();
       });
 

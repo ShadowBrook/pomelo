@@ -37,14 +37,16 @@ public class LogicVerticle extends VerticleBase {
         var messageRepo = new PgMessageRepository(vertx);
         var idGenerator = new RedisIdGenerator(vertx, RedisFactory.get(vertx).getRedis());
 
-        c2cService = new C2CService(vertx, messageRepo, idGenerator);
-        ackService = new AckService(vertx, messageRepo);
+        PushRouter pushRouter = new PushRouter(vertx);
+
+        c2cService = new C2CService(vertx, pushRouter, messageRepo, idGenerator);
+        ackService = new AckService(vertx, pushRouter, messageRepo);
         authService = new AuthService(vertx);
         pullService = new PullService(vertx, messageRepo);
         heartbeatService = new HeartbeatService();
         ctrlService = new CtrlService();
         c2gService = new C2GService();
-        friendService = new FriendService(vertx, messageRepo);
+        friendService = new FriendService(vertx, pushRouter, messageRepo);
 
         var bus = vertx.eventBus();
         bus.consumer("logic.c2c",     (Message<Buffer> msg) -> dispatch(msg, c2cService::process));

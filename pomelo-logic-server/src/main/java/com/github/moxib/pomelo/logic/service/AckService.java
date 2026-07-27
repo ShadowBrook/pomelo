@@ -27,11 +27,13 @@ public class AckService extends ServiceBase {
   private static final Logger LOG = LoggerFactory.getLogger(AckService.class);
 
   private final Vertx vertx;
+  private final PushRouter pushRouter;
   private final MessageRepository messageRepo;
   private final CodecRegistry codecRegistry;
 
-  public AckService(Vertx vertx, MessageRepository messageRepo) {
+  public AckService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo) {
     this.vertx = vertx;
+    this.pushRouter = pushRouter;
     this.messageRepo = messageRepo;
     this.codecRegistry = new CodecRegistry();
     codecRegistry.registerProtobuf(CMD_ACK_REQ_VALUE, AckProto.AckReq.parser(), AckRequest::fromProto, AckRequest.class);
@@ -112,7 +114,7 @@ public class AckService extends ServiceBase {
         builder.build().toByteArray(),
         (byte) 0
       );
-      vertx.eventBus().publish("gateway.push", JsonObject.mapFrom(env));
+      pushRouter.push(env);
       LOG.debug("AckNotify 已广播: sender={} type={} count={}", ctx.getSenderId(), ctx.getAckType(), ctx.getMessageIds().size());
     } catch (Exception e) {
       LOG.error("推送 AckNotify 失败: {}", e.getMessage());
