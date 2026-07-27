@@ -2,6 +2,8 @@ package com.github.moxib.pomelo.gateway.handler;
 
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.config.SessionRouteTable;
+import com.github.moxib.pomelo.model.PushCodec;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import io.vertx.core.Vertx;
@@ -15,9 +17,7 @@ import java.util.Map;
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 /**
- * 消息分发器 — Gateway 侧（EventBus 转发模式）。
- * 将客户端请求通过 EventBus request() 转发到 logic-server，
- * 并订阅 gateway.push 地址，将 logic-server 的推送投递给本地连接。
+ * 消息分发器 — Gateway 侧（EventBus 转发 + 精确路由推送）。
  */
 public class MessageDispatcher {
 
@@ -25,19 +25,35 @@ public class MessageDispatcher {
 
   private final Vertx vertx;
   private final SessionRegistry sessionRegistry;
+  private final SessionRouteTable routeTable;
 
   public MessageDispatcher(Vertx vertx, SessionRegistry sessionRegistry) {
     this.vertx = vertx;
     this.sessionRegistry = sessionRegistry;
-    vertx.eventBus().consumer("gateway.push", this::onPushMessage);
+    this.routeTable = new SessionRouteTable(vertx);
+    String nodeId = routeTable.getNodeId();
+    // 精确路由订阅（logic-server 通过 send 直接投递）
+    vertx.eventBus().consumer("gateway.push." + nodeId, msg -> deliverPush(msg.body()));
+    // 兜底广播订阅（logic-server 查不到路由时 fallback）
+    vertx.eventBus().consumer("gateway.push", msg -> deliverPush(msg.body()));
+    LOG.info("Push consumers registered: gateway.push.{} + gateway.push (fallback)", nodeId);
   }
 
-  /**
-   * 收到 logic-server 的推送消息，投递给本地连接的用户。
-   */
-  private void onPushMessage(io.vertx.core.eventbus.Message<JsonObject> msg) {
-    PushEnvelope env = msg.body().mapTo(PushEnvelope.class);
-    // 先按数字 id 查，再按 NanoID userId 查
+  /** 解析 push 并投递给本地连接的用户 */
+  private void deliverPush(Object msgBody) {
+    PushEnvelope env;
+    if (msgBody instanceof Buffer buf) {
+      env = PushCodec.decode(buf);
+    } else if (msgBody instanceof JsonObject json) {
+      env = json.mapTo(PushEnvelope.class);
+    } else {
+      LOG.warn("Unknown push body type: {}", msgBody.getClass().getName());
+      return;
+    }
+    deliverToConnection(env);
+  }
+
+  private void deliverToConnection(PushEnvelope env) {
     Connection conn = null;
     long targetId = 0;
     try {
@@ -47,10 +63,8 @@ public class MessageDispatcher {
       conn = sessionRegistry.getConnectionByUserId(env.getTargetUserId());
     }
     if (conn == null) {
-      LOG.debug("push target {} 不在本节点，忽略", env.getTargetUserId());
       return;
     }
-    // 根据接收方实际 codec 选择 body：JSON 用户用 jsonBody，PB 用户用 body
     byte recipientCodec = sessionRegistry.getCodec(targetId);
     byte[] pushBody;
     byte pushCodecId;
@@ -72,23 +86,17 @@ public class MessageDispatcher {
     conn.write(imMsg.encodeToWire());
   }
 
-  /**
-   * 将客户端请求转发到 logic-server。
-   * ImMessage 编码为 wire bytes（Buffer）在 EventBus 上传输。
-   */
   public void dispatch(Connection connection, ImMessage message) {
     String address = cmdToAddress(message.getCmd());
     if (address == null) {
       handleUnknownCmd(connection, message);
       return;
     }
-    // 从 SessionRegistry 补充发送者的 userName/nickname 到 varHeaders
     enrichWithSenderInfo(message);
     Buffer wire = message.encodeToWire();
     vertx.eventBus().<Buffer>request(address, wire)
       .onSuccess(replyMsg -> {
         Buffer respBuf = replyMsg.body();
-        // 解析响应（跳过 4 字节长度前缀），检查是否需要注册/注销 session
         ImMessage response = new ImMessage();
         response.readFromWire(respBuf.getBuffer(4, respBuf.length()));
         handleSessionUpdates(connection, response);
@@ -100,9 +108,6 @@ public class MessageDispatcher {
       });
   }
 
-  /**
-   * 处理 Login/Logout 响应中的 Session 更新。
-   */
   private void handleSessionUpdates(Connection connection, ImMessage response) {
     Map<String, String> headers = response.getVarHeaders();
     if (headers == null) return;
@@ -115,20 +120,18 @@ public class MessageDispatcher {
       byte codecId = Byte.parseByte(headers.getOrDefault("loginCodecId", "0"));
       String token = headers.getOrDefault("loginToken", "");
       sessionRegistry.register(loginUserId, id, connection, codecId, userName, nickname, token);
+      routeTable.register(loginUserId);
       LOG.info("Session 已注册: userId={} id={}", loginUserId, id);
     }
 
     String logoutUserId = headers.get("logoutUserId");
     if (logoutUserId != null && !logoutUserId.isEmpty()) {
       sessionRegistry.unregisterByUserId(logoutUserId);
+      routeTable.unregister(logoutUserId);
       LOG.info("Session 已注销: userId={}", logoutUserId);
     }
   }
 
-  /**
-   * 从 SessionRegistry 获取发送者信息，补充到 varHeaders 中，
-   * 供 logic-server 构建推送时使用（senderUserName, senderNickname）。
-   */
   private void enrichWithSenderInfo(ImMessage message) {
     Map<String, String> headers = message.getVarHeaders();
     if (headers == null) return;
@@ -146,9 +149,6 @@ public class MessageDispatcher {
     }
   }
 
-  /**
-   * cmd → EventBus 地址映射。
-   */
   private static String cmdToAddress(int cmd) {
     if (cmd == CMD_C2C_REQ_VALUE)          return "logic.c2c";
     if (cmd == CMD_C2G_REQ_VALUE)          return "logic.c2g";
@@ -177,12 +177,8 @@ public class MessageDispatcher {
         .toBuffer().getBytes();
     }
     ImMessage response = ImMessage.builder()
-      .magic(ImMessage.MAGIC_NUMBER)
-      .version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId(codecId)
-      .cmd(CMD_ERROR_VALUE)
-      .messageId(request.getMessageId())
-      .body(body)
+      .magic(ImMessage.MAGIC_NUMBER).version(ImMessage.WIRE_PROTOCOL_VERSION)
+      .codecId(codecId).cmd(CMD_ERROR_VALUE).messageId(request.getMessageId()).body(body)
       .build();
     connection.write(response.encodeToWire());
   }
@@ -198,17 +194,17 @@ public class MessageDispatcher {
         .toBuffer().getBytes();
     }
     ImMessage response = ImMessage.builder()
-      .magic(ImMessage.MAGIC_NUMBER)
-      .version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId(codecId)
-      .cmd(CMD_ERROR_VALUE)
-      .messageId(request.getMessageId())
-      .body(body)
+      .magic(ImMessage.MAGIC_NUMBER).version(ImMessage.WIRE_PROTOCOL_VERSION)
+      .codecId(codecId).cmd(CMD_ERROR_VALUE).messageId(request.getMessageId()).body(body)
       .build();
     connection.write(response.encodeToWire());
   }
 
   public SessionRegistry getSessionRegistry() {
     return sessionRegistry;
+  }
+
+  public SessionRouteTable getRouteTable() {
+    return routeTable;
   }
 }

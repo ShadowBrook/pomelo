@@ -29,12 +29,14 @@ public class C2CService extends ServiceBase {
   private static final Logger LOG = LoggerFactory.getLogger(C2CService.class);
 
   private final Vertx vertx;
+  private final PushRouter pushRouter;
   private final MessageRepository messageRepo;
   private final IdGenerator idGenerator;
   private final CodecRegistry codecRegistry;
 
-  public C2CService(Vertx vertx, MessageRepository messageRepo, IdGenerator idGenerator) {
+  public C2CService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo, IdGenerator idGenerator) {
     this.vertx = vertx;
+    this.pushRouter = pushRouter;
     this.messageRepo = messageRepo;
     this.idGenerator = idGenerator;
     this.codecRegistry = new CodecRegistry();
@@ -174,8 +176,8 @@ public class C2CService extends ServiceBase {
       json.toBuffer().getBytes(),
       (byte) 0
     );
-    vertx.eventBus().publish("gateway.push", JsonObject.mapFrom(env));
-    LOG.debug("C2CNotify 已广播: recipientId={} msgId={} seq={}", record.getRecipientId(), record.getId(), record.getSeq());
+    pushRouter.push(env);
+    LOG.debug("C2CNotify pushed: recipientId={} msgId={} seq={}", record.getRecipientId(), record.getId(), record.getSeq());
   }
 
   private ImMessage buildC2CResponse(ImMessage request, byte codecId, C2CRespResult result) {

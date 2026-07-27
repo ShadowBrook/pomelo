@@ -56,7 +56,7 @@ public class WsGatewayVerticle extends VerticleBase {
       ws.closeHandler(closed -> {
         LOG.info("客户端断开连接：{}", ws.remoteAddress());
         String userId = sessionRegistry.unregisterByConnection(conn);
-        // TODO: Phase 2 — publish gateway.user.offline event to EventBus
+        dispatcher.getRouteTable().unregister(userId);
       });
 
       ws.exceptionHandler(throwable -> {
@@ -66,7 +66,7 @@ public class WsGatewayVerticle extends VerticleBase {
           LOG.error("连接异常：{}", ws.remoteAddress(), throwable);
         }
         String userId = sessionRegistry.unregisterByConnection(conn);
-        // TODO: Phase 2 — publish gateway.user.offline event to EventBus
+        dispatcher.getRouteTable().unregister(userId);
         ws.close();
       });
     };
