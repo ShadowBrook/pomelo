@@ -67,9 +67,9 @@ public class MessageDispatcher {
     vertx.eventBus().<Buffer>request(address, wire)
       .onSuccess(replyMsg -> {
         Buffer respBuf = replyMsg.body();
-        // 解析响应，检查是否需要注册/注销 session
+        // 解析响应（跳过 4 字节长度前缀），检查是否需要注册/注销 session
         ImMessage response = new ImMessage();
-        response.readFromWire(respBuf);
+        response.readFromWire(respBuf.getBuffer(4, respBuf.length()));
         handleSessionUpdates(connection, response);
         connection.write(respBuf);
       })
