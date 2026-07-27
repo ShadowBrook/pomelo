@@ -1,5 +1,6 @@
 package com.github.moxib.pomelo.logic;
 
+import com.github.moxib.pomelo.config.ClusterHelper;
 import com.github.moxib.pomelo.config.ConfigHolder;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
@@ -8,8 +9,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Logic-Server 独立启动入口。
- * 部署 LogicVerticle（EventBus consumer）+ ApiVerticle（HTTP API）。
+ * Logic-Server 启动入口。
+ *
+ * 本地模式（默认）：
+ *   java -jar pomelo-logic-server.jar
+ *
+ * 集群模式：
+ *   java -Dvertx.cluster=true -jar pomelo-logic-server.jar
  */
 public class LogicMain extends VerticleBase {
 
@@ -26,9 +32,9 @@ public class LogicMain extends VerticleBase {
   }
 
   public static void main(String[] args) {
-    Vertx vertx = Vertx.vertx();
+    Vertx vertx = ClusterHelper.createVertx();
     vertx.deployVerticle(new LogicMain())
-      .onSuccess(id -> LOG.info("Logic-Server 已启动: deploymentId={}", id))
-      .onFailure(e -> LOG.error("Logic-Server 启动失败", e));
+      .onSuccess(id -> LOG.info("Logic-Server started: deploymentId={}, clustered={}", id, vertx.isClustered()))
+      .onFailure(e -> LOG.error("Logic-Server startup failed", e));
   }
 }

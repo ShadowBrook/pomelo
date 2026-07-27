@@ -1,5 +1,6 @@
 package com.github.moxib.pomelo.gateway;
 
+import com.github.moxib.pomelo.config.ClusterHelper;
 import com.github.moxib.pomelo.config.ConfigHolder;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
@@ -8,8 +9,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Gateway 独立启动入口。
- * 部署 TcpGatewayVerticle 和 WsGatewayVerticle。
+ * Gateway 启动入口。
+ *
+ * 本地模式（默认）：
+ *   java -jar pomelo-gateway.jar
+ *
+ * 集群模式：
+ *   java -Dvertx.cluster=true -jar pomelo-gateway.jar
  */
 public class GatewayMain extends VerticleBase {
 
@@ -26,9 +32,9 @@ public class GatewayMain extends VerticleBase {
   }
 
   public static void main(String[] args) {
-    Vertx vertx = Vertx.vertx();
+    Vertx vertx = ClusterHelper.createVertx();
     vertx.deployVerticle(new GatewayMain())
-      .onSuccess(id -> LOG.info("Gateway 已启动: deploymentId={}", id))
-      .onFailure(e -> LOG.error("Gateway 启动失败", e));
+      .onSuccess(id -> LOG.info("Gateway started: deploymentId={}, clustered={}", id, vertx.isClustered()))
+      .onFailure(e -> LOG.error("Gateway startup failed", e));
   }
 }
