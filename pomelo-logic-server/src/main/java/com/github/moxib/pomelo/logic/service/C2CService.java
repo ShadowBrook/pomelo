@@ -56,11 +56,7 @@ public class C2CService extends ServiceBase {
         return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.BAD_REQUEST, "senderId 和 recipientId 不能为空"));
       }
 
-      long senderId;
-      try { senderId = Long.parseLong(senderUserId); }
-      catch (NumberFormatException e) { senderId = 0L; }
-
-      final long fSenderId = senderId;
+      // NanoID → numeric id：优先 parseLong，失败则查 DB
       final String fSenderUserId = senderUserId;
       final String fRecipientUserId = recipientUserId;
       final long fTimestamp = timestamp;
@@ -69,23 +65,28 @@ public class C2CService extends ServiceBase {
       final String fContent = content;
       final byte fCodecId = codecId;
 
-      return resolveId(recipientUserId).compose(recipientId -> {
-        if (recipientId == 0) {
-          return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.NOT_FOUND, "接收者不存在"));
+      return resolveId(senderUserId).compose(senderId -> {
+        if (senderId == 0) {
+          return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.UNAUTHORIZED, "发送者不存在"));
         }
+        return resolveId(recipientUserId).compose(recipientId -> {
+          if (recipientId == 0) {
+            return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.NOT_FOUND, "接收者不存在"));
+          }
 
-        C2CReqContext ctx = C2CReqContext.builder()
-          .messageId(fClientMsgId)
-          .senderId(fSenderId)
-          .recipientId(recipientId)
-          .senderUserId(fSenderUserId)
-          .msgType(fMsgType)
-          .content(fContent)
-          .timestamp(fTimestamp)
-          .build();
+          C2CReqContext ctx = C2CReqContext.builder()
+            .messageId(fClientMsgId)
+            .senderId(senderId)
+            .recipientId(recipientId)
+            .senderUserId(fSenderUserId)
+            .msgType(fMsgType)
+            .content(fContent)
+            .timestamp(fTimestamp)
+            .build();
 
-        return doSend(ctx)
-          .map(result -> buildC2CResponse(message, fCodecId, result));
+          return doSend(ctx)
+            .map(result -> buildC2CResponse(message, fCodecId, result));
+        });
       });
     } catch (Exception e) {
       LOG.error("C2C 消息处理失败", e);
