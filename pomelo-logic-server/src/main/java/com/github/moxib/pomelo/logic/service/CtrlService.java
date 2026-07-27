@@ -10,7 +10,7 @@ import io.vertx.core.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.CMD_CTRL_RESP_VALUE;
+import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 public class CtrlService extends ServiceBase {
 
@@ -20,8 +20,8 @@ public class CtrlService extends ServiceBase {
 
   public CtrlService() {
     this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_CTRL_RESP_VALUE, CtrlProto.CtrlReq.parser(), CtrlRequest::fromProto, CtrlRequest.class);
-    codecRegistry.registerJson(CMD_CTRL_RESP_VALUE, CtrlRequest.class);
+    codecRegistry.registerProtobuf(CMD_CTRL_REQ_VALUE, CtrlProto.CtrlReq.parser(), CtrlRequest::fromProto, CtrlRequest.class);
+    codecRegistry.registerJson(CMD_CTRL_REQ_VALUE, CtrlRequest.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {
