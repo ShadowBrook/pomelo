@@ -16,6 +16,8 @@ public class C2CReqContext {
   private final String senderUserName;
   // 发送方 nickname
   private final String senderNickname;
+  // 接收方 userId (NanoID)，用于推送路由
+  private final String recipientUserId;
   private final int msgType;
   private final String content;
   // 客户端时间戳（毫秒）
@@ -28,6 +30,7 @@ public class C2CReqContext {
     this.senderUserId = builder.senderUserId;
     this.senderUserName = builder.senderUserName;
     this.senderNickname = builder.senderNickname;
+    this.recipientUserId = builder.recipientUserId;
     this.msgType = builder.msgType;
     this.content = builder.content;
     this.timestamp = builder.timestamp;
@@ -41,6 +44,7 @@ public class C2CReqContext {
   public String getSenderUserId() { return senderUserId; }
   public String getSenderUserName() { return senderUserName; }
   public String getSenderNickname() { return senderNickname; }
+  public String getRecipientUserId() { return recipientUserId; }
   public int getMsgType() { return msgType; }
   public String getContent() { return content; }
   public long getTimestamp() { return timestamp; }
@@ -52,6 +56,7 @@ public class C2CReqContext {
     private String senderUserId;
     private String senderUserName;
     private String senderNickname;
+    private String recipientUserId;
     private int msgType;
     private String content;
     private long timestamp;
@@ -62,6 +67,7 @@ public class C2CReqContext {
     public Builder senderUserId(String senderUserId) { this.senderUserId = senderUserId; return this; }
     public Builder senderUserName(String senderUserName) { this.senderUserName = senderUserName; return this; }
     public Builder senderNickname(String senderNickname) { this.senderNickname = senderNickname; return this; }
+    public Builder recipientUserId(String recipientUserId) { this.recipientUserId = recipientUserId; return this; }
     public Builder msgType(int msgType) { this.msgType = msgType; return this; }
     public Builder content(String content) { this.content = content; return this; }
     public Builder timestamp(long timestamp) { this.timestamp = timestamp; return this; }

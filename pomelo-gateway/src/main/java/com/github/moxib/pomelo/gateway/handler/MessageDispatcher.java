@@ -120,17 +120,12 @@ public class MessageDispatcher {
       byte codecId = Byte.parseByte(headers.getOrDefault("loginCodecId", "0"));
       String token = headers.getOrDefault("loginToken", "");
       sessionRegistry.register(loginUserId, id, connection, codecId, userName, nickname, token);
-      // 同时注册 NanoID 和数字 ID，logic-server push 时可能用任意一种
       routeTable.register(loginUserId);
-      routeTable.register(String.valueOf(id));
       LOG.info("Session 已注册: userId={} id={}", loginUserId, id);
     }
 
     String logoutUserId = headers.get("logoutUserId");
     if (logoutUserId != null && !logoutUserId.isEmpty()) {
-      // 先取数字 ID 再注销（unregisterByUserId 会删除 userId→id 映射）
-      long logoutId = sessionRegistry.getId(logoutUserId);
-      if (logoutId != 0) routeTable.unregister(String.valueOf(logoutId));
       sessionRegistry.unregisterByUserId(logoutUserId);
       routeTable.unregister(logoutUserId);
       LOG.info("Session 已注销: userId={}", logoutUserId);
