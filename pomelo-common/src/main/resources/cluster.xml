@@ -9,9 +9,12 @@
   <network>
     <port auto-increment="true" port-count="50">5701</port>
     <join>
-      <!-- 关闭组播（macOS 环境通常不可用） -->
-      <multicast enabled="false"/>
-      <!-- 使用 TCP-IP 静态成员列表 -->
+      <!-- 多播（生产/支持多播的网络环境自动发现） -->
+      <multicast enabled="true">
+        <multicast-group>224.0.0.1</multicast-group>
+        <multicast-port>54327</multicast-port>
+      </multicast>
+      <!-- TCP-IP（本地开发/不支持多播的环境） -->
       <tcp-ip enabled="true">
         <member>127.0.0.1:5701</member>
         <member>127.0.0.1:5702</member>
