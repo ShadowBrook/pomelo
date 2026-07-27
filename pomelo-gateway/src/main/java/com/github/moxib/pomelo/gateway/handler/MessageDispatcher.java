@@ -55,17 +55,18 @@ public class MessageDispatcher {
 
   private void deliverToConnection(PushEnvelope env) {
     Connection conn = null;
-    long targetId = 0;
+    byte recipientCodec = 0;
     try {
-      targetId = Long.parseLong(env.getTargetUserId());
+      long targetId = Long.parseLong(env.getTargetUserId());
       conn = sessionRegistry.getConnection(targetId);
+      recipientCodec = sessionRegistry.getCodec(targetId);
     } catch (NumberFormatException e) {
       conn = sessionRegistry.getConnectionByUserId(env.getTargetUserId());
+      recipientCodec = sessionRegistry.getCodecByUserId(env.getTargetUserId());
     }
     if (conn == null) {
       return;
     }
-    byte recipientCodec = sessionRegistry.getCodec(targetId);
     byte[] pushBody;
     byte pushCodecId;
     if (recipientCodec == 1 && env.getJsonBody() != null && env.getJsonBody().length > 0) {
