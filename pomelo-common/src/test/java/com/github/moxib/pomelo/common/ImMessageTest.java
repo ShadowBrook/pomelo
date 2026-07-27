@@ -157,7 +157,7 @@ public class ImMessageTest {
     ImMessage decoded = new ImMessage();
 
     assertThrows(IllegalArgumentException.class, () -> {
-      decoded.readFromWire(buffer);
+      decoded.readFromWire(buffer.getBuffer(4, buffer.length()));
     });
   }
 
@@ -171,6 +171,7 @@ public class ImMessageTest {
     headers.put("token", "jwt-token-12345");
 
     ImMessage original = ImMessage.builder()
+        .magic(ImMessage.MAGIC_NUMBER)
         .version((byte) 1)
         .codecId((byte) 5)
         .cmd((byte) 99)
@@ -182,7 +183,7 @@ public class ImMessageTest {
 
     Buffer buffer = original.encodeToWire();
     ImMessage decoded = new ImMessage();
-    decoded.readFromWire(buffer);
+    decoded.readFromWire(buffer.getBuffer(4, buffer.length()));
 
     assertEquals(headers.size(), decoded.getVarHeaders().size());
     assertEquals(headers, decoded.getVarHeaders());
