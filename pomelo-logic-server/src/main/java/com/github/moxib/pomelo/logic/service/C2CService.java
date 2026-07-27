@@ -134,6 +134,7 @@ public class C2CService extends ServiceBase {
       .setRecipientId(String.valueOf(record.getRecipientId()))
       .setMessage(msgContent)
       .setSeq(record.getSeq())
+      .setMessageId(record.getId())
       .build();
 
     PushEnvelope env = new PushEnvelope(
