@@ -54,19 +54,13 @@ public class MessageDispatcher {
   }
 
   private void deliverToConnection(PushEnvelope env) {
-    Connection conn = null;
-    byte recipientCodec = 0;
-    try {
-      long targetId = Long.parseLong(env.getTargetUserId());
-      conn = sessionRegistry.getConnection(targetId);
-      recipientCodec = sessionRegistry.getCodec(targetId);
-    } catch (NumberFormatException e) {
-      conn = sessionRegistry.getConnectionByUserId(env.getTargetUserId());
-      recipientCodec = sessionRegistry.getCodecByUserId(env.getTargetUserId());
-    }
+    // push target 统一使用 NanoID (userId)
+    String userId = env.getTargetUserId();
+    Connection conn = sessionRegistry.getConnectionByUserId(userId);
     if (conn == null) {
       return;
     }
+    byte recipientCodec = sessionRegistry.getCodecByUserId(userId);
     byte[] pushBody;
     byte pushCodecId;
     if (recipientCodec == 1 && env.getJsonBody() != null && env.getJsonBody().length > 0) {
