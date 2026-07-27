@@ -5,7 +5,6 @@ import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.gateway.handler.Connection;
 import com.github.moxib.pomelo.gateway.handler.MessageDispatcher;
 import com.github.moxib.pomelo.gateway.handler.SessionRegistry;
-import com.github.moxib.pomelo.service.RedisOnlineStatus;
 import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.VerticleBase;
@@ -23,17 +22,15 @@ public class WsGatewayVerticle extends VerticleBase {
   private static final Logger LOG = LoggerFactory.getLogger(WsGatewayVerticle.class);
 
   private int wsPort;
-
   private HttpServer wsServer;
+  private SessionRegistry sessionRegistry;
   private MessageDispatcher dispatcher;
 
   @Override
   public Future<?> start() throws Exception {
     this.wsPort = ConfigHolder.getInt("gateway.websocket.port", 9001);
-    dispatcher = new MessageDispatcher(vertx);
-
-    // 后台初始化 dispatcher（Redis 连接等），不阻塞服务器启动
-    dispatcher.start();
+    this.sessionRegistry = new SessionRegistry();
+    this.dispatcher = new MessageDispatcher(vertx, sessionRegistry);
 
     wsServer = vertx.createHttpServer();
     return wsServer.webSocketHandler(getServerHandler()).listen(wsPort)
@@ -47,8 +44,6 @@ public class WsGatewayVerticle extends VerticleBase {
   }
 
   private Handler<ServerWebSocket> getServerHandler() {
-    SessionRegistry sessionRegistry = dispatcher.getSessionRegistry();
-
     return ws -> {
       Connection conn = Connection.from(ws);
 
@@ -61,7 +56,7 @@ public class WsGatewayVerticle extends VerticleBase {
       ws.closeHandler(closed -> {
         LOG.info("客户端断开连接：{}", ws.remoteAddress());
         String userId = sessionRegistry.unregisterByConnection(conn);
-        updateUserOffline(userId);
+        // TODO: Phase 2 — publish gateway.user.offline event to EventBus
       });
 
       ws.exceptionHandler(throwable -> {
@@ -71,15 +66,9 @@ public class WsGatewayVerticle extends VerticleBase {
           LOG.error("连接异常：{}", ws.remoteAddress(), throwable);
         }
         String userId = sessionRegistry.unregisterByConnection(conn);
-        updateUserOffline(userId);
+        // TODO: Phase 2 — publish gateway.user.offline event to EventBus
         ws.close();
       });
     };
-  }
-
-  /** Redis 标记用户离线 */
-  private void updateUserOffline(String userId) {
-    if (userId == null) return;
-    RedisOnlineStatus.get(vertx).setOffline(userId);
   }
 }
