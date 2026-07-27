@@ -2230,6 +2230,25 @@ public final class ChatProto {
      * @return The seq.
      */
     long getSeq();
+
+    /**
+     * <pre>
+     * 消息 ID (客户端用此 ID 发送 ACK)
+     * </pre>
+     *
+     * <code>optional int64 message_id = 5;</code>
+     * @return Whether the messageId field is set.
+     */
+    boolean hasMessageId();
+    /**
+     * <pre>
+     * 消息 ID (客户端用此 ID 发送 ACK)
+     * </pre>
+     *
+     * <code>optional int64 message_id = 5;</code>
+     * @return The messageId.
+     */
+    long getMessageId();
   }
   /**
    * Protobuf type {@code im.chat.C2CNotify}
@@ -2428,6 +2447,33 @@ public final class ChatProto {
       return seq_;
     }
 
+    public static final int MESSAGE_ID_FIELD_NUMBER = 5;
+    private long messageId_ = 0L;
+    /**
+     * <pre>
+     * 消息 ID (客户端用此 ID 发送 ACK)
+     * </pre>
+     *
+     * <code>optional int64 message_id = 5;</code>
+     * @return Whether the messageId field is set.
+     */
+    @java.lang.Override
+    public boolean hasMessageId() {
+      return ((bitField0_ & 0x00000004) != 0);
+    }
+    /**
+     * <pre>
+     * 消息 ID (客户端用此 ID 发送 ACK)
+     * </pre>
+     *
+     * <code>optional int64 message_id = 5;</code>
+     * @return The messageId.
+     */
+    @java.lang.Override
+    public long getMessageId() {
+      return messageId_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -2454,6 +2500,9 @@ public final class ChatProto {
       if (((bitField0_ & 0x00000002) != 0)) {
         output.writeInt64(4, seq_);
       }
+      if (((bitField0_ & 0x00000004) != 0)) {
+        output.writeInt64(5, messageId_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -2476,6 +2525,10 @@ public final class ChatProto {
       if (((bitField0_ & 0x00000002) != 0)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(4, seq_);
+      }
+      if (((bitField0_ & 0x00000004) != 0)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(5, messageId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -2506,6 +2559,11 @@ public final class ChatProto {
         if (getSeq()
             != other.getSeq()) return false;
       }
+      if (hasMessageId() != other.hasMessageId()) return false;
+      if (hasMessageId()) {
+        if (getMessageId()
+            != other.getMessageId()) return false;
+      }
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -2529,6 +2587,11 @@ public final class ChatProto {
         hash = (37 * hash) + SEQ_FIELD_NUMBER;
         hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
             getSeq());
+      }
+      if (hasMessageId()) {
+        hash = (37 * hash) + MESSAGE_ID_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getMessageId());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -2675,6 +2738,7 @@ public final class ChatProto {
           messageBuilder_ = null;
         }
         seq_ = 0L;
+        messageId_ = 0L;
         return this;
       }
 
@@ -2724,6 +2788,10 @@ public final class ChatProto {
         if (((from_bitField0_ & 0x00000008) != 0)) {
           result.seq_ = seq_;
           to_bitField0_ |= 0x00000002;
+        }
+        if (((from_bitField0_ & 0x00000010) != 0)) {
+          result.messageId_ = messageId_;
+          to_bitField0_ |= 0x00000004;
         }
         result.bitField0_ |= to_bitField0_;
       }
@@ -2788,6 +2856,9 @@ public final class ChatProto {
         if (other.hasSeq()) {
           setSeq(other.getSeq());
         }
+        if (other.hasMessageId()) {
+          setMessageId(other.getMessageId());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
@@ -2836,6 +2907,11 @@ public final class ChatProto {
                 bitField0_ |= 0x00000008;
                 break;
               } // case 32
+              case 40: {
+                messageId_ = input.readInt64();
+                bitField0_ |= 0x00000010;
+                break;
+              } // case 40
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -3249,6 +3325,62 @@ public final class ChatProto {
         onChanged();
         return this;
       }
+
+      private long messageId_ ;
+      /**
+       * <pre>
+       * 消息 ID (客户端用此 ID 发送 ACK)
+       * </pre>
+       *
+       * <code>optional int64 message_id = 5;</code>
+       * @return Whether the messageId field is set.
+       */
+      @java.lang.Override
+      public boolean hasMessageId() {
+        return ((bitField0_ & 0x00000010) != 0);
+      }
+      /**
+       * <pre>
+       * 消息 ID (客户端用此 ID 发送 ACK)
+       * </pre>
+       *
+       * <code>optional int64 message_id = 5;</code>
+       * @return The messageId.
+       */
+      @java.lang.Override
+      public long getMessageId() {
+        return messageId_;
+      }
+      /**
+       * <pre>
+       * 消息 ID (客户端用此 ID 发送 ACK)
+       * </pre>
+       *
+       * <code>optional int64 message_id = 5;</code>
+       * @param value The messageId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setMessageId(long value) {
+
+        messageId_ = value;
+        bitField0_ |= 0x00000010;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 消息 ID (客户端用此 ID 发送 ACK)
+       * </pre>
+       *
+       * <code>optional int64 message_id = 5;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearMessageId() {
+        bitField0_ = (bitField0_ & ~0x00000010);
+        messageId_ = 0L;
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -3343,12 +3475,13 @@ public final class ChatProto {
       "\n\007message\030\004 \001(\0132\031.im.common.MessageConte" +
       "nt\"k\n\007C2CResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002" +
       " \001(\t\022\022\n\nmessage_id\030\003 \001(\003\022\023\n\013server_time\030" +
-      "\004 \001(\003\022\020\n\003seq\030\005 \001(\003H\000\210\001\001B\006\n\004_seq\"z\n\tC2CNo" +
-      "tify\022\021\n\tsender_id\030\001 \001(\t\022\024\n\014recipient_id\030" +
-      "\002 \001(\t\022*\n\007message\030\003 \001(\0132\031.im.common.Messa" +
-      "geContent\022\020\n\003seq\030\004 \001(\003H\000\210\001\001B\006\n\004_seqB/\n\"c" +
-      "om.github.moxib.pomelo.proto.chatB\tChatP" +
-      "rotob\006proto3"
+      "\004 \001(\003\022\020\n\003seq\030\005 \001(\003H\000\210\001\001B\006\n\004_seq\"\242\001\n\tC2CN" +
+      "otify\022\021\n\tsender_id\030\001 \001(\t\022\024\n\014recipient_id" +
+      "\030\002 \001(\t\022*\n\007message\030\003 \001(\0132\031.im.common.Mess" +
+      "ageContent\022\020\n\003seq\030\004 \001(\003H\000\210\001\001\022\027\n\nmessage_" +
+      "id\030\005 \001(\003H\001\210\001\001B\006\n\004_seqB\r\n\013_message_idB/\n\"" +
+      "com.github.moxib.pomelo.proto.chatB\tChat" +
+      "Protob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -3372,7 +3505,7 @@ public final class ChatProto {
     internal_static_im_chat_C2CNotify_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_chat_C2CNotify_descriptor,
-        new java.lang.String[] { "SenderId", "RecipientId", "Message", "Seq", });
+        new java.lang.String[] { "SenderId", "RecipientId", "Message", "Seq", "MessageId", });
     com.github.moxib.pomelo.proto.common.CommonProto.getDescriptor();
   }
 
