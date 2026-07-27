@@ -90,6 +90,7 @@ public class C2CService extends ServiceBase {
             .senderId(senderId)
             .recipientId(recipientId)
             .senderUserId(fSenderUserId)
+            .recipientUserId(fRecipientUserId)
             .senderUserName(fSenderUserName)
             .senderNickname(fSenderNickname)
             .msgType(fMsgType)
@@ -127,7 +128,8 @@ public class C2CService extends ServiceBase {
         return messageRepo.save(record)
           .map(inserted -> {
             if (inserted) {
-              publishC2CNotify(record, ctx.getSenderUserId(), ctx.getSenderUserName(), ctx.getSenderNickname());
+              publishC2CNotify(record, ctx.getSenderUserId(), ctx.getRecipientUserId(),
+                ctx.getSenderUserName(), ctx.getSenderNickname());
             }
             return C2CRespResult.builder()
               .code(0).message("success")
@@ -138,7 +140,7 @@ public class C2CService extends ServiceBase {
       });
   }
 
-  private void publishC2CNotify(MessageRecord record, String senderUserId,
+  private void publishC2CNotify(MessageRecord record, String senderUserId, String recipientUserId,
                                   String senderUserName, String senderNickname) {
     // PB body
     CommonProto.MessageContent msgContent = CommonProto.MessageContent.newBuilder()
@@ -156,7 +158,7 @@ public class C2CService extends ServiceBase {
     // JSON body（与旧 MessageServiceImpl.pushToRecipient 的 JSON 分支对齐）
     JsonObject json = new JsonObject();
     json.put("senderId", senderUserId);
-    json.put("recipientId", String.valueOf(record.getRecipientId()));
+    json.put("recipientId", recipientUserId);
     if (senderUserName != null) json.put("senderUserName", senderUserName);
     if (senderNickname != null) json.put("senderNickname", senderNickname);
     json.put("conversationId", record.getConversationId());
@@ -170,7 +172,7 @@ public class C2CService extends ServiceBase {
     json.put("createdAt", record.getCreatedAt());
 
     PushEnvelope env = new PushEnvelope(
-      String.valueOf(record.getRecipientId()),
+      recipientUserId,
       CMD_C2C_NOTIFY_VALUE,
       notify.toByteArray(),
       json.toBuffer().getBytes(),

@@ -55,9 +55,7 @@ public class WsGatewayVerticle extends VerticleBase {
 
       ws.closeHandler(closed -> {
         LOG.info("客户端断开连接：{}", ws.remoteAddress());
-        long numericId = sessionRegistry.getNumericIdByConnection(conn);
         String userId = sessionRegistry.unregisterByConnection(conn);
-        if (numericId != 0) dispatcher.getRouteTable().unregister(String.valueOf(numericId));
         dispatcher.getRouteTable().unregister(userId);
       });
 
@@ -67,9 +65,7 @@ public class WsGatewayVerticle extends VerticleBase {
         } else {
           LOG.error("连接异常：{}", ws.remoteAddress(), throwable);
         }
-        long numericId = sessionRegistry.getNumericIdByConnection(conn);
         String userId = sessionRegistry.unregisterByConnection(conn);
-        if (numericId != 0) dispatcher.getRouteTable().unregister(String.valueOf(numericId));
         dispatcher.getRouteTable().unregister(userId);
         ws.close();
       });
