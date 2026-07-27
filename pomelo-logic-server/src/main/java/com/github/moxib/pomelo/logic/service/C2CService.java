@@ -22,6 +22,8 @@ import org.slf4j.LoggerFactory;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
+import java.util.Map;
+
 public class C2CService extends ServiceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(C2CService.class);
@@ -56,9 +58,16 @@ public class C2CService extends ServiceBase {
         return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.BAD_REQUEST, "senderId 和 recipientId 不能为空"));
       }
 
+      // 从 varHeaders 提取发送者显示名（Gateway 转发时已附加）
+      Map<String, String> varHeaders = message.getVarHeaders();
+      String senderUserName = varHeaders != null ? varHeaders.get("userName") : null;
+      String senderNickname = varHeaders != null ? varHeaders.get("nickname") : null;
+
       // NanoID → numeric id：优先 parseLong，失败则查 DB
       final String fSenderUserId = senderUserId;
       final String fRecipientUserId = recipientUserId;
+      final String fSenderUserName = senderUserName;
+      final String fSenderNickname = senderNickname;
       final long fTimestamp = timestamp;
       final long fClientMsgId = clientMsgId;
       final int fMsgType = msgType;
@@ -79,6 +88,8 @@ public class C2CService extends ServiceBase {
             .senderId(senderId)
             .recipientId(recipientId)
             .senderUserId(fSenderUserId)
+            .senderUserName(fSenderUserName)
+            .senderNickname(fSenderNickname)
             .msgType(fMsgType)
             .content(fContent)
             .timestamp(fTimestamp)
@@ -114,7 +125,7 @@ public class C2CService extends ServiceBase {
         return messageRepo.save(record)
           .map(inserted -> {
             if (inserted) {
-              publishC2CNotify(record, ctx.getSenderUserId());
+              publishC2CNotify(record, ctx.getSenderUserId(), ctx.getSenderUserName(), ctx.getSenderNickname());
             }
             return C2CRespResult.builder()
               .code(0).message("success")
@@ -125,7 +136,8 @@ public class C2CService extends ServiceBase {
       });
   }
 
-  private void publishC2CNotify(MessageRecord record, String senderUserId) {
+  private void publishC2CNotify(MessageRecord record, String senderUserId,
+                                  String senderUserName, String senderNickname) {
     // PB body
     CommonProto.MessageContent msgContent = CommonProto.MessageContent.newBuilder()
       .setMsgTypeValue(record.getMsgType())
@@ -143,6 +155,8 @@ public class C2CService extends ServiceBase {
     JsonObject json = new JsonObject();
     json.put("senderId", senderUserId);
     json.put("recipientId", String.valueOf(record.getRecipientId()));
+    if (senderUserName != null) json.put("senderUserName", senderUserName);
+    if (senderNickname != null) json.put("senderNickname", senderNickname);
     json.put("conversationId", record.getConversationId());
     json.put("seq", record.getSeq());
     JsonObject jsonMsgContent = new JsonObject();
