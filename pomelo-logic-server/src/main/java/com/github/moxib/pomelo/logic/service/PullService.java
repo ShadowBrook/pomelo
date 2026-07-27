@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.CMD_PULL_RESP_VALUE;
+import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 public class PullService extends ServiceBase {
 
@@ -34,8 +34,8 @@ public class PullService extends ServiceBase {
     this.vertx = vertx;
     this.messageRepo = messageRepo;
     this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_PULL_RESP_VALUE, PullProto.PullReq.parser(), PullRequest::fromProto, PullRequest.class);
-    codecRegistry.registerJson(CMD_PULL_RESP_VALUE, PullRequest.class);
+    codecRegistry.registerProtobuf(CMD_PULL_REQ_VALUE, PullProto.PullReq.parser(), PullRequest::fromProto, PullRequest.class);
+    codecRegistry.registerJson(CMD_PULL_REQ_VALUE, PullRequest.class);
     this.defaultPullLimit = ConfigHolder.getInt("message.pullLimit", 50);
   }
 

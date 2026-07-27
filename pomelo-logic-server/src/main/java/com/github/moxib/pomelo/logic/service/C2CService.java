@@ -20,8 +20,7 @@ import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.CMD_C2C_NOTIFY_VALUE;
-import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.CMD_C2C_RESP_VALUE;
+import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 public class C2CService extends ServiceBase {
 
@@ -37,8 +36,8 @@ public class C2CService extends ServiceBase {
     this.messageRepo = messageRepo;
     this.idGenerator = idGenerator;
     this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_C2C_RESP_VALUE, ChatProto.C2CReq.parser(), C2CRequest::fromProto, C2CRequest.class);
-    codecRegistry.registerJson(CMD_C2C_RESP_VALUE, C2CRequest.class);
+    codecRegistry.registerProtobuf(CMD_C2C_REQ_VALUE, ChatProto.C2CReq.parser(), C2CRequest::fromProto, C2CRequest.class);
+    codecRegistry.registerJson(CMD_C2C_REQ_VALUE, C2CRequest.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {

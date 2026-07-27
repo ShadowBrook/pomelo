@@ -20,8 +20,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.CMD_ACK_NOTIFY_VALUE;
-import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.CMD_ACK_RESP_VALUE;
+import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 public class AckService extends ServiceBase {
 
@@ -35,8 +34,8 @@ public class AckService extends ServiceBase {
     this.vertx = vertx;
     this.messageRepo = messageRepo;
     this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_ACK_RESP_VALUE, AckProto.AckReq.parser(), AckRequest::fromProto, AckRequest.class);
-    codecRegistry.registerJson(CMD_ACK_RESP_VALUE, AckRequest.class);
+    codecRegistry.registerProtobuf(CMD_ACK_REQ_VALUE, AckProto.AckReq.parser(), AckRequest::fromProto, AckRequest.class);
+    codecRegistry.registerJson(CMD_ACK_REQ_VALUE, AckRequest.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {
