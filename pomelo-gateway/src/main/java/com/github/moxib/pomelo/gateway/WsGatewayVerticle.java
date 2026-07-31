@@ -29,8 +29,9 @@ public class WsGatewayVerticle extends VerticleBase {
   @Override
   public Future<?> start() throws Exception {
     this.wsPort = ConfigHolder.getInt("gateway.websocket.port", 9001);
+    long heartbeatTimeoutMs = ConfigHolder.getLong("gateway.heartbeat.timeoutMs", 90000L);
     this.sessionRegistry = new SessionRegistry();
-    this.dispatcher = new MessageDispatcher(vertx, sessionRegistry);
+    this.dispatcher = new MessageDispatcher(vertx, sessionRegistry, heartbeatTimeoutMs);
 
     wsServer = vertx.createHttpServer();
     return wsServer.webSocketHandler(getServerHandler()).listen(wsPort)
@@ -55,7 +56,7 @@ public class WsGatewayVerticle extends VerticleBase {
 
       ws.closeHandler(closed -> {
         LOG.info("客户端断开连接：{}", ws.remoteAddress());
-        String userId = sessionRegistry.unregisterByConnection(conn);
+        String userId = sessionRegistry.unregisterByConnection(vertx, conn);
         dispatcher.getRouteTable().unregister(userId);
       });
 
@@ -65,7 +66,7 @@ public class WsGatewayVerticle extends VerticleBase {
         } else {
           LOG.error("连接异常：{}", ws.remoteAddress(), throwable);
         }
-        String userId = sessionRegistry.unregisterByConnection(conn);
+        String userId = sessionRegistry.unregisterByConnection(vertx, conn);
         dispatcher.getRouteTable().unregister(userId);
         ws.close();
       });

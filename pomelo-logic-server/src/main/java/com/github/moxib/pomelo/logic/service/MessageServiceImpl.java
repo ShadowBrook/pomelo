@@ -9,7 +9,7 @@ import com.github.moxib.pomelo.logic.model.AckNotifyContext;
 import com.github.moxib.pomelo.logic.model.C2CReqContext;
 import com.github.moxib.pomelo.logic.model.C2CRespResult;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
-import com.github.moxib.pomelo.logic.id.IdGenerator;
+import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import io.vertx.core.json.JsonObject;
 
 import com.google.protobuf.ByteString;
@@ -37,16 +37,16 @@ public class MessageServiceImpl implements MessageService {
   private static final Logger LOG = LoggerFactory.getLogger(MessageServiceImpl.class);
 
   private final MessageRepository messageRepo;
-  private final IdGenerator idGenerator;
+  private final SeqClientService seqClient;
 
-  public MessageServiceImpl(MessageRepository messageRepo, IdGenerator idGenerator) {
+  public MessageServiceImpl(MessageRepository messageRepo, SeqClientService seqClient) {
     this.messageRepo = messageRepo;
-    this.idGenerator = idGenerator;
+    this.seqClient = seqClient;
   }
 
   @Override
   public Future<C2CRespResult> sendC2CMessage(C2CReqContext ctx) {
-    Future<C2CRespResult> result = idGenerator.nextId()
+    Future<C2CRespResult> result = seqClient.fetchNextSequence(ctx.getSenderId())
       .compose(seq -> {
         long now = System.currentTimeMillis();
         String convId = buildConversationId(ctx.getSenderId(), ctx.getRecipientId());

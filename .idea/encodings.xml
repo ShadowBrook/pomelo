@@ -7,6 +7,12 @@
     <file url="file://$PROJECT_DIR$/pomelo-gateway/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pomelo-logic-server/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/pomelo-logic-server/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/pomelo-seqsvr/pomelo-seqsvr-client/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/pomelo-seqsvr/pomelo-seqsvr-client/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/pomelo-seqsvr/pomelo-seqsvr-server/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/pomelo-seqsvr/pomelo-seqsvr-server/src/main/resources" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/pomelo-seqsvr/src/main/java" charset="UTF-8" />
+    <file url="file://$PROJECT_DIR$/pomelo-seqsvr/src/main/resources" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/java" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/src/main/resources" charset="UTF-8" />
   </component>

@@ -19,12 +19,17 @@
       <artifactId>pomelo-common</artifactId>
     </dependency>
     <dependency>
+      <groupId>com.github.moxib</groupId>
+      <artifactId>pomelo-seqsvr-client</artifactId>
+    </dependency>
+    <dependency>
       <groupId>io.vertx</groupId>
       <artifactId>vertx-core</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-hazelcast</artifactId>
+      <groupId>io.github.shadowbrook</groupId>
+      <artifactId>vertx-redis-clustermanager</artifactId>
+      <version>0.0.1</version>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>
@@ -53,10 +58,6 @@
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-databind</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.redisson</groupId>
-      <artifactId>redisson</artifactId>
     </dependency>
     <dependency>
       <groupId>at.favre.lib</groupId>

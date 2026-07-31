@@ -4,7 +4,7 @@ import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
-import com.github.moxib.pomelo.logic.id.IdGenerator;
+import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.C2CReqContext;
 import com.github.moxib.pomelo.logic.model.C2CRespResult;
@@ -31,14 +31,14 @@ public class C2CService extends ServiceBase {
   private final Vertx vertx;
   private final PushRouter pushRouter;
   private final MessageRepository messageRepo;
-  private final IdGenerator idGenerator;
+  private final SeqClientService seqClient;
   private final CodecRegistry codecRegistry;
 
-  public C2CService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo, IdGenerator idGenerator) {
+  public C2CService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo, SeqClientService seqClient) {
     this.vertx = vertx;
     this.pushRouter = pushRouter;
     this.messageRepo = messageRepo;
-    this.idGenerator = idGenerator;
+    this.seqClient = seqClient;
     this.codecRegistry = new CodecRegistry();
     codecRegistry.registerProtobuf(CMD_C2C_REQ_VALUE, ChatProto.C2CReq.parser(), C2CRequest::fromProto, C2CRequest.class);
     codecRegistry.registerJson(CMD_C2C_REQ_VALUE, C2CRequest.class);
@@ -109,7 +109,7 @@ public class C2CService extends ServiceBase {
   }
 
   private Future<C2CRespResult> doSend(C2CReqContext ctx) {
-    return idGenerator.nextId()
+    return seqClient.fetchNextSequence(ctx.getSenderId())
       .compose(seq -> {
         long now = System.currentTimeMillis();
         String convId = MessageServiceImpl.buildConversationId(ctx.getSenderId(), ctx.getRecipientId());
