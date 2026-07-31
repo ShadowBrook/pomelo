@@ -6,9 +6,11 @@
         <sourceOutputDir name="target/generated-sources/annotations" />
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
-        <module name="pomelo-gateway" />
         <module name="pomelo-common" />
         <module name="pomelo-logic-server" />
+        <module name="pomelo-seqsvr-server" />
+        <module name="pomelo-gateway" />
+        <module name="pomelo-seqsvr-client" />
       </profile>
     </annotationProcessing>
   </component>
@@ -18,6 +20,9 @@
       <module name="pomelo-common" options="-parameters" />
       <module name="pomelo-gateway" options="-parameters" />
       <module name="pomelo-logic-server" options="-parameters" />
+      <module name="pomelo-seqsvr" options="" />
+      <module name="pomelo-seqsvr-client" options="-parameters" />
+      <module name="pomelo-seqsvr-server" options="-parameters" />
     </option>
   </component>
 </project>

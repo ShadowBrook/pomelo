@@ -1,7 +1,7 @@
 package com.github.moxib.pomelo.logic;
 
 import com.github.moxib.pomelo.common.ImMessage;
-import com.github.moxib.pomelo.logic.id.RedisIdGenerator;
+import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.github.moxib.pomelo.logic.infrastructure.PgMessageRepository;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
@@ -35,11 +35,11 @@ public class LogicVerticle extends VerticleBase {
     return RedisFactory.get(vertx).connect()
       .compose(v -> {
         var messageRepo = new PgMessageRepository(vertx);
-        var idGenerator = new RedisIdGenerator(vertx, RedisFactory.get(vertx).getRedis());
+        var seqClient = new SeqClientService(vertx);
 
         PushRouter pushRouter = new PushRouter(vertx);
 
-        c2cService = new C2CService(vertx, pushRouter, messageRepo, idGenerator);
+        c2cService = new C2CService(vertx, pushRouter, messageRepo, seqClient);
         ackService = new AckService(vertx, pushRouter, messageRepo);
         authService = new AuthService(vertx);
         pullService = new PullService(vertx, messageRepo);

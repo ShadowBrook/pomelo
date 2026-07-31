@@ -31,8 +31,9 @@
       <artifactId>jackson-databind</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.vertx</groupId>
-      <artifactId>vertx-hazelcast</artifactId>
+      <groupId>com.retailsvc</groupId>
+      <artifactId>vertx-redis-clustermanager</artifactId>
+      <version>0.0.1-local</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
