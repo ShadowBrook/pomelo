@@ -10,7 +10,7 @@
     <version>1.0.0-SNAPSHOT</version>
   </parent>
 
-  <artifactId>pomelo-seqsvr-server</artifactId>
+  <artifactId>pomelo-seqsvr-store</artifactId>
   <packaging>jar</packaging>
 
   <dependencies>
@@ -21,17 +21,6 @@
     <dependency>
       <groupId>com.github.moxib</groupId>
       <artifactId>pomelo-common</artifactId>
-    </dependency>
-    <!-- 单测使用 LocalStoreAccessor 包装 StoreManager；生产 AllocSvr 不依赖 StoreSvr 实现 -->
-    <dependency>
-      <groupId>com.github.moxib</groupId>
-      <artifactId>pomelo-seqsvr-store</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>com.github.moxib</groupId>
-      <artifactId>pomelo-seqsvr-mediate</artifactId>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.vertx</groupId>

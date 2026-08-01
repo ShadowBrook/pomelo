@@ -15,6 +15,8 @@
 
   <modules>
     <module>pomelo-seqsvr-client</module>
+    <module>pomelo-seqsvr-store</module>
+    <module>pomelo-seqsvr-mediate</module>
     <module>pomelo-seqsvr-server</module>
   </modules>
 </project>

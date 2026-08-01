@@ -101,6 +101,7 @@ public class StoreManager {
   /**
    * 设置 section max_seq
    * 只有当新值大于旧值时才更新，并且向上取整到 SEQ_STEP 边界。
+   * 返回存储生效后的 max_seq（写入时为对齐值；未写入时返回旧值）。
    */
   public long setSectionMaxSeq(int id, long maxSeq) {
     RangeId.SectionResult result = setId.calcSectionID(id);
@@ -112,15 +113,16 @@ public class StoreManager {
     int sectionIdx = result.getSectionIdx();
     long oldMaxSeq = sectionMaxSeqsBuf.getLong(sectionIdx * 8);
 
-    long newMaxSeq = maxSeq;
-    if (newMaxSeq > oldMaxSeq) {
+    if (maxSeq > oldMaxSeq) {
       // 向上取整到 SEQ_STEP 边界
-      newMaxSeq = ((maxSeq / SeqSvrConstants.SEQ_STEP) + 1) * SeqSvrConstants.SEQ_STEP;
+      long newMaxSeq = ((maxSeq / SeqSvrConstants.SEQ_STEP) + 1) * SeqSvrConstants.SEQ_STEP;
       sectionMaxSeqsBuf.putLong(sectionIdx * 8, newMaxSeq);
       sectionMaxSeqsBuf.force();
+      return newMaxSeq;
     }
 
-    return newMaxSeq;
+    // 未写入：返回当前生效值，保证调用方（AllocSvr 回填）得到真实持久化值
+    return oldMaxSeq;
   }
 
   /**
