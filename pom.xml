@@ -63,6 +63,16 @@
       </dependency>
       <dependency>
         <groupId>com.github.moxib</groupId>
+        <artifactId>pomelo-seqsvr-store</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.moxib</groupId>
+        <artifactId>pomelo-seqsvr-mediate</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.moxib</groupId>
         <artifactId>pomelo-seqsvr-server</artifactId>
         <version>${project.version}</version>
       </dependency>
