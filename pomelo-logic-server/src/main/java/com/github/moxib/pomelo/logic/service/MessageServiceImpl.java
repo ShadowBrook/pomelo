@@ -127,11 +127,11 @@ public class MessageServiceImpl implements MessageService {
   }
 
   @Override
-  public Future<List<MessageRecord>> pullConversationHistory(long userId, long peerId, long beforeSeq, int limit) {
+  public Future<List<MessageRecord>> pullConversationHistory(long userId, long peerId, long beforeTime, int limit) {
     String conversationId = buildConversationId(userId, peerId);
-    return messageRepo.pullConversation(conversationId, beforeSeq, limit)
-      .onSuccess(list -> LOG.info("pullConversationHistory: conv={} beforeSeq={} count={}",
-        conversationId, beforeSeq, list.size()))
+    return messageRepo.pullConversation(conversationId, beforeTime, limit)
+      .onSuccess(list -> LOG.info("pullConversationHistory: conv={} beforeTime={} count={}",
+        conversationId, beforeTime, list.size()))
       .onFailure(e -> LOG.error("pullConversationHistory 失败: {}", e.getMessage()));
   }
 

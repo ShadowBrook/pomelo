@@ -77,9 +77,9 @@ Two codec types identified by `codecId`:
 
 `PullMessageHandler` serves two purposes via the same `PULL_REQ`/`PULL_RESP` command pair:
 
-1. **Offline message pull** (no `peerId` in body): calls `MessageService.pullOfflineMessages()` → `MessageRepository.pullPending()` — fetches messages with `status < 2` for the requesting user, ordered by seq. Used after reconnection.
+1. **Offline message pull** (no `peerId` in body): calls `MessageService.pullOfflineMessages()` → `MessageRepository.pullPending()` — fetches messages with `status < 2` for the requesting user, ordered by `seq`. The message's `seq` is the **recipient's** seqsvr sync version (write-diffusion inbox sequence, assigned at `C2CService.doSend` via `fetchNextSequence(recipientId)`), so `seq > sinceSeq` is the recipient's incremental sync watermark. Used after reconnection.
 
-2. **Conversation history pull** (`peerId` present in body): calls `MessageService.pullConversationHistory(userId, peerId, beforeSeq, limit)` which computes `conversationId = buildConversationId(userId, peerId)` (sorted `userId:peerId`) and delegates to `MessageRepository.pullConversation()`. Queries by `conversation_id` with `seq < beforeSeq ORDER BY seq DESC LIMIT $3`. When `beforeSeq` is 0, treated as `Long.MAX_VALUE` (fetch latest).
+2. **Conversation history pull** (`peerId` present in body): calls `MessageService.pullConversationHistory(userId, peerId, beforeTime, limit)` which computes `conversationId = buildConversationId(userId, peerId)` (sorted `userId:peerId`) and delegates to `MessageRepository.pullConversation()`. Queries by `conversation_id` with `created_at < beforeTime ORDER BY created_at DESC LIMIT $3`. When `beforeTime` is 0, treated as `Long.MAX_VALUE` (fetch latest). Conversation order is by `created_at` — **not** the per-user `seq`, which mixes two users' inbox spaces and is incomparable.
 
 Both modes now include the message records in the response body (`{code, message, hasMore, messages: [...]}`) — messages are JSON-serialized with fields: `id`, `senderId`, `recipientId`, `msgType`, `content`, `seq`, `createdAt`.
 

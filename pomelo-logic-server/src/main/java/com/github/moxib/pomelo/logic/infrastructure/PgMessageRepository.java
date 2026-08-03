@@ -55,7 +55,7 @@ public class PgMessageRepository implements MessageRepository {
 
   private static final String PULL_CONVERSATION_SQL = """
     SELECT id, sender_id, recipient_id, conversation_id, msg_type, content, seq, status, created_at
-    FROM im_message_c2c WHERE conversation_id = $1 AND seq < $2 ORDER BY seq DESC LIMIT $3
+    FROM im_message_c2c WHERE conversation_id = $1 AND created_at < $2 ORDER BY created_at DESC LIMIT $3
     """;
 
   private static final String FIND_USER_ID_SQL = """
@@ -154,9 +154,9 @@ public class PgMessageRepository implements MessageRepository {
   }
 
   @Override
-  public Future<List<MessageRecord>> pullConversation(String conversationId, long beforeSeq, int limit) {
+  public Future<List<MessageRecord>> pullConversation(String conversationId, long beforeTime, int limit) {
     return pool.preparedQuery(PULL_CONVERSATION_SQL)
-      .execute(Tuple.of(conversationId, beforeSeq == 0 ? Long.MAX_VALUE : beforeSeq, limit))
+      .execute(Tuple.of(conversationId, beforeTime == 0 ? Long.MAX_VALUE : beforeTime, limit))
       .map(rows -> {
         List<MessageRecord> list = new ArrayList<>();
         for (Row row : rows) list.add(rowToRecord(row));
