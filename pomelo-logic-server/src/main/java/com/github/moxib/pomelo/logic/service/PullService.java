@@ -44,7 +44,8 @@ public class PullService extends ServiceBase {
       String userId = req.userId() != null && !req.userId().isEmpty()
         ? req.userId() : getUserIdFromHeaders(message);
       String peerId = req.peerId() != null && !req.peerId().isEmpty() && !"0".equals(req.peerId()) ? req.peerId() : null;
-      long sinceSeq = req.lastMsgId();
+      // lastMsgId 是通用游标：离线拉 = 收件人同步水位(sinceSeq)；会话历史 = 时间游标(beforeTime)
+      long cursor = req.lastMsgId();
       int limit = req.limit() > 0 ? req.limit() : defaultPullLimit;
 
       if (userId == null || userId.isEmpty()) {
@@ -56,16 +57,17 @@ public class PullService extends ServiceBase {
       return resolveId(userId, peerId)
         .compose(resolved -> {
           if (isHistoryPull) {
-            LOG.info("拉取会话历史: userId={}({}) peerId={}({}) beforeSeq={} limit={}",
-              userId, resolved.userId, peerId, resolved.peerId, sinceSeq, limit);
-            return MessageServiceImpl.buildConversationId(resolved.userId, resolved.peerId) != null
-              ? messageRepo.pullConversation(MessageServiceImpl.buildConversationId(resolved.userId, resolved.peerId), sinceSeq, limit)
+            LOG.info("拉取会话历史: userId={}({}) peerId={}({}) beforeTime={} limit={}",
+              userId, resolved.userId, peerId, resolved.peerId, cursor, limit);
+            String conversationId = MessageServiceImpl.buildConversationId(resolved.userId, resolved.peerId);
+            return conversationId != null
+              ? messageRepo.pullConversation(conversationId, cursor, limit)
                   .compose(records -> sendPullResp(message, records, limit))
               : Future.succeededFuture();
           } else {
             LOG.info("拉取离线消息: userId={}({}) sinceSeq={} limit={}",
-              userId, resolved.userId, sinceSeq, limit);
-            return messageRepo.pullPending(resolved.userId, sinceSeq, limit)
+              userId, resolved.userId, cursor, limit);
+            return messageRepo.pullPending(resolved.userId, cursor, limit)
               .compose(records -> sendPullResp(message, records, limit));
           }
         })

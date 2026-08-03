@@ -109,7 +109,8 @@ public class C2CService extends ServiceBase {
   }
 
   private Future<C2CRespResult> doSend(C2CReqContext ctx) {
-    return seqClient.fetchNextSequence(ctx.getSenderId())
+    // seq 是收件人信箱的同步版本号（写扩散：消息写进收件人信箱时取收件人的 seq 作为递增序号）
+    return seqClient.fetchNextSequence(ctx.getRecipientId())
       .compose(seq -> {
         long now = System.currentTimeMillis();
         String convId = MessageServiceImpl.buildConversationId(ctx.getSenderId(), ctx.getRecipientId());

@@ -31,8 +31,8 @@ public interface MessageRepository {
   /** 按 messageId 列表批量查询 */
   Future<List<MessageRecord>> findByIds(List<Long> messageIds);
 
-  /** 拉取会话历史消息（双向，按 conversation_id 排序） */
-  Future<List<MessageRecord>> pullConversation(String conversationId, long beforeSeq, int limit);
+  /** 拉取会话历史消息（双向，按 conversation_id + created_at 倒序分页） */
+  Future<List<MessageRecord>> pullConversation(String conversationId, long beforeTime, int limit);
 
   /** 按 userId (NanoID) 查询 im_user.id */
   Future<Long> findUserId(String userId);
