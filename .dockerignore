@@ -10,9 +10,10 @@
 .eclipse/
 .settings/
 
-# Maven build output (except fat jar)
-target/*
+# Maven build output (except fat jars — 兼容根 Dockerfile 与 seqsvr Dockerfile 的 host-build + COPY)
+**/target/*
 !target/pomelo-*-fat.jar
+!pomelo-seqsvr/*/target/*-fat.jar
 
 # Node.js (SDK build artifacts)
 node_modules/
@@ -40,5 +41,4 @@ Dockerfile*
 *.swp
 *.swo
 
-# Proto (already compiled into jar)
-src/main/proto/
+# 注意：不能排除 src/main/proto/ —— Docker 内执行 mvn 构建时 protobuf-maven-plugin 需要 .proto 源码重新生成

@@ -1,3 +1,19 @@
+# ================================================================
+# pomelo 一体化部署：主应用 + 数据库 + Redis + seqsvr 发号服务
+#
+#   pomelo      主应用（HTTP API + Gateway，host-build 需先在宿主机产出 fat jar）
+#   postgres    业务数据库
+#   redis       缓存 / 在线状态（同时作为 seqsvr 集群 EventBus 的 Redis 管理器）
+#   seqsvr-store-1/2/3   StoreSvr 副本（NRW：写 W=2 / 读 R=2）
+#   seqsvr-mediate       仲裁（路由表生成/故障迁移）+ admin HTTP :10106
+#   seqsvr-alloc-1/2     AllocSvr 分配层（互为备机，均衡分号段）
+#
+# 仅启动 seqsvr（不含主应用）：
+#   docker compose up -d redis seqsvr-store-1 seqsvr-store-2 seqsvr-store-3 \
+#     seqsvr-mediate seqsvr-alloc-1 seqsvr-alloc-2 --build
+# 全部启动：
+#   docker compose up -d --build
+# ================================================================
 services:
   pomelo:
     build:
@@ -70,8 +86,102 @@ services:
     networks:
       - pomelo-net
 
+  # ============ seqsvr 发号服务 ============
+
+  seqsvr-store-1:
+    build: &seqsvr-store-build
+      context: .
+      dockerfile: deploy/seqsvr/Dockerfile
+      args:
+        MODULE_PATH: pomelo-seqsvr/pomelo-seqsvr-store
+    container_name: seqsvr-store-1
+    environment: &seqsvr-env
+      VERTX_CLUSTER: "true"
+      POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.dataDir=/data -Dseqsvr.store.replicaId=store-1"
+    volumes: [seqsvr-data-1:/data]
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  seqsvr-store-2:
+    build: *seqsvr-store-build
+    container_name: seqsvr-store-2
+    environment:
+      <<: *seqsvr-env
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.dataDir=/data -Dseqsvr.store.replicaId=store-2"
+    volumes: [seqsvr-data-2:/data]
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  seqsvr-store-3:
+    build: *seqsvr-store-build
+    container_name: seqsvr-store-3
+    environment:
+      <<: *seqsvr-env
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.dataDir=/data -Dseqsvr.store.replicaId=store-3"
+    volumes: [seqsvr-data-3:/data]
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  seqsvr-mediate:
+    build:
+      context: .
+      dockerfile: deploy/seqsvr/Dockerfile
+      args:
+        MODULE_PATH: pomelo-seqsvr/pomelo-seqsvr-mediate
+    container_name: seqsvr-mediate
+    ports:
+      - "10106:10106"   # admin HTTP：GET /router /nodes
+    environment:
+      VERTX_CLUSTER: "true"
+      POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.store.replicas=seqsvr.store.store-1,seqsvr.store.store-2,seqsvr.store.store-3 -Dseqsvr.store.w=2 -Dseqsvr.store.r=2"
+    depends_on:
+      redis: { condition: service_healthy }
+      seqsvr-store-1: { condition: service_started }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  seqsvr-alloc-1:
+    build: &seqsvr-alloc-build
+      context: .
+      dockerfile: deploy/seqsvr/Dockerfile
+      args:
+        MODULE_PATH: pomelo-seqsvr/pomelo-seqsvr-server
+    container_name: seqsvr-alloc-1
+    environment:
+      VERTX_CLUSTER: "true"
+      POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.nodeId=alloc-1 -Dseqsvr.mediate.enabled=true -Dseqsvr.store.replicas=seqsvr.store.store-1,seqsvr.store.store-2,seqsvr.store.store-3 -Dseqsvr.store.w=2 -Dseqsvr.store.r=2"
+    depends_on:
+      redis: { condition: service_healthy }
+      seqsvr-mediate: { condition: service_started }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  seqsvr-alloc-2:
+    build: *seqsvr-alloc-build
+    container_name: seqsvr-alloc-2
+    environment:
+      <<: *seqsvr-env
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.nodeId=alloc-2 -Dseqsvr.mediate.enabled=true -Dseqsvr.store.replicas=seqsvr.store.store-1,seqsvr.store.store-2,seqsvr.store.store-3 -Dseqsvr.store.w=2 -Dseqsvr.store.r=2"
+    depends_on:
+      redis: { condition: service_healthy }
+      seqsvr-mediate: { condition: service_started }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
 volumes:
   pgdata:
+  seqsvr-data-1:
+  seqsvr-data-2:
+  seqsvr-data-3:
 
 networks:
   pomelo-net:

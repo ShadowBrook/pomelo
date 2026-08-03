@@ -83,21 +83,45 @@ public class SeqAllocVerticle extends VerticleBase {
         .onFailure(err -> LOG.error("SeqAllocVerticle init failed: nodeId={}", nodeId, err));
     }
 
-    // Mediate 模式：注册（返回路由表立即应用）+ 周期心跳
+    // Mediate 模式：周期心跳 + 注册（失败自动重试，返回路由表立即应用）
     mediate = new MediateClient(vertx.eventBus(), config.mediatePrefix());
     heartbeatTimer = vertx.setPeriodic(config.heartbeatMs(), id ->
       mediate.heartbeat(nodeId, new JsonObject())
         .onFailure(err -> LOG.debug("heartbeat failed: nodeId={}, cause={}", nodeId, err.getMessage())));
 
-    return initFuture.compose(v -> mediate.register(myNode))
+    return initFuture
+      .onSuccess(v -> {
+        registerWithMediateWithRetry(myNode, 0);
+        LOG.info("SeqAllocVerticle start initiated: nodeId={}, state={}",
+          nodeId, allocManager.getState());
+      })
+      .map(v -> null)
+      .onFailure(err -> LOG.error("SeqAllocVerticle init failed: nodeId={}, cause={}",
+        nodeId, err.getMessage()));
+  }
+
+  /** 注册失败后的重试间隔 */
+  private static final long REGISTER_RETRY_MS = 5000;
+
+  /**
+   * 注册到 Mediate；失败后定时重试，保证 Docker 启动乱序 / Mediate 重启后能自愈。
+   * 注册成功返回的路由表立即应用（无需等 4s 租约同步）。
+   */
+  private void registerWithMediateWithRetry(RouterNode myNode, int attempt) {
+    if (mediate == null) {
+      return;
+    }
+    mediate.register(myNode)
       .onSuccess(router -> {
         allocManager.updateRouter(router);
         LOG.info("SeqAllocVerticle registered with Mediate: nodeId={}, routerVersion={}, state={}",
-          nodeId, router.getVersion(), allocManager.getState());
+          config.nodeId(), router.getVersion(), allocManager.getState());
       })
-      .map(v -> null)
-      .onFailure(err -> LOG.error("SeqAllocVerticle Mediate registration failed: nodeId={}, cause={}",
-        nodeId, err.getMessage()));
+      .onFailure(err -> {
+        LOG.warn("register with Mediate failed (attempt {}), retry in {}ms: nodeId={}, cause={}",
+          attempt + 1, REGISTER_RETRY_MS, config.nodeId(), err.getMessage());
+        vertx.setTimer(REGISTER_RETRY_MS, id -> registerWithMediateWithRetry(myNode, attempt + 1));
+      });
   }
 
   private void registerConsumers(String nodeId) {

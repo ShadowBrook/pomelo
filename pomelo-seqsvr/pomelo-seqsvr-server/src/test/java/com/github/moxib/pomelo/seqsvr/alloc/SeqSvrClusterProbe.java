@@ -1,6 +1,7 @@
 package com.github.moxib.pomelo.seqsvr.alloc;
 
 import com.github.moxib.pomelo.config.ClusterHelper;
+import com.github.moxib.pomelo.seqsvr.rpc.SeqSvrAddresses;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.Test;
@@ -26,15 +27,17 @@ class SeqSvrClusterProbe {
   void probeFetchAndGetCurrent() throws Exception {
     Vertx vertx = ClusterHelper.createVertx();
     try {
-      // 等待集群就绪 + AllocSvr 初始化
-      Thread.sleep(3000);
+      // 等待集群就绪 + 订阅同步 + AllocSvr 初始化
+      Thread.sleep(8000);
 
+      // 目标节点可用 -Dseqsvr.nodeId 覆盖（如 Docker 集群的 alloc-1）
+      String nodeId = System.getProperty("seqsvr.nodeId", "node-1");
       JsonObject req = new JsonObject().put("id", 4242).put("version", 0);
 
       CountDownLatch fetched = new CountDownLatch(1);
       AtomicReference<Long> seqRef = new AtomicReference<>();
       AtomicReference<Throwable> fetchErr = new AtomicReference<>();
-      vertx.eventBus().<JsonObject>request("seqsvr.alloc.node-1.fetchNext", req)
+      vertx.eventBus().<JsonObject>request(SeqSvrAddresses.allocNodeFetchNext(nodeId), req)
         .onSuccess(resp -> {
           seqRef.set(resp.body().getLong("seq"));
           fetched.countDown();
@@ -51,7 +54,7 @@ class SeqSvrClusterProbe {
       CountDownLatch curDone = new CountDownLatch(1);
       AtomicReference<Long> curRef = new AtomicReference<>();
       AtomicReference<Throwable> curErr = new AtomicReference<>();
-      vertx.eventBus().<JsonObject>request("seqsvr.alloc.node-1.getCurrent", req)
+      vertx.eventBus().<JsonObject>request(SeqSvrAddresses.allocNodeGetCurrent(nodeId), req)
         .onSuccess(resp -> {
           curRef.set(resp.body().getLong("seq"));
           curDone.countDown();
