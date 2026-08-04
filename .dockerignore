@@ -10,10 +10,8 @@
 .eclipse/
 .settings/
 
-# Maven build output (except fat jars — 兼容根 Dockerfile 与 seqsvr Dockerfile 的 host-build + COPY)
+# Maven build output（Jib 直接从 classes + deps 构建，不需要 fat jar）
 **/target/*
-!target/pomelo-*-fat.jar
-!pomelo-seqsvr/*/target/*-fat.jar
 
 # Node.js (SDK build artifacts)
 node_modules/

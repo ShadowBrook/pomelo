@@ -63,6 +63,34 @@
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
       </plugin>
+      <!-- Jib 打 Docker 镜像：无需 Dockerfile，Maven 一步产出 OCI 镜像 -->
+      <plugin>
+        <groupId>com.google.cloud.tools</groupId>
+        <artifactId>jib-maven-plugin</artifactId>
+        <version>3.4.0</version>
+        <configuration>
+          <from>
+            <image>eclipse-temurin:21-jre</image>
+            <platforms>
+              <platform>
+                <architecture>arm64</architecture>
+                <os>linux</os>
+              </platform>
+            </platforms>
+          </from>
+          <to>
+            <image>pomelo/seqsvr-alloc</image>
+          </to>
+          <container>
+            <user>1000:1000</user>
+            <mainClass>com.github.moxib.pomelo.seqsvr.SeqAllocMain</mainClass>
+            <entrypoint>sh,-c,exec java $JAVA_OPTS -cp @/app/jib-classpath-file com.github.moxib.pomelo.seqsvr.SeqAllocMain</entrypoint>
+            <environment>
+              <JAVA_OPTS>-Xms256m -Xmx512m</JAVA_OPTS>
+            </environment>
+          </container>
+        </configuration>
+      </plugin>
       <!-- 可执行 fat jar：pomelo-seqsvr-server-1.0.0-SNAPSHOT-fat.jar（AllocSvr 入口 SeqAllocMain） -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

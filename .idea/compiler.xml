@@ -8,7 +8,9 @@
         <outputRelativeToContentRoot value="true" />
         <module name="pomelo-common" />
         <module name="pomelo-logic-server" />
+        <module name="pomelo-seqsvr-store" />
         <module name="pomelo-seqsvr-server" />
+        <module name="pomelo-seqsvr-mediate" />
         <module name="pomelo-gateway" />
         <module name="pomelo-seqsvr-client" />
       </profile>
@@ -22,7 +24,9 @@
       <module name="pomelo-logic-server" options="-parameters" />
       <module name="pomelo-seqsvr" options="" />
       <module name="pomelo-seqsvr-client" options="-parameters" />
+      <module name="pomelo-seqsvr-mediate" options="-parameters" />
       <module name="pomelo-seqsvr-server" options="-parameters" />
+      <module name="pomelo-seqsvr-store" options="-parameters" />
     </option>
   </component>
 </project>
