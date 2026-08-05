@@ -1,7 +1,7 @@
 package com.github.moxib.pomelo.config;
 
-import com.retailsvc.vertx.spi.cluster.redis.RedisClusterManager;
-import com.retailsvc.vertx.spi.cluster.redis.config.RedisConfig;
+import io.github.shadowbrook.RedisClusterManager;
+import io.github.shadowbrook.config.RedisConfig;
 import io.vertx.core.Vertx;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.eventbus.EventBusOptions;
