@@ -27,9 +27,9 @@
       <artifactId>vertx-web</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.retailsvc</groupId>
+      <groupId>io.github.shadowbrook</groupId>
       <artifactId>vertx-redis-clustermanager</artifactId>
-      <version>0.0.1-local</version>
+      <version>0.0.1</version>
     </dependency>
     <dependency>
       <groupId>org.slf4j</groupId>
@@ -92,7 +92,16 @@
             <environment>
               <JAVA_OPTS>-Xms256m -Xmx512m</JAVA_OPTS>
             </environment>
+            <workingDirectory>/app</workingDirectory>
           </container>
+          <extraDirectories>
+            <paths>
+              <path>
+                <from>${maven.multiModuleProjectDirectory}/conf</from>
+                <into>/app/conf</into>
+              </path>
+            </paths>
+          </extraDirectories>
         </configuration>
       </plugin>
     </plugins>

@@ -77,7 +77,16 @@
             <environment>
               <JAVA_OPTS>-Xms256m -Xmx512m</JAVA_OPTS>
             </environment>
+            <workingDirectory>/app</workingDirectory>
           </container>
+          <extraDirectories>
+            <paths>
+              <path>
+                <from>${maven.multiModuleProjectDirectory}/conf</from>
+                <into>/app/conf</into>
+              </path>
+            </paths>
+          </extraDirectories>
         </configuration>
       </plugin>
       <!-- 可执行 fat jar：pomelo-seqsvr-store-1.0.0-SNAPSHOT-fat.jar -->

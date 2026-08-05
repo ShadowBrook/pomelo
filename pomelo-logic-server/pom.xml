@@ -129,7 +129,16 @@
             <environment>
               <JAVA_OPTS>-Xms256m -Xmx512m</JAVA_OPTS>
             </environment>
+            <workingDirectory>/app</workingDirectory>
           </container>
+          <extraDirectories>
+            <paths>
+              <path>
+                <from>${maven.multiModuleProjectDirectory}/conf</from>
+                <into>/app/conf</into>
+              </path>
+            </paths>
+          </extraDirectories>
         </configuration>
       </plugin>
     </plugins>
