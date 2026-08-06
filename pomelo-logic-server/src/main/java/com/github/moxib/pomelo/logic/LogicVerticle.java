@@ -13,6 +13,8 @@ import io.vertx.core.eventbus.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.function.Function;
+
 /**
  * Logic-Server 主 Verticle。
  * 注册所有 EventBus consumer，负责将请求分发给对应的 Service。
@@ -66,7 +68,7 @@ public class LogicVerticle extends VerticleBase {
   /**
    * 通用分发：Buffer → ImMessage → Service → Buffer reply。
    */
-  private void dispatch(Message<Buffer> msg, java.util.function.Function<ImMessage, Future<ImMessage>> processor) {
+  private void dispatch(Message<Buffer> msg, Function<ImMessage, Future<ImMessage>> processor) {
     try {
       ImMessage request = new ImMessage();
       // 跳过 4 字节长度前缀（encodeToWire 的格式）
