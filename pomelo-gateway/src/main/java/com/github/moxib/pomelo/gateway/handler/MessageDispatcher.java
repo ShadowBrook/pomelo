@@ -62,23 +62,13 @@ public class MessageDispatcher {
     if (conn == null) {
       return;
     }
-    byte recipientCodec = sessionRegistry.getCodecByUserId(userId);
-    byte[] pushBody;
-    byte pushCodecId;
-    if (recipientCodec == 1 && env.getJsonBody() != null && env.getJsonBody().length > 0) {
-      pushBody = env.getJsonBody();
-      pushCodecId = 1;
-    } else {
-      pushBody = env.getBody();
-      pushCodecId = env.getCodecId();
-    }
     ImMessage imMsg = ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER)
       .version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId(pushCodecId)
+      .codecId(env.getCodecId())
       .cmd(env.getCmd())
       .messageId(env.getCorrelationMsgId() != null ? env.getCorrelationMsgId() : "")
-      .body(pushBody)
+      .body(env.getBody())
       .build();
     conn.write(imMsg.encodeToWire());
   }

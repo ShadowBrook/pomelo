@@ -96,6 +96,7 @@ public class C2CService extends ServiceBase {
             .msgType(fMsgType)
             .content(fContent)
             .timestamp(fTimestamp)
+            .codecId(fCodecId)
             .build();
 
           return doSend(ctx)
@@ -130,7 +131,7 @@ public class C2CService extends ServiceBase {
           .map(inserted -> {
             if (inserted) {
               publishC2CNotify(record, ctx.getSenderUserId(), ctx.getRecipientUserId(),
-                ctx.getSenderUserName(), ctx.getSenderNickname());
+                ctx.getSenderUserName(), ctx.getSenderNickname(), ctx.getCodecId());
             }
             return C2CRespResult.builder()
               .code(0).message("success")
@@ -142,51 +143,52 @@ public class C2CService extends ServiceBase {
   }
 
   private void publishC2CNotify(MessageRecord record, String senderUserId, String recipientUserId,
-                                  String senderUserName, String senderNickname) {
-    // PB body；C2CNotify proto 无 sender 显示名字段，借 MessageContent.ext 传递（与 PullResp 同套路）
-    CommonProto.MessageContent.Builder msgContentBuilder = CommonProto.MessageContent.newBuilder()
-      .setMsgTypeValue(record.getMsgType())
-      .setContent(ByteString.copyFromUtf8(record.getContent() != null ? record.getContent() : ""));
-    if (senderUserName != null && !senderUserName.isEmpty()) {
-      msgContentBuilder.putExt("senderUserName", senderUserName);
+                                  String senderUserName, String senderNickname, byte codecId) {
+    byte[] body;
+    if (codecId == ProtobufCodec.CODEC_ID) {
+      CommonProto.MessageContent.Builder msgContentBuilder = CommonProto.MessageContent.newBuilder()
+        .setMsgTypeValue(record.getMsgType())
+        .setContent(ByteString.copyFromUtf8(record.getContent() != null ? record.getContent() : ""));
+      if (senderUserName != null && !senderUserName.isEmpty()) {
+        msgContentBuilder.putExt("senderUserName", senderUserName);
+      }
+      if (senderNickname != null && !senderNickname.isEmpty()) {
+        msgContentBuilder.putExt("senderNickname", senderNickname);
+      }
+      CommonProto.MessageContent msgContent = msgContentBuilder.build();
+      ChatProto.C2CNotify notify = ChatProto.C2CNotify.newBuilder()
+        .setSenderId(senderUserId)
+        .setRecipientId(String.valueOf(record.getRecipientId()))
+        .setMessage(msgContent)
+        .setSeq(record.getSeq())
+        .setMessageId(record.getId())
+        .build();
+      body = notify.toByteArray();
+    } else {
+      JsonObject json = new JsonObject();
+      json.put("senderId", senderUserId);
+      json.put("recipientId", recipientUserId);
+      if (senderUserName != null) json.put("senderUserName", senderUserName);
+      if (senderNickname != null) json.put("senderNickname", senderNickname);
+      json.put("conversationId", record.getConversationId());
+      json.put("seq", record.getSeq());
+      JsonObject jsonMsgContent = new JsonObject();
+      json.put("message", jsonMsgContent);
+      jsonMsgContent.put("msgType", record.getMsgType());
+      jsonMsgContent.put("content", record.getContent() != null ? record.getContent() : "");
+      json.put("id", record.getId());
+      json.put("messageId", record.getId());
+      json.put("createdAt", record.getCreatedAt());
+      body = json.toBuffer().getBytes();
     }
-    if (senderNickname != null && !senderNickname.isEmpty()) {
-      msgContentBuilder.putExt("senderNickname", senderNickname);
-    }
-    CommonProto.MessageContent msgContent = msgContentBuilder.build();
-    ChatProto.C2CNotify notify = ChatProto.C2CNotify.newBuilder()
-      .setSenderId(senderUserId)
-      .setRecipientId(String.valueOf(record.getRecipientId()))
-      .setMessage(msgContent)
-      .setSeq(record.getSeq())
-      .setMessageId(record.getId())
-      .build();
-
-    // JSON body（与旧 MessageServiceImpl.pushToRecipient 的 JSON 分支对齐）
-    JsonObject json = new JsonObject();
-    json.put("senderId", senderUserId);
-    json.put("recipientId", recipientUserId);
-    if (senderUserName != null) json.put("senderUserName", senderUserName);
-    if (senderNickname != null) json.put("senderNickname", senderNickname);
-    json.put("conversationId", record.getConversationId());
-    json.put("seq", record.getSeq());
-    JsonObject jsonMsgContent = new JsonObject();
-    json.put("message", jsonMsgContent);
-    jsonMsgContent.put("msgType", record.getMsgType());
-    jsonMsgContent.put("content", record.getContent() != null ? record.getContent() : "");
-    json.put("id", record.getId());
-    json.put("messageId", record.getId());
-    json.put("createdAt", record.getCreatedAt());
-
     PushEnvelope env = new PushEnvelope(
       recipientUserId,
       CMD_C2C_NOTIFY_VALUE,
-      notify.toByteArray(),
-      json.toBuffer().getBytes(),
-      (byte) 0
+      body,
+      codecId
     );
     pushRouter.push(env);
-    LOG.debug("C2CNotify pushed: recipientId={} msgId={} seq={}", record.getRecipientId(), record.getId(), record.getSeq());
+    LOG.debug("C2CNotify pushed: recipientId={} msgId={} seq={} codec={}", record.getRecipientId(), record.getId(), record.getSeq(), codecId);
   }
 
   private ImMessage buildC2CResponse(ImMessage request, byte codecId, C2CRespResult result) {
