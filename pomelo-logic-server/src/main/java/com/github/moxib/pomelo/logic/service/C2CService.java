@@ -143,11 +143,17 @@ public class C2CService extends ServiceBase {
 
   private void publishC2CNotify(MessageRecord record, String senderUserId, String recipientUserId,
                                   String senderUserName, String senderNickname) {
-    // PB body
-    CommonProto.MessageContent msgContent = CommonProto.MessageContent.newBuilder()
+    // PB body；C2CNotify proto 无 sender 显示名字段，借 MessageContent.ext 传递（与 PullResp 同套路）
+    CommonProto.MessageContent.Builder msgContentBuilder = CommonProto.MessageContent.newBuilder()
       .setMsgTypeValue(record.getMsgType())
-      .setContent(ByteString.copyFromUtf8(record.getContent() != null ? record.getContent() : ""))
-      .build();
+      .setContent(ByteString.copyFromUtf8(record.getContent() != null ? record.getContent() : ""));
+    if (senderUserName != null && !senderUserName.isEmpty()) {
+      msgContentBuilder.putExt("senderUserName", senderUserName);
+    }
+    if (senderNickname != null && !senderNickname.isEmpty()) {
+      msgContentBuilder.putExt("senderNickname", senderNickname);
+    }
+    CommonProto.MessageContent msgContent = msgContentBuilder.build();
     ChatProto.C2CNotify notify = ChatProto.C2CNotify.newBuilder()
       .setSenderId(senderUserId)
       .setRecipientId(String.valueOf(record.getRecipientId()))
