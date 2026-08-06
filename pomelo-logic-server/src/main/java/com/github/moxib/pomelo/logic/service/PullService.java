@@ -8,6 +8,7 @@ import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
 import com.github.moxib.pomelo.logic.model.requests.PullRequest;
+import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.proto.pull.PullProto;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -43,7 +44,11 @@ public class PullService extends ServiceBase {
       PullRequest req = decode(codecRegistry, message, PullRequest.class);
       String userId = req.userId() != null && !req.userId().isEmpty()
         ? req.userId() : getUserIdFromHeaders(message);
-      String peerId = req.peerId() != null && !req.peerId().isEmpty() && !"0".equals(req.peerId()) ? req.peerId() : null;
+      // PB 的 PullReq 无 peerId 字段：proto 客户端通过 varHeaders["peerId"] 传会话历史目标
+      String headerPeerId = message.getVarHeaders() != null ? message.getVarHeaders().get("peerId") : null;
+      String peerId = req.peerId() != null && !req.peerId().isEmpty() && !"0".equals(req.peerId())
+        ? req.peerId()
+        : (headerPeerId != null && !headerPeerId.isEmpty() && !"0".equals(headerPeerId) ? headerPeerId : null);
       // lastMsgId 是通用游标：离线拉 = 收件人同步水位(sinceSeq)；会话历史 = 时间游标(beforeTime)
       long cursor = req.lastMsgId();
       int limit = req.limit() > 0 ? req.limit() : defaultPullLimit;
@@ -117,10 +122,32 @@ public class PullService extends ServiceBase {
     Object respBody;
 
     if (codecId == ProtobufCodec.CODEC_ID) {
-      respBody = PullProto.PullResp.newBuilder()
+      PullProto.PullResp.Builder resp = PullProto.PullResp.newBuilder()
         .setCode(0).setMessage("success")
-        .setHasMore(records != null && records.size() >= limit)
-        .build();
+        .setHasMore(records != null && records.size() >= limit);
+      // PB 通道也返回消息列表：MessageContent + ext{id, senderId, recipientId, seq, 显示名}
+      if (records != null) {
+        for (MessageRecord r : records) {
+          com.github.moxib.pomelo.logic.model.UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
+          com.github.moxib.pomelo.logic.model.UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());
+          CommonProto.MessageContent.Builder mc = CommonProto.MessageContent.newBuilder()
+            .setMsgTypeValue(r.getMsgType())
+            .setContent(com.google.protobuf.ByteString.copyFromUtf8(r.getContent() != null ? r.getContent() : ""))
+            .setTimestamp(r.getCreatedAt());
+          mc.putExt("id", String.valueOf(r.getId()));
+          mc.putExt("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(r.getSenderId()));
+          mc.putExt("recipientId", recipientInfo != null ? recipientInfo.userId() : String.valueOf(r.getRecipientId()));
+          if (senderInfo != null && senderInfo.userName() != null) {
+            mc.putExt("senderUserName", senderInfo.userName());
+          }
+          if (senderInfo != null && senderInfo.nickname() != null) {
+            mc.putExt("senderNickname", senderInfo.nickname());
+          }
+          mc.putExt("seq", String.valueOf(r.getSeq()));
+          resp.addMessages(mc);
+        }
+      }
+      respBody = resp.build();
     } else {
       JsonObject json = jsonBody();
       json.put("code", 0).put("message", "success");
