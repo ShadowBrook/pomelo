@@ -1,5 +1,7 @@
 package com.github.moxib.pomelo.logic.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 /**
  * C2C 发送结果，由 MessageService 返回给 Handler 构建响应。
  */
@@ -7,6 +9,8 @@ public class C2CRespResult {
 
   private final int code;
   private final String message;
+  // 使用 String 序列化避免 JavaScript Number 精度丢失（snowflake ID > 2^53）
+  @JsonFormat(shape = JsonFormat.Shape.STRING)
   private final long messageId;
   private final long seq;
   private final long serverTime;

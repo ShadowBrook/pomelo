@@ -158,7 +158,8 @@ public class PullService extends ServiceBase {
         for (MessageRecord r : records) {
           JsonObject msg = new JsonObject();
           arr.add(msg);
-          msg.put("id", r.getId());
+          // 使用 String 避免 JavaScript Number 精度丢失（snowflake ID > 2^53）
+          msg.put("id", String.valueOf(r.getId()));
           // 用 DB 查到的 NanoID + 显示名，fallback 到数字 ID
           com.github.moxib.pomelo.logic.model.UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
           com.github.moxib.pomelo.logic.model.UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());

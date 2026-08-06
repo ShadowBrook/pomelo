@@ -4,6 +4,7 @@ import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.AckNotifyContext;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
@@ -13,6 +14,7 @@ import com.github.moxib.pomelo.proto.ack.AckProto;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,12 +31,14 @@ public class AckService extends ServiceBase {
   private final Vertx vertx;
   private final PushRouter pushRouter;
   private final MessageRepository messageRepo;
+  private final SessionRouteTable routeTable;
   private final CodecRegistry codecRegistry;
 
-  public AckService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo) {
+  public AckService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo, SessionRouteTable routeTable) {
     this.vertx = vertx;
     this.pushRouter = pushRouter;
     this.messageRepo = messageRepo;
+    this.routeTable = routeTable;
     this.codecRegistry = new CodecRegistry();
     codecRegistry.registerProtobuf(CMD_ACK_REQ_VALUE, AckProto.AckReq.parser(), AckRequest::fromProto, AckRequest.class);
     codecRegistry.registerJson(CMD_ACK_REQ_VALUE, AckRequest.class);
@@ -110,23 +114,36 @@ public class AckService extends ServiceBase {
   }
 
   private void publishAckNotify(AckNotifyContext ctx) {
-    try {
-      AckProto.AckNotify.Builder builder = AckProto.AckNotify.newBuilder()
-        .setAckTypeValue(ctx.getAckType());
-      for (Long id : ctx.getMessageIds()) {
-        builder.addMessageIds(id);
-      }
-      String targetUserId = ctx.getSenderUserId() != null ? ctx.getSenderUserId() : String.valueOf(ctx.getSenderId());
-      PushEnvelope env = new PushEnvelope(
-        targetUserId,
-        CMD_ACK_NOTIFY_VALUE,
-        builder.build().toByteArray(),
-        (byte) 0
-      );
-      pushRouter.push(env);
-      LOG.debug("AckNotify 已发送: sender={} type={} count={}", ctx.getSenderId(), ctx.getAckType(), ctx.getMessageIds().size());
-    } catch (Exception e) {
-      LOG.error("推送 AckNotify 失败: {}", e.getMessage());
-    }
+    String targetUserId = ctx.getSenderUserId() != null ? ctx.getSenderUserId() : String.valueOf(ctx.getSenderId());
+    routeTable.resolveCodec(targetUserId)
+      .onSuccess(codec -> {
+        byte[] body;
+        byte pushCodec;
+        if (codec == ProtobufCodec.CODEC_ID) {
+          AckProto.AckNotify.Builder builder = AckProto.AckNotify.newBuilder()
+            .setAckTypeValue(ctx.getAckType());
+          for (Long id : ctx.getMessageIds()) {
+            builder.addMessageIds(id);
+          }
+          body = builder.build().toByteArray();
+          pushCodec = 0;
+        } else {
+          // JSON: messageIds 用字符串避免 JavaScript Number 精度丢失
+          JsonObject json = new JsonObject();
+          JsonArray ids = new JsonArray();
+          for (Long id : ctx.getMessageIds()) {
+            ids.add(String.valueOf(id));
+          }
+          json.put("messageIds", ids);
+          json.put("ackType", ctx.getAckType());
+          body = json.toBuffer().getBytes();
+          pushCodec = 1;
+        }
+        PushEnvelope env = new PushEnvelope(targetUserId, CMD_ACK_NOTIFY_VALUE, body, pushCodec);
+        pushRouter.push(env);
+        LOG.debug("AckNotify 已发送: sender={} type={} count={} codec={}",
+          ctx.getSenderId(), ctx.getAckType(), ctx.getMessageIds().size(), pushCodec);
+      })
+      .onFailure(e -> LOG.warn("解析发送方 codec 失败，跳过 AckNotify: target={}", targetUserId, e));
   }
 }
