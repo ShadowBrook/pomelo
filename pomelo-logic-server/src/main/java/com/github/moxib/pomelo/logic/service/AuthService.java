@@ -88,6 +88,7 @@ public class AuthService extends ServiceBase {
         response.getVarHeaders().put("loginNickname", nickname != null ? nickname : "");
         response.getVarHeaders().put("loginCodecId", String.valueOf(codecId));
         response.getVarHeaders().put("loginToken", token);
+        response.getVarHeaders().put("loginPlatform", req.platform() != null ? req.platform() : "");
         return Future.succeededFuture(response);
       });
     });

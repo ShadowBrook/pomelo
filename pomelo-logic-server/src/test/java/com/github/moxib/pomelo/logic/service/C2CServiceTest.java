@@ -1,6 +1,8 @@
 package com.github.moxib.pomelo.logic.service;
 
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.config.SessionRouteTable;
+import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
 import com.github.moxib.pomelo.model.PushEnvelope;
@@ -92,7 +94,8 @@ class C2CServiceTest {
       }
     };
 
-    C2CService service = new C2CService(vertx, noopPush, stubRepo(), seqClient);
+    C2CService service = new C2CService(vertx, noopPush, stubRepo(), seqClient,
+      new SnowflakeIdGenerator(1), new SessionRouteTable(vertx));
 
     // 构造 JSON C2CReq：senderId=100, recipientId=200（数字 id，resolveId 直接 parse）
     byte[] body = new JsonObject()

@@ -130,8 +130,10 @@ public class MessageDispatcher {
       String nickname = headers.getOrDefault("loginNickname", "");
       byte codecId = Byte.parseByte(headers.getOrDefault("loginCodecId", "0"));
       String token = headers.getOrDefault("loginToken", "");
+      String platform = headers.getOrDefault("loginPlatform", "");
       sessionRegistry.register(loginUserId, id, connection, codecId, userName, nickname, token);
       routeTable.register(loginUserId);
+      routeTable.setCodec(loginUserId, platform, codecId);
       sessionRegistry.startHeartbeatTimer(vertx, loginUserId, heartbeatTimeoutMs);
       LOG.info("Session 已注册: userId={} id={}", loginUserId, id);
     }

@@ -5,8 +5,8 @@ package com.github.moxib.pomelo.model;
  * 在 EventBus 上以 {@link PushCodec} 二进制编码传输，各 Gateway 节点收到后
  * 根据 targetUserId 查本地 SessionRegistry 投递。
  *
- * body 为推送体字节（PB 或 JSON），codecId 标识其编码格式。
- * Gateway 直接按 codecId 投递，不做格式转换。
+ * body 为推送体字节，codecId 标识其编码格式。
+ * 推送前已按接收方 codec 构建，Gateway 直接投递无需转换。
  */
 public class PushEnvelope {
 

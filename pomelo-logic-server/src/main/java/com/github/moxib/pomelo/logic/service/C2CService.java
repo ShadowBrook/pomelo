@@ -4,6 +4,8 @@ import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.config.SessionRouteTable;
+import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.C2CReqContext;
@@ -32,13 +34,18 @@ public class C2CService extends ServiceBase {
   private final PushRouter pushRouter;
   private final MessageRepository messageRepo;
   private final SeqClientService seqClient;
+  private final SnowflakeIdGenerator snowflake;
+  private final SessionRouteTable routeTable;
   private final CodecRegistry codecRegistry;
 
-  public C2CService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo, SeqClientService seqClient) {
+  public C2CService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo, SeqClientService seqClient,
+                    SnowflakeIdGenerator snowflake, SessionRouteTable routeTable) {
     this.vertx = vertx;
     this.pushRouter = pushRouter;
     this.messageRepo = messageRepo;
     this.seqClient = seqClient;
+    this.snowflake = snowflake;
+    this.routeTable = routeTable;
     this.codecRegistry = new CodecRegistry();
     codecRegistry.registerProtobuf(CMD_C2C_REQ_VALUE, ChatProto.C2CReq.parser(), C2CRequest::fromProto, C2CRequest.class);
     codecRegistry.registerJson(CMD_C2C_REQ_VALUE, C2CRequest.class);
@@ -110,13 +117,15 @@ public class C2CService extends ServiceBase {
   }
 
   private Future<C2CRespResult> doSend(C2CReqContext ctx) {
+    // 服务端生成全局唯一 Snowflake ID，客户端本地 ID（ctx.getMessageId()）仅用于线路关联
+    long snowflakeId = snowflake.nextId();
     // seq 是收件人信箱的同步版本号（写扩散：消息写进收件人信箱时取收件人的 seq 作为递增序号）
     return seqClient.fetchNextSequence(ctx.getRecipientId())
       .compose(seq -> {
         long now = System.currentTimeMillis();
         String convId = MessageServiceImpl.buildConversationId(ctx.getSenderId(), ctx.getRecipientId());
         MessageRecord record = MessageRecord.builder()
-          .id(ctx.getMessageId())
+          .id(snowflakeId)
           .senderId(ctx.getSenderId())
           .recipientId(ctx.getRecipientId())
           .conversationId(convId)
@@ -131,11 +140,11 @@ public class C2CService extends ServiceBase {
           .map(inserted -> {
             if (inserted) {
               publishC2CNotify(record, ctx.getSenderUserId(), ctx.getRecipientUserId(),
-                ctx.getSenderUserName(), ctx.getSenderNickname(), ctx.getCodecId());
+                ctx.getSenderUserName(), ctx.getSenderNickname());
             }
             return C2CRespResult.builder()
               .code(0).message("success")
-              .messageId(ctx.getMessageId())
+              .messageId(snowflakeId)
               .seq(seq).serverTime(now)
               .build();
           });
@@ -143,52 +152,62 @@ public class C2CService extends ServiceBase {
   }
 
   private void publishC2CNotify(MessageRecord record, String senderUserId, String recipientUserId,
-                                  String senderUserName, String senderNickname, byte codecId) {
-    byte[] body;
-    if (codecId == ProtobufCodec.CODEC_ID) {
-      CommonProto.MessageContent.Builder msgContentBuilder = CommonProto.MessageContent.newBuilder()
-        .setMsgTypeValue(record.getMsgType())
-        .setContent(ByteString.copyFromUtf8(record.getContent() != null ? record.getContent() : ""));
-      if (senderUserName != null && !senderUserName.isEmpty()) {
-        msgContentBuilder.putExt("senderUserName", senderUserName);
-      }
-      if (senderNickname != null && !senderNickname.isEmpty()) {
-        msgContentBuilder.putExt("senderNickname", senderNickname);
-      }
-      CommonProto.MessageContent msgContent = msgContentBuilder.build();
-      ChatProto.C2CNotify notify = ChatProto.C2CNotify.newBuilder()
-        .setSenderId(senderUserId)
-        .setRecipientId(String.valueOf(record.getRecipientId()))
-        .setMessage(msgContent)
-        .setSeq(record.getSeq())
-        .setMessageId(record.getId())
-        .build();
-      body = notify.toByteArray();
-    } else {
-      JsonObject json = new JsonObject();
-      json.put("senderId", senderUserId);
-      json.put("recipientId", recipientUserId);
-      if (senderUserName != null) json.put("senderUserName", senderUserName);
-      if (senderNickname != null) json.put("senderNickname", senderNickname);
-      json.put("conversationId", record.getConversationId());
-      json.put("seq", record.getSeq());
-      JsonObject jsonMsgContent = new JsonObject();
-      json.put("message", jsonMsgContent);
-      jsonMsgContent.put("msgType", record.getMsgType());
-      jsonMsgContent.put("content", record.getContent() != null ? record.getContent() : "");
-      json.put("id", record.getId());
-      json.put("messageId", record.getId());
-      json.put("createdAt", record.getCreatedAt());
-      body = json.toBuffer().getBytes();
-    }
-    PushEnvelope env = new PushEnvelope(
-      recipientUserId,
-      CMD_C2C_NOTIFY_VALUE,
-      body,
-      codecId
-    );
-    pushRouter.push(env);
-    LOG.debug("C2CNotify pushed: recipientId={} msgId={} seq={} codec={}", record.getRecipientId(), record.getId(), record.getSeq(), codecId);
+                                  String senderUserName, String senderNickname) {
+    // 查接收方 codec，按需构建一种 body（PB 或 JSON）
+    routeTable.resolveCodec(recipientUserId)
+      .onSuccess(recipientCodec -> {
+        byte[] body;
+        byte pushCodec;
+        if (recipientCodec == ProtobufCodec.CODEC_ID) {
+          CommonProto.MessageContent.Builder msgContentBuilder = CommonProto.MessageContent.newBuilder()
+            .setMsgTypeValue(record.getMsgType())
+            .setContent(ByteString.copyFromUtf8(record.getContent() != null ? record.getContent() : ""));
+          if (senderUserName != null && !senderUserName.isEmpty()) {
+            msgContentBuilder.putExt("senderUserName", senderUserName);
+          }
+          if (senderNickname != null && !senderNickname.isEmpty()) {
+            msgContentBuilder.putExt("senderNickname", senderNickname);
+          }
+          CommonProto.MessageContent msgContent = msgContentBuilder.build();
+          ChatProto.C2CNotify notify = ChatProto.C2CNotify.newBuilder()
+            .setSenderId(senderUserId)
+            .setRecipientId(String.valueOf(record.getRecipientId()))
+            .setMessage(msgContent)
+            .setSeq(record.getSeq())
+            .setMessageId(record.getId())
+            .build();
+          body = notify.toByteArray();
+          pushCodec = 0;
+        } else {
+          JsonObject json = new JsonObject();
+          json.put("senderId", senderUserId);
+          json.put("recipientId", recipientUserId);
+          if (senderUserName != null) json.put("senderUserName", senderUserName);
+          if (senderNickname != null) json.put("senderNickname", senderNickname);
+          json.put("conversationId", record.getConversationId());
+          json.put("seq", record.getSeq());
+          JsonObject jsonMsgContent = new JsonObject();
+          json.put("message", jsonMsgContent);
+          jsonMsgContent.put("msgType", record.getMsgType());
+          jsonMsgContent.put("content", record.getContent() != null ? record.getContent() : "");
+          // 使用 String 避免 JavaScript Number 精度丢失（snowflake ID > 2^53）
+          json.put("id", String.valueOf(record.getId()));
+          json.put("messageId", String.valueOf(record.getId()));
+          json.put("createdAt", record.getCreatedAt());
+          body = json.toBuffer().getBytes();
+          pushCodec = 1;
+        }
+        PushEnvelope env = new PushEnvelope(
+          recipientUserId,
+          CMD_C2C_NOTIFY_VALUE,
+          body,
+          pushCodec
+        );
+        pushRouter.push(env);
+        LOG.debug("C2CNotify pushed: recipientId={} msgId={} seq={} codec={}",
+          record.getRecipientId(), record.getId(), record.getSeq(), pushCodec);
+      })
+      .onFailure(e -> LOG.warn("Failed to resolve codec for {}, fallback to PB push", recipientUserId, e));
   }
 
   private ImMessage buildC2CResponse(ImMessage request, byte codecId, C2CRespResult result) {

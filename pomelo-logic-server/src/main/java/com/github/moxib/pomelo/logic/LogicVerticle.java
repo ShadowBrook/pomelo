@@ -1,7 +1,10 @@
 package com.github.moxib.pomelo.logic;
 
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.config.ConfigHolder;
+import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
+import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.PgMessageRepository;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
@@ -38,11 +41,14 @@ public class LogicVerticle extends VerticleBase {
       .compose(v -> {
         var messageRepo = new PgMessageRepository(vertx);
         var seqClient = new SeqClientService(vertx);
+        var snowflake = new SnowflakeIdGenerator(
+          ConfigHolder.getInt("snowflake.workerId", 1));
+        var routeTable = new SessionRouteTable(vertx);
 
         PushRouter pushRouter = new PushRouter(vertx);
 
-        c2cService = new C2CService(vertx, pushRouter, messageRepo, seqClient);
-        ackService = new AckService(vertx, pushRouter, messageRepo);
+        c2cService = new C2CService(vertx, pushRouter, messageRepo, seqClient, snowflake, routeTable);
+        ackService = new AckService(vertx, pushRouter, messageRepo, routeTable);
         authService = new AuthService(vertx);
         pullService = new PullService(vertx, messageRepo);
         heartbeatService = new HeartbeatService();
