@@ -37,9 +37,8 @@ public abstract class ServiceBase {
     return buildResponse(request, responseCmd, body);
   }
 
-  @SuppressWarnings("unchecked")
   protected byte[] encodeBody(byte codecId, int cmd, Object body) {
-    var codec = (com.github.moxib.pomelo.codec.MessageCodec<Object>) new CodecRegistry().getCodec(cmd, codecId);
+    var codec = new CodecRegistry().getCodec(cmd, codecId);
     if (codec != null) {
       try { return codec.encode(body); }
       catch (UnsupportedOperationException ignored) {}
