@@ -67,6 +67,12 @@ public class PgGroupRepository implements GroupRepository {
     SELECT 1 FROM im_group_member WHERE group_id = $1 AND user_id = $2
     """;
 
+  private static final String IS_FRIEND_SQL = """
+    SELECT 1 FROM im_friend
+    WHERE ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1))
+    AND status = 1
+    """;
+
   private static final String UPDATE_LAST_READ_SQL = """
     UPDATE im_group_member SET last_read_seq = GREATEST(last_read_seq, $1)
     WHERE group_id = $2 AND user_id = $3
@@ -172,6 +178,13 @@ public class PgGroupRepository implements GroupRepository {
   public Future<Boolean> isMember(String groupId, long userId) {
     return pool.preparedQuery(IS_MEMBER_SQL)
       .execute(Tuple.of(groupId, userId))
+      .map(rows -> rows.size() > 0);
+  }
+
+  @Override
+  public Future<Boolean> isFriend(long userId1, long userId2) {
+    return pool.preparedQuery(IS_FRIEND_SQL)
+      .execute(Tuple.of(userId1, userId2))
       .map(rows -> rows.size() > 0);
   }
 
