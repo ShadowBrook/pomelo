@@ -42,7 +42,7 @@ public class PgGroupRepository implements GroupRepository {
   private static final String FIND_MEMBERS_SQL = """
     SELECT gm.group_id, gm.user_id, u.user_name, u.nickname, u.avatar, gm.role, gm.joined_at
     FROM im_group_member gm
-    JOIN im_user u ON gm.user_id = u.user_id
+    JOIN im_user u ON gm.user_id = u.id
     WHERE gm.group_id = $1
     ORDER BY gm.role DESC, gm.joined_at
     """;
@@ -98,7 +98,7 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<GroupInfo> findById(String groupId) {
+  public Future<GroupInfo> findById(long groupId) {
     return pool.preparedQuery(FIND_GROUP_SQL)
       .execute(Tuple.of(groupId))
       .map(rows -> {
@@ -108,7 +108,7 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<List<GroupInfo>> findGroupsByUserId(String userId) {
+  public Future<List<GroupInfo>> findGroupsByUserId(long userId) {
     return pool.preparedQuery(FIND_GROUPS_BY_USER_SQL)
       .execute(Tuple.of(userId))
       .map(rows -> {
@@ -119,15 +119,15 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<List<GroupMemberRecord>> findMembers(String groupId) {
+  public Future<List<GroupMemberRecord>> findMembers(long groupId) {
     return pool.preparedQuery(FIND_MEMBERS_SQL)
       .execute(Tuple.of(groupId))
       .map(rows -> {
         List<GroupMemberRecord> list = new ArrayList<>();
         for (Row row : rows) {
           list.add(GroupMemberRecord.builder()
-            .groupId(row.getString("group_id"))
-            .userId(row.getString("user_id"))
+            .groupId(row.getLong("group_id"))
+            .userId(row.getLong("user_id"))
             .userName(row.getString("user_name"))
             .nickname(row.getString("nickname"))
             .avatar(row.getString("avatar"))
@@ -140,7 +140,7 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<Void> addMember(long id, String groupId, String userId, int role, long now) {
+  public Future<Void> addMember(long id, long groupId, long userId, int role, long now) {
     return pool.preparedQuery(ADD_MEMBER_SQL)
       .execute(Tuple.of(id, groupId, userId, role, now))
       .onSuccess(r -> LOG.debug("成员加入: groupId={} userId={}", groupId, userId))
@@ -149,7 +149,7 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<Void> removeMember(String groupId, String userId) {
+  public Future<Void> removeMember(long groupId, long userId) {
     return pool.preparedQuery(REMOVE_MEMBER_SQL)
       .execute(Tuple.of(groupId, userId))
       .onSuccess(r -> LOG.debug("成员移除: groupId={} userId={}", groupId, userId))
@@ -158,21 +158,21 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<Boolean> isMember(String groupId, String userId) {
+  public Future<Boolean> isMember(long groupId, long userId) {
     return pool.preparedQuery(IS_MEMBER_SQL)
       .execute(Tuple.of(groupId, userId))
       .map(rows -> rows.size() > 0);
   }
 
   @Override
-  public Future<Void> updateLastReadSeq(String groupId, String userId, long seq) {
+  public Future<Void> updateLastReadSeq(long groupId, long userId, long seq) {
     return pool.preparedQuery(UPDATE_LAST_READ_SQL)
       .execute(Tuple.of(seq, groupId, userId))
       .mapEmpty();
   }
 
   @Override
-  public Future<Boolean> saveMessage(long id, String groupId, long senderNumericId,
+  public Future<Boolean> saveMessage(long id, long groupId, long senderNumericId,
                                      int msgType, String content, long seq, long createdAt) {
     return pool.preparedQuery(SAVE_MSG_SQL)
       .execute(Tuple.of(id, senderNumericId, groupId, msgType, content, seq, createdAt))
@@ -187,7 +187,7 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<List<GroupMsgWithSender>> pullMessages(String groupId, long cursor, int limit, boolean backward) {
+  public Future<List<GroupMsgWithSender>> pullMessages(long groupId, long cursor, int limit, boolean backward) {
     String sql = backward ? PULL_MSG_BACKWARD_SQL : PULL_MSG_FORWARD_SQL;
     return pool.preparedQuery(sql)
       .execute(Tuple.of(groupId, cursor, limit))
@@ -195,7 +195,7 @@ public class PgGroupRepository implements GroupRepository {
         List<GroupMsgWithSender> list = new ArrayList<>();
         for (Row row : rows) {
           list.add(new GroupMsgWithSender(
-            row.getLong("id"), row.getLong("sender_id"), row.getString("group_id"),
+            row.getLong("id"), row.getLong("sender_id"), row.getLong("group_id"),
             row.getInteger("msg_type"), row.getString("content"),
             row.getLong("seq"), row.getLong("created_at")));
         }
@@ -205,7 +205,7 @@ public class PgGroupRepository implements GroupRepository {
 
   private GroupInfo rowToGroupInfo(Row row) {
     return GroupInfo.builder()
-      .groupId(row.getString("id"))
+      .groupId(row.getLong("id"))
       .name(row.getString("name"))
       .avatar(row.getString("avatar"))
       .description(row.getString("description"))

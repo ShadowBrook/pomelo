@@ -2,8 +2,8 @@ package com.github.moxib.pomelo.logic.model;
 
 public class GroupMemberRecord {
 
-  private final String groupId;
-  private final String userId;
+  private final long groupId;
+  private final long userId;
   private final String userName;
   private final String nickname;
   private final String avatar;
@@ -22,8 +22,8 @@ public class GroupMemberRecord {
 
   public static Builder builder() { return new Builder(); }
 
-  public String getGroupId() { return groupId; }
-  public String getUserId() { return userId; }
+  public long getGroupId() { return groupId; }
+  public long getUserId() { return userId; }
   public String getUserName() { return userName; }
   public String getNickname() { return nickname; }
   public String getAvatar() { return avatar; }
@@ -31,16 +31,16 @@ public class GroupMemberRecord {
   public long getJoinedAt() { return joinedAt; }
 
   public static class Builder {
-    private String groupId;
-    private String userId;
+    private long groupId;
+    private long userId;
     private String userName;
     private String nickname;
     private String avatar;
     private int role;
     private long joinedAt;
 
-    public Builder groupId(String groupId) { this.groupId = groupId; return this; }
-    public Builder userId(String userId) { this.userId = userId; return this; }
+    public Builder groupId(long groupId) { this.groupId = groupId; return this; }
+    public Builder userId(long userId) { this.userId = userId; return this; }
     public Builder userName(String userName) { this.userName = userName; return this; }
     public Builder nickname(String nickname) { this.nickname = nickname; return this; }
     public Builder avatar(String avatar) { this.avatar = avatar; return this; }

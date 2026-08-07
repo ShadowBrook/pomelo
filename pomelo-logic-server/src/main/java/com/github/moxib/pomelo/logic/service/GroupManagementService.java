@@ -7,6 +7,7 @@ import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
+import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.GroupInfo;
 import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
@@ -17,8 +18,6 @@ import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
-
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 public class GroupManagementService extends ServiceBase {
@@ -27,15 +26,17 @@ public class GroupManagementService extends ServiceBase {
 
   private final PushRouter pushRouter;
   private final GroupRepository groupRepo;
+  private final MessageRepository messageRepo;
   private final SessionRouteTable routeTable;
   private final SnowflakeIdGenerator snowflake;
   private final CodecRegistry codecRegistry;
 
   public GroupManagementService(Vertx vertx, PushRouter pushRouter,
                                  GroupRepository groupRepo, SessionRouteTable routeTable,
-                                 SnowflakeIdGenerator snowflake) {
+                                 SnowflakeIdGenerator snowflake, MessageRepository messageRepo) {
     this.pushRouter = pushRouter;
     this.groupRepo = groupRepo;
+    this.messageRepo = messageRepo;
     this.routeTable = routeTable;
     this.snowflake = snowflake;
     this.codecRegistry = new CodecRegistry();
@@ -91,31 +92,38 @@ public class GroupManagementService extends ServiceBase {
     }
     String avatar = body.getString("avatar", "");
 
-    String groupId = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+    long groupId = snowflake.nextId();
     long now = System.currentTimeMillis();
 
-    GroupInfo group = GroupInfo.builder()
-      .groupId(groupId).name(name.trim()).avatar(avatar)
-      .description("").ownerId(userId)
-      .memberCount(1).maxMembers(200)
-      .createdAt(now).updatedAt(now)
-      .build();
+    return resolveId(userId).compose(ownerNumericId -> {
+      if (ownerNumericId == 0) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_CREATE_RESP_VALUE,
+          ErrorCode.UNAUTHORIZED, "用户不存在"));
+      }
 
-    return groupRepo.createGroup(group)
-      .compose(v -> groupRepo.addMember(snowflake.nextId(), groupId, userId, 2, now))
-      .map(v -> {
-        byte codecId = message.getCodecId();
-        Object respBody;
-        if (codecId == ProtobufCodec.CODEC_ID) {
-          respBody = GroupMgmtProto.CreateGroupResp.newBuilder()
-            .setCode(0).setMessage("success").setGroup(toProtoGroupInfo(group)).build();
-        } else {
-          respBody = jsonBody().put("code", 0).put("message", "success")
-            .put("group", toJsonGroupInfo(group));
-        }
-        LOG.info("群创建成功: groupId={} name={} owner={}", groupId, name, userId);
-        return buildResponse(message, CMD_GROUP_CREATE_RESP_VALUE, respBody);
-      });
+      GroupInfo group = GroupInfo.builder()
+        .groupId(groupId).name(name.trim()).avatar(avatar)
+        .description("").ownerId(userId)
+        .memberCount(1).maxMembers(200)
+        .createdAt(now).updatedAt(now)
+        .build();
+
+      return groupRepo.createGroup(group)
+        .compose(v -> groupRepo.addMember(snowflake.nextId(), groupId, ownerNumericId, 2, now))
+        .map(v -> {
+          byte codecId = message.getCodecId();
+          Object respBody;
+          if (codecId == ProtobufCodec.CODEC_ID) {
+            respBody = GroupMgmtProto.CreateGroupResp.newBuilder()
+              .setCode(0).setMessage("success").setGroup(toProtoGroupInfo(group)).build();
+          } else {
+            respBody = jsonBody().put("code", 0).put("message", "success")
+              .put("group", toJsonGroupInfo(group));
+          }
+          LOG.info("群创建成功: groupId={} name={} owner={}", groupId, name, userId);
+          return buildResponse(message, CMD_GROUP_CREATE_RESP_VALUE, respBody);
+        });
+    });
   }
 
   private Future<ImMessage> handleGetGroupInfo(ImMessage message) {
@@ -125,7 +133,8 @@ public class GroupManagementService extends ServiceBase {
         ErrorCode.BAD_REQUEST, "body 不能为空"));
     }
     JsonObject body = new JsonObject(bodyStr);
-    String groupId = body.getString("groupId");
+    String groupIdStr = body.getString("groupId");
+    long groupId = Long.parseLong(groupIdStr);
 
     return groupRepo.findById(groupId)
       .compose(group -> {
@@ -153,7 +162,8 @@ public class GroupManagementService extends ServiceBase {
         ErrorCode.BAD_REQUEST, "body 不能为空"));
     }
     JsonObject body = new JsonObject(bodyStr);
-    String groupId = body.getString("groupId");
+    String groupIdStr = body.getString("groupId");
+    long groupId = Long.parseLong(groupIdStr);
 
     return groupRepo.findMembers(groupId)
       .compose(members -> {
@@ -164,8 +174,10 @@ public class GroupManagementService extends ServiceBase {
             GroupMgmtProto.GetGroupMembersResp.newBuilder().setCode(0).setMessage("success");
           for (GroupMemberRecord m : members) {
             resp.addMembers(GroupMgmtProto.GroupMember.newBuilder()
-              .setUserId(m.getUserId()).setUserName(nn(m.getUserName()))
-              .setNickname(nn(m.getNickname())).setAvatar(nn(m.getAvatar()))
+              .setUserId(String.valueOf(m.getUserId()))
+              .setUserName(nn(m.getUserName()))
+              .setNickname(nn(m.getNickname()))
+              .setAvatar(nn(m.getAvatar()))
               .setRole(m.getRole()).setJoinedAt(m.getJoinedAt()).build());
           }
           respBody = resp.build();
@@ -175,7 +187,7 @@ public class GroupManagementService extends ServiceBase {
           json.put("members", arr);
           for (GroupMemberRecord m : members) {
             JsonObject jm = new JsonObject();
-            jm.put("userId", m.getUserId());
+            jm.put("userId", String.valueOf(m.getUserId()));
             jm.put("userName", nn(m.getUserName()));
             jm.put("nickname", nn(m.getNickname()));
             jm.put("avatar", nn(m.getAvatar()));
@@ -196,31 +208,43 @@ public class GroupManagementService extends ServiceBase {
         ErrorCode.UNAUTHORIZED, "未认证用户"));
     }
 
-    return groupRepo.findGroupsByUserId(userId)
-      .map(groups -> {
-        byte codecId = message.getCodecId();
-        Object respBody;
-        if (codecId == ProtobufCodec.CODEC_ID) {
-          GroupMgmtProto.GetMyGroupsResp.Builder resp =
-            GroupMgmtProto.GetMyGroupsResp.newBuilder().setCode(0).setMessage("success");
-          for (GroupInfo g : groups) resp.addGroups(toProtoGroupInfo(g));
-          respBody = resp.build();
-        } else {
-          JsonObject json = jsonBody().put("code", 0).put("message", "success");
-          JsonArray arr = new JsonArray();
-          json.put("groups", arr);
-          for (GroupInfo g : groups) arr.add(toJsonGroupInfo(g));
-          respBody = json;
-        }
-        return buildResponse(message, CMD_GROUP_GET_MY_GROUPS_RESP_VALUE, respBody);
-      });
+    return resolveId(userId).compose(numericId -> {
+      if (numericId == 0) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_GET_MY_GROUPS_RESP_VALUE,
+          ErrorCode.UNAUTHORIZED, "用户不存在"));
+      }
+      return groupRepo.findGroupsByUserId(numericId)
+        .map(groups -> {
+          byte codecId = message.getCodecId();
+          Object respBody;
+          if (codecId == ProtobufCodec.CODEC_ID) {
+            GroupMgmtProto.GetMyGroupsResp.Builder resp =
+              GroupMgmtProto.GetMyGroupsResp.newBuilder().setCode(0).setMessage("success");
+            for (GroupInfo g : groups) resp.addGroups(toProtoGroupInfo(g));
+            respBody = resp.build();
+          } else {
+            JsonObject json = jsonBody().put("code", 0).put("message", "success");
+            JsonArray arr = new JsonArray();
+            json.put("groups", arr);
+            for (GroupInfo g : groups) arr.add(toJsonGroupInfo(g));
+            respBody = json;
+          }
+          return buildResponse(message, CMD_GROUP_GET_MY_GROUPS_RESP_VALUE, respBody);
+        });
+    });
+  }
+
+  private Future<Long> resolveId(String userId) {
+    try { return Future.succeededFuture(Long.parseLong(userId)); }
+    catch (NumberFormatException e) { return messageRepo.findUserId(userId); }
   }
 
   private static String nn(String s) { return s != null ? s : ""; }
 
   private GroupMgmtProto.GroupInfo toProtoGroupInfo(GroupInfo g) {
     return GroupMgmtProto.GroupInfo.newBuilder()
-      .setGroupId(g.getGroupId()).setName(g.getName())
+      .setGroupId(String.valueOf(g.getGroupId()))
+      .setName(g.getName())
       .setAvatar(nn(g.getAvatar())).setDescription(nn(g.getDescription()))
       .setOwnerId(g.getOwnerId()).setMemberCount(g.getMemberCount())
       .setMaxMembers(g.getMaxMembers()).setCreatedAt(g.getCreatedAt())
@@ -229,7 +253,8 @@ public class GroupManagementService extends ServiceBase {
 
   private JsonObject toJsonGroupInfo(GroupInfo g) {
     return new JsonObject()
-      .put("groupId", g.getGroupId()).put("name", g.getName())
+      .put("groupId", String.valueOf(g.getGroupId()))
+      .put("name", g.getName())
       .put("avatar", nn(g.getAvatar())).put("description", nn(g.getDescription()))
       .put("ownerId", g.getOwnerId()).put("memberCount", g.getMemberCount())
       .put("maxMembers", g.getMaxMembers()).put("createdAt", g.getCreatedAt())
