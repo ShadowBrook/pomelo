@@ -113,8 +113,8 @@ public class ProtobufCodec<T> implements MessageCodec<T> {
     registerProto(CommonProto.Cmd.CMD_GROUP_GET_MY_GROUPS_REQ_VALUE, GroupMgmtProto.GetMyGroupsReq.parser(), GroupMgmtProto.GetMyGroupsReq.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_GET_MY_GROUPS_RESP_VALUE, GroupMgmtProto.GetMyGroupsResp.parser(), GroupMgmtProto.GetMyGroupsResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_MEMBER_CHANGE_NOTIFY_VALUE, GroupMgmtProto.GroupMemberChangeNotify.parser(), GroupMgmtProto.GroupMemberChangeNotify.class);
-    registerProto(CommonProto.Cmd.CMD_GROUP_PULL_MSG_REQ_VALUE, GroupMgmtProto.PullGroupMsgReq.parser(), GroupMgmtProto.PullGroupMsgReq.class);
-    registerProto(CommonProto.Cmd.CMD_GROUP_PULL_MSG_RESP_VALUE, GroupMgmtProto.PullGroupMsgResp.parser(), GroupMgmtProto.PullGroupMsgResp.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_PULL_MSG_REQ_VALUE, PullProto.PullGroupMsgReq.parser(), PullProto.PullGroupMsgReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_PULL_MSG_RESP_VALUE, PullProto.PullResp.parser(), PullProto.PullResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_ACK_REQ_VALUE, GroupMgmtProto.GroupAckReq.parser(), GroupMgmtProto.GroupAckReq.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_ACK_RESP_VALUE, GroupMgmtProto.GroupAckResp.parser(), GroupMgmtProto.GroupAckResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_MSG_READ_REQ_VALUE, GroupMgmtProto.GetGroupMsgReadStatusReq.parser(), GroupMgmtProto.GetGroupMsgReadStatusReq.class);

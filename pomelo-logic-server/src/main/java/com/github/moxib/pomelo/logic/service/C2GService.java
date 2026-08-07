@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
@@ -16,7 +15,6 @@ import com.github.moxib.pomelo.proto.group.GroupProto;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,29 +27,22 @@ public class C2GService extends ServiceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(C2GService.class);
 
-  private final Vertx vertx;
   private final PushRouter pushRouter;
   private final GroupRepository groupRepo;
   private final MessageRepository messageRepo;
   private final SeqClientService seqClient;
   private final SnowflakeIdGenerator snowflake;
   private final SessionRouteTable routeTable;
-  private final CodecRegistry codecRegistry;
 
-  public C2GService(Vertx vertx, PushRouter pushRouter, GroupRepository groupRepo,
+  public C2GService(PushRouter pushRouter, GroupRepository groupRepo,
                     MessageRepository messageRepo, SeqClientService seqClient,
                     SnowflakeIdGenerator snowflake, SessionRouteTable routeTable) {
-    this.vertx = vertx;
     this.pushRouter = pushRouter;
     this.groupRepo = groupRepo;
     this.messageRepo = messageRepo;
     this.seqClient = seqClient;
     this.snowflake = snowflake;
     this.routeTable = routeTable;
-    this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_C2G_REQ_VALUE, GroupProto.C2GReq.parser(),
-      req -> null, Object.class);
-    codecRegistry.registerJson(CMD_C2G_REQ_VALUE, JsonObject.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {

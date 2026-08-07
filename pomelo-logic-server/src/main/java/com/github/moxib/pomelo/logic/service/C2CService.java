@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
@@ -17,7 +16,6 @@ import com.github.moxib.pomelo.proto.chat.ChatProto;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,31 +28,25 @@ public class C2CService extends ServiceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(C2CService.class);
 
-  private final Vertx vertx;
   private final PushRouter pushRouter;
   private final MessageRepository messageRepo;
   private final SeqClientService seqClient;
   private final SnowflakeIdGenerator snowflake;
   private final SessionRouteTable routeTable;
-  private final CodecRegistry codecRegistry;
 
-  public C2CService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo, SeqClientService seqClient,
+  public C2CService(PushRouter pushRouter, MessageRepository messageRepo, SeqClientService seqClient,
                     SnowflakeIdGenerator snowflake, SessionRouteTable routeTable) {
-    this.vertx = vertx;
     this.pushRouter = pushRouter;
     this.messageRepo = messageRepo;
     this.seqClient = seqClient;
     this.snowflake = snowflake;
     this.routeTable = routeTable;
-    this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_C2C_REQ_VALUE, ChatProto.C2CReq.parser(), C2CRequest::fromProto, C2CRequest.class);
-    codecRegistry.registerJson(CMD_C2C_REQ_VALUE, C2CRequest.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {
     try {
       byte codecId = message.getCodecId();
-      C2CRequest req = decode(codecRegistry, message, C2CRequest.class);
+      C2CRequest req = decode(message, C2CRequest.class);
       C2CRequest.MessageBody msg = req.message();
       String senderUserId = extractSenderUserId(message, req.senderId());
       String recipientUserId = req.recipientId();

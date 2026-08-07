@@ -1,10 +1,10 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.SessionRouteTable;
+import com.github.moxib.pomelo.logic.id.NanoIdGenerator;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.GroupMsgReader;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
@@ -13,13 +13,10 @@ import com.github.moxib.pomelo.logic.model.GroupInfo;
 import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.github.moxib.pomelo.logic.id.NanoIdGenerator;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
@@ -27,42 +24,16 @@ public class GroupManagementService extends ServiceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(GroupManagementService.class);
 
-  private final PushRouter pushRouter;
   private final GroupRepository groupRepo;
   private final MessageRepository messageRepo;
-  private final SessionRouteTable routeTable;
   private final SnowflakeIdGenerator snowflake;
-  private final CodecRegistry codecRegistry;
 
-  public GroupManagementService(Vertx vertx, PushRouter pushRouter,
-                                 GroupRepository groupRepo, SessionRouteTable routeTable,
-                                 SnowflakeIdGenerator snowflake, MessageRepository messageRepo) {
-    this.pushRouter = pushRouter;
+  public GroupManagementService(PushRouter pushRouter,
+                                GroupRepository groupRepo, SessionRouteTable routeTable,
+                                SnowflakeIdGenerator snowflake, MessageRepository messageRepo) {
     this.groupRepo = groupRepo;
     this.messageRepo = messageRepo;
-    this.routeTable = routeTable;
     this.snowflake = snowflake;
-    this.codecRegistry = new CodecRegistry();
-
-    codecRegistry.registerJson(CMD_GROUP_CREATE_REQ_VALUE, JsonObject.class);
-    codecRegistry.registerJson(CMD_GROUP_INVITE_REQ_VALUE, JsonObject.class);
-    codecRegistry.registerJson(CMD_GROUP_GET_INFO_REQ_VALUE, JsonObject.class);
-    codecRegistry.registerJson(CMD_GROUP_GET_MEMBERS_REQ_VALUE, JsonObject.class);
-    codecRegistry.registerJson(CMD_GROUP_GET_MY_GROUPS_REQ_VALUE, JsonObject.class);
-    codecRegistry.registerJson(CMD_GROUP_MSG_READ_REQ_VALUE, JsonObject.class);
-
-    codecRegistry.registerProtobuf(CMD_GROUP_CREATE_REQ_VALUE,
-      GroupMgmtProto.CreateGroupReq.parser(), req -> null, Object.class);
-    codecRegistry.registerProtobuf(CMD_GROUP_INVITE_REQ_VALUE,
-      GroupMgmtProto.InviteToGroupReq.parser(), req -> null, Object.class);
-    codecRegistry.registerProtobuf(CMD_GROUP_GET_INFO_REQ_VALUE,
-      GroupMgmtProto.GetGroupInfoReq.parser(), req -> null, Object.class);
-    codecRegistry.registerProtobuf(CMD_GROUP_GET_MEMBERS_REQ_VALUE,
-      GroupMgmtProto.GetGroupMembersReq.parser(), req -> null, Object.class);
-    codecRegistry.registerProtobuf(CMD_GROUP_GET_MY_GROUPS_REQ_VALUE,
-      GroupMgmtProto.GetMyGroupsReq.parser(), req -> null, Object.class);
-    codecRegistry.registerProtobuf(CMD_GROUP_MSG_READ_REQ_VALUE,
-      GroupMgmtProto.GetGroupMsgReadStatusReq.parser(), req -> null, Object.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {

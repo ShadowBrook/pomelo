@@ -94,7 +94,7 @@ class C2CServiceTest {
       }
     };
 
-    C2CService service = new C2CService(vertx, noopPush, stubRepo(), seqClient,
+    C2CService service = new C2CService(noopPush, stubRepo(), seqClient,
       new SnowflakeIdGenerator(1), new SessionRouteTable(vertx));
 
     // 构造 JSON C2CReq：senderId=100, recipientId=200（数字 id，resolveId 直接 parse）

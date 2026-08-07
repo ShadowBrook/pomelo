@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
@@ -16,17 +15,12 @@ public class CtrlService extends ServiceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(CtrlService.class);
 
-  private final CodecRegistry codecRegistry;
-
   public CtrlService() {
-    this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_CTRL_REQ_VALUE, CtrlProto.CtrlReq.parser(), CtrlRequest::fromProto, CtrlRequest.class);
-    codecRegistry.registerJson(CMD_CTRL_REQ_VALUE, CtrlRequest.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {
     try {
-      CtrlRequest req = decode(codecRegistry, message, CtrlRequest.class);
+      CtrlRequest req = decode(message, CtrlRequest.class);
       LOG.info("收到控制命令请求，ctrlType: {}", req.ctrlType());
 
       byte codecId = message.getCodecId();

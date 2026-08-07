@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
@@ -21,13 +20,9 @@ public class AuthService extends ServiceBase {
   private static final Logger LOG = LoggerFactory.getLogger(AuthService.class);
 
   private final Vertx vertx;
-  private final CodecRegistry codecRegistry;
 
   public AuthService(Vertx vertx) {
     this.vertx = vertx;
-    this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_AUTH_REQ_VALUE, AuthProto.AuthReq.parser(), LoginRequest::fromProto, LoginRequest.class);
-    codecRegistry.registerJson(CMD_AUTH_REQ_VALUE, LoginRequest.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {
@@ -43,7 +38,7 @@ public class AuthService extends ServiceBase {
   }
 
   private Future<ImMessage> handleLogin(ImMessage message) {
-    LoginRequest req = decode(codecRegistry, message, LoginRequest.class);
+    LoginRequest req = decode(message, LoginRequest.class);
     String token = req.token();
 
     if (token == null || token.isEmpty()) {

@@ -51,18 +51,18 @@ public class LogicVerticle extends VerticleBase {
 
         PushRouter pushRouter = new PushRouter(vertx);
 
-        c2cService = new C2CService(vertx, pushRouter, messageRepo, seqClient, snowflake, routeTable);
-        ackService = new AckService(vertx, pushRouter, messageRepo, routeTable);
+        c2cService = new C2CService(pushRouter, messageRepo, seqClient, snowflake, routeTable);
+        ackService = new AckService(pushRouter, messageRepo, routeTable);
         authService = new AuthService(vertx);
-        pullService = new PullService(vertx, messageRepo);
+        pullService = new PullService(messageRepo);
         heartbeatService = new HeartbeatService();
         ctrlService = new CtrlService();
         var groupRepo = new PgGroupRepository(vertx);
-        c2gService = new C2GService(vertx, pushRouter, groupRepo, messageRepo, seqClient, snowflake, routeTable);
+        c2gService = new C2GService(pushRouter, groupRepo, messageRepo, seqClient, snowflake, routeTable);
         friendService = new FriendService(vertx, pushRouter, messageRepo);
-        groupService = new GroupManagementService(vertx, pushRouter, groupRepo, routeTable, snowflake, messageRepo);
-        groupPullService = new GroupPullService(vertx, groupRepo, messageRepo);
-        groupAckService = new GroupAckService(vertx, groupRepo, messageRepo);
+        groupService = new GroupManagementService(pushRouter, groupRepo, routeTable, snowflake, messageRepo);
+        groupPullService = new GroupPullService(groupRepo, messageRepo);
+        groupAckService = new GroupAckService(groupRepo, messageRepo);
 
         var bus = vertx.eventBus();
         bus.consumer("logic.c2c",     (Message<Buffer> msg) -> dispatch(msg, c2cService::process));

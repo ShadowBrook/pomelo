@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
@@ -11,7 +10,6 @@ import com.github.moxib.pomelo.logic.model.requests.PullRequest;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.proto.pull.PullProto;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
@@ -25,23 +23,17 @@ public class PullService extends ServiceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(PullService.class);
 
-  private final Vertx vertx;
   private final MessageRepository messageRepo;
-  private final CodecRegistry codecRegistry;
   private final int defaultPullLimit;
 
-  public PullService(Vertx vertx, MessageRepository messageRepo) {
-    this.vertx = vertx;
+  public PullService(MessageRepository messageRepo) {
     this.messageRepo = messageRepo;
-    this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_PULL_REQ_VALUE, PullProto.PullReq.parser(), PullRequest::fromProto, PullRequest.class);
-    codecRegistry.registerJson(CMD_PULL_REQ_VALUE, PullRequest.class);
     this.defaultPullLimit = ConfigHolder.getInt("message.pullLimit", 50);
   }
 
   public Future<ImMessage> process(ImMessage message) {
     try {
-      PullRequest req = decode(codecRegistry, message, PullRequest.class);
+      PullRequest req = decode(message, PullRequest.class);
       String userId = req.userId() != null && !req.userId().isEmpty()
         ? req.userId() : getUserIdFromHeaders(message);
       // PB 的 PullReq 无 peerId 字段：proto 客户端通过 varHeaders["peerId"] 传会话历史目标
@@ -50,14 +42,14 @@ public class PullService extends ServiceBase {
         ? req.peerId()
         : (headerPeerId != null && !headerPeerId.isEmpty() && !"0".equals(headerPeerId) ? headerPeerId : null);
       // lastMsgId 是通用游标：离线拉 = 收件人同步水位(sinceSeq)；会话历史 = 时间游标(beforeTime)
-      long cursor = req.lastMsgId();
+      long cursor = req.seq();
       int limit = req.limit() > 0 ? req.limit() : defaultPullLimit;
 
       if (userId == null || userId.isEmpty()) {
         return Future.succeededFuture(buildErrorResp(message, CMD_PULL_RESP_VALUE, ErrorCode.UNAUTHORIZED, "未认证用户"));
       }
 
-      final boolean isHistoryPull = peerId != null && !peerId.isEmpty();
+      final boolean isHistoryPull = peerId != null;
 
       return resolveId(userId, peerId)
         .compose(resolved -> {
@@ -65,10 +57,8 @@ public class PullService extends ServiceBase {
             LOG.info("拉取会话历史: userId={}({}) peerId={}({}) beforeTime={} limit={}",
               userId, resolved.userId, peerId, resolved.peerId, cursor, limit);
             String conversationId = MessageServiceImpl.buildConversationId(resolved.userId, resolved.peerId);
-            return conversationId != null
-              ? messageRepo.pullConversation(conversationId, cursor, limit)
-                  .compose(records -> sendPullResp(message, records, limit))
-              : Future.succeededFuture();
+            return messageRepo.pullConversation(conversationId, cursor, limit)
+                .compose(records -> sendPullResp(message, records, limit));
           } else {
             LOG.info("拉取离线消息: userId={}({}) sinceSeq={} limit={}",
               userId, resolved.userId, cursor, limit);
