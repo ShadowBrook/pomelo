@@ -126,14 +126,17 @@ CREATE INDEX idx_group_seq ON im_message_group (seq);
 
 
 -- 5. 群组成员表
+--    id: 雪花ID，服务端分配，作为成员关系主键
 CREATE TABLE IF NOT EXISTS im_group_member (
-    group_id       VARCHAR(64) NOT NULL,
-    user_id        VARCHAR(64) NOT NULL,
-    role           SMALLINT    NOT NULL DEFAULT 0,    -- 0=成员, 1=管理员, 2=群主
-    last_read_seq  BIGINT      NOT NULL DEFAULT 0,   -- 已读游标
-    muted_until    BIGINT      NOT NULL DEFAULT 0,   -- 禁言截止时间戳 (Unix毫秒)，0=未禁言
-    joined_at      BIGINT      NOT NULL,
-    PRIMARY KEY (group_id, user_id)
+    id            BIGINT       NOT NULL,              -- 雪花ID (服务端生成)
+    group_id      VARCHAR(64)  NOT NULL,
+    user_id       VARCHAR(64)  NOT NULL,
+    role          SMALLINT     NOT NULL DEFAULT 0,    -- 0=成员, 1=管理员, 2=群主
+    last_read_seq BIGINT       NOT NULL DEFAULT 0,   -- 已读游标
+    muted_until   BIGINT       NOT NULL DEFAULT 0,   -- 禁言截止时间戳 (Unix毫秒)，0=未禁言
+    joined_at     BIGINT       NOT NULL,
+    PRIMARY KEY (id),
+    UNIQUE (group_id, user_id)
 );
 
 CREATE INDEX idx_group_member_user ON im_group_member (user_id);

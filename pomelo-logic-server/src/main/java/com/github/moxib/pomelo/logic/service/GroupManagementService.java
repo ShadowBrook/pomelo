@@ -5,6 +5,7 @@ import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.SessionRouteTable;
+import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
 import com.github.moxib.pomelo.logic.model.GroupInfo;
 import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
@@ -27,13 +28,16 @@ public class GroupManagementService extends ServiceBase {
   private final PushRouter pushRouter;
   private final GroupRepository groupRepo;
   private final SessionRouteTable routeTable;
+  private final SnowflakeIdGenerator snowflake;
   private final CodecRegistry codecRegistry;
 
   public GroupManagementService(Vertx vertx, PushRouter pushRouter,
-                                 GroupRepository groupRepo, SessionRouteTable routeTable) {
+                                 GroupRepository groupRepo, SessionRouteTable routeTable,
+                                 SnowflakeIdGenerator snowflake) {
     this.pushRouter = pushRouter;
     this.groupRepo = groupRepo;
     this.routeTable = routeTable;
+    this.snowflake = snowflake;
     this.codecRegistry = new CodecRegistry();
 
     codecRegistry.registerJson(CMD_GROUP_CREATE_REQ_VALUE, JsonObject.class);
@@ -98,7 +102,7 @@ public class GroupManagementService extends ServiceBase {
       .build();
 
     return groupRepo.createGroup(group)
-      .compose(v -> groupRepo.addMember(groupId, userId, 2, now))
+      .compose(v -> groupRepo.addMember(snowflake.nextId(), groupId, userId, 2, now))
       .map(v -> {
         byte codecId = message.getCodecId();
         Object respBody;

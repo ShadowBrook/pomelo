@@ -60,7 +60,7 @@ public class LogicVerticle extends VerticleBase {
         var groupRepo = new PgGroupRepository(vertx);
         c2gService = new C2GService(vertx, pushRouter, groupRepo, seqClient, snowflake, routeTable);
         friendService = new FriendService(vertx, pushRouter, messageRepo);
-        groupService = new GroupManagementService(vertx, pushRouter, groupRepo, routeTable);
+        groupService = new GroupManagementService(vertx, pushRouter, groupRepo, routeTable, snowflake);
         groupPullService = new GroupPullService(vertx, groupRepo, messageRepo);
         groupAckService = new GroupAckService(vertx, groupRepo);
 
