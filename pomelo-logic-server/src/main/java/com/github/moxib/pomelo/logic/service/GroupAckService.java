@@ -59,7 +59,8 @@ public class GroupAckService extends ServiceBase {
           return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
             ErrorCode.UNAUTHORIZED, "用户不存在"));
         }
-        return groupRepo.isMember(groupId, numericId).compose(isMember -> {
+        LOG.info("群 ACK: userId={} groupId={} lastReadSeq={}", userId, groupId, lastReadSeq);
+      return groupRepo.isMember(groupId, numericId).compose(isMember -> {
           if (!isMember) {
             return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
               ErrorCode.UNAUTHORIZED, "你不是该群成员"));
