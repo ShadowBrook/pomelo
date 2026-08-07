@@ -169,8 +169,8 @@ public class C2GService extends ServiceBase {
         if (member.getUserId() == senderNumericId) {
           continue;
         }
-        // 推送目标用 member.userName（NanoID），对应 im_user.user_id
-        String targetNanoId = member.getUserName();
+        // 推送目标用 member.nanoId（im_user.user_id NanoID）
+        String targetNanoId = member.getNanoId();
         if (targetNanoId == null) {
           continue;
         }

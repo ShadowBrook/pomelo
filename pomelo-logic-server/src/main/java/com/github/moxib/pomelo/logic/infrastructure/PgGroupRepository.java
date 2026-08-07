@@ -47,7 +47,7 @@ public class PgGroupRepository implements GroupRepository {
     """;
 
   private static final String FIND_MEMBERS_SQL = """
-    SELECT gm.group_id, gm.user_id, u.user_name, u.nickname, u.avatar, gm.role, gm.joined_at
+    SELECT gm.group_id, gm.user_id, u.user_id AS nano_id, u.user_name, u.nickname, u.avatar, gm.role, gm.joined_at
     FROM im_group_member gm
     JOIN im_user u ON gm.user_id = u.id
     WHERE gm.group_id = $1
@@ -145,6 +145,7 @@ public class PgGroupRepository implements GroupRepository {
           list.add(GroupMemberRecord.builder()
             .groupId(row.getString("group_id"))
             .userId(row.getLong("user_id"))
+            .nanoId(row.getString("nano_id"))
             .userName(row.getString("user_name"))
             .nickname(row.getString("nickname"))
             .avatar(row.getString("avatar"))
