@@ -30,7 +30,30 @@ COMMENT ON COLUMN im_user.updated_at   IS '更新时间 (Unix毫秒)';
 CREATE INDEX idx_user_status ON im_user(status);
 
 
--- 2. 单聊消息表
+-- 2. 群组元数据表
+CREATE TABLE IF NOT EXISTS im_group (
+    id           VARCHAR(64)  PRIMARY KEY,           -- NanoID 系统生成（对外唯一标识）
+    name         VARCHAR(128) NOT NULL,               -- 群名
+    avatar       VARCHAR(512),                       -- 群头像 URL
+    description  TEXT,                                -- 群公告/简介
+    owner_id     VARCHAR(64) NOT NULL,                -- 群主 userId (NanoID)
+    max_members  INT         NOT NULL DEFAULT 200,    -- 群成员上限
+    created_at   BIGINT      NOT NULL,               -- 创建时间 (Unix毫秒)
+    updated_at   BIGINT      NOT NULL                -- 更新时间 (Unix毫秒)
+);
+
+COMMENT ON TABLE  im_group              IS '群组元数据表';
+COMMENT ON COLUMN im_group.id           IS 'NanoID 系统生成（对外唯一标识）';
+COMMENT ON COLUMN im_group.name         IS '群名';
+COMMENT ON COLUMN im_group.avatar       IS '群头像URL';
+COMMENT ON COLUMN im_group.description  IS '群公告/简介';
+COMMENT ON COLUMN im_group.owner_id     IS '群主 userId (NanoID)';
+COMMENT ON COLUMN im_group.max_members  IS '群成员上限';
+COMMENT ON COLUMN im_group.created_at   IS '创建时间 (Unix毫秒)';
+COMMENT ON COLUMN im_group.updated_at   IS '更新时间 (Unix毫秒)';
+
+
+-- 3. 单聊消息表
 --    id  : 雪花ID，客户端生成，作为消息主键
 --    seq : RedisIdGenerator 全局ID，服务端分配，全局单调递增
 --    content : 文本消息存原文，图片/视频/文件存资源链接
@@ -71,7 +94,7 @@ CREATE INDEX idx_c2c_recipient_pending ON im_message_c2c (recipient_id, seq) WHE
 CREATE INDEX idx_c2c_created_at_brin ON im_message_c2c USING BRIN (created_at);
 
 
--- 3. 群聊消息表
+-- 4. 群聊消息表
 CREATE TABLE IF NOT EXISTS im_message_group (
     id         BIGINT       NOT NULL,             -- 雪花ID (客户端生成)
     sender_id  BIGINT       NOT NULL,             -- 发送者 im_user.id
@@ -102,19 +125,21 @@ CREATE INDEX idx_group_created_at_brin ON im_message_group USING BRIN (created_a
 CREATE INDEX idx_group_seq ON im_message_group (seq);
 
 
--- 4. 群组成员表
+-- 5. 群组成员表
 CREATE TABLE IF NOT EXISTS im_group_member (
-    group_id   VARCHAR(64) NOT NULL,
-    user_id    VARCHAR(64) NOT NULL,
-    role       SMALLINT    NOT NULL DEFAULT 0,    -- 0=成员, 1=管理员, 2=群主
-    joined_at  BIGINT      NOT NULL,
+    group_id       VARCHAR(64) NOT NULL,
+    user_id        VARCHAR(64) NOT NULL,
+    role           SMALLINT    NOT NULL DEFAULT 0,    -- 0=成员, 1=管理员, 2=群主
+    last_read_seq  BIGINT      NOT NULL DEFAULT 0,   -- 已读游标
+    muted_until    BIGINT      NOT NULL DEFAULT 0,   -- 禁言截止时间戳 (Unix毫秒)，0=未禁言
+    joined_at      BIGINT      NOT NULL,
     PRIMARY KEY (group_id, user_id)
 );
 
 CREATE INDEX idx_group_member_user ON im_group_member (user_id);
 
 
--- 5. 好友关系表
+-- 6. 好友关系表
 CREATE TABLE IF NOT EXISTS im_friend (
     user_id    BIGINT    NOT NULL,              -- 用户 im_user.id
     friend_id  BIGINT    NOT NULL,              -- 好友 im_user.id
