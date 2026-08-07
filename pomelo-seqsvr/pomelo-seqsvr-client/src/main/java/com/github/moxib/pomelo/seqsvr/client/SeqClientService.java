@@ -74,8 +74,15 @@ public class SeqClientService {
   private Future<Long> resolveResponse(JsonObject resp, int id, boolean increment, int attempt) {
     int code = resp.getInteger("code", SeqSvrConstants.ALLOC_CODE_OK);
     if (code == SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED) {
+      int versionBefore = routeVersion;
       updateRouteFrom(resp);
       if (attempt >= MAX_RETRY) {
+        // 路由表有实质更新
+        if (routeVersion > versionBefore) {
+          LOG.info("Route outdated but route updated (v{}→v{}), retrying: id={}",
+            versionBefore, routeVersion, id);
+          return attempt(id, increment, attempt + 1);
+        }
         return Future.failedFuture(new IllegalStateException("route outdated after retry: " + resp.getString("message")));
       }
       // 路由表已更新，重路由重试
@@ -101,8 +108,9 @@ public class SeqClientService {
       int code = resp.getInteger("code", SeqSvrConstants.ALLOC_CODE_OK);
       if (code == SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED) {
         updateRouteFrom(resp);
-        return Future.failedFuture(new IllegalStateException(
-          "route outdated after fallback retry: " + resp.getString("message")));
+        // 路由表已更新，用新路由重试
+        LOG.info("Route outdated from fallback, retrying with updated route: id={}", id);
+        return attempt(id, increment, attempt + 1);
       }
       processRouteInResponse(resp);
       return Future.succeededFuture(resp.getLong("seq"));
