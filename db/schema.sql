@@ -142,6 +142,15 @@ CREATE TABLE IF NOT EXISTS im_group_member (
     UNIQUE (group_id, user_id)
 );
 
+COMMENT ON TABLE  im_group_member              IS '群组成员表';
+COMMENT ON COLUMN im_group_member.id            IS '雪花ID (服务端生成)';
+COMMENT ON COLUMN im_group_member.group_id      IS 'im_group.id (雪花ID)';
+COMMENT ON COLUMN im_group_member.user_id       IS 'im_user.id (雪花ID)';
+COMMENT ON COLUMN im_group_member.role          IS '0=成员, 1=管理员, 2=群主';
+COMMENT ON COLUMN im_group_member.last_read_seq IS '已读游标 — 该成员在此群读到的最后一条消息 seq';
+COMMENT ON COLUMN im_group_member.muted_until   IS '禁言截止时间戳 (Unix毫秒)，0=未禁言';
+COMMENT ON COLUMN im_group_member.joined_at     IS '加入时间 (Unix毫秒)';
+
 CREATE INDEX idx_group_member_user ON im_group_member (user_id);
 
 
