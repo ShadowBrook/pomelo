@@ -58,12 +58,11 @@ public class GroupPullService extends ServiceBase {
           ErrorCode.BAD_REQUEST, "body 不能为空"));
       }
       JsonObject body = new JsonObject(bodyStr);
-      String groupIdStr = body.getString("groupId");
-      if (groupIdStr == null || groupIdStr.isEmpty()) {
+      String groupId = body.getString("groupId");
+      if (groupId == null || groupId.isEmpty()) {
         return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_PULL_MSG_RESP_VALUE,
           ErrorCode.BAD_REQUEST, "groupId 不能为空"));
       }
-      long groupId = Long.parseLong(groupIdStr);
       long cursor = body.getLong("cursor", 0L);
       int limit = body.getInteger("limit", DEFAULT_LIMIT);
       boolean backward = body.getBoolean("isBackward", false);
@@ -109,7 +108,7 @@ public class GroupPullService extends ServiceBase {
         GroupMgmtProto.GroupMsgRecord.Builder record = GroupMgmtProto.GroupMsgRecord.newBuilder()
           .setId(String.valueOf(m.getId()))
           .setSenderId(senderInfo != null ? senderInfo.userId() : String.valueOf(m.getSenderNumericId()))
-          .setGroupId(String.valueOf(m.getGroupId()))
+          .setGroupId(m.getGroupId())
           .setMsgType(m.getMsgType())
           .setContent(m.getContent() != null ? m.getContent() : "")
           .setSeq(m.getSeq())

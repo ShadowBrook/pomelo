@@ -46,14 +46,13 @@ public class GroupAckService extends ServiceBase {
           ErrorCode.BAD_REQUEST, "body 不能为空"));
       }
       JsonObject body = new JsonObject(bodyStr);
-      String groupIdStr = body.getString("groupId");
+      String groupId = body.getString("groupId");
       long lastReadSeq = body.getLong("lastReadSeq", 0L);
 
-      if (groupIdStr == null || groupIdStr.isEmpty()) {
+      if (groupId == null || groupId.isEmpty()) {
         return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
           ErrorCode.BAD_REQUEST, "groupId 不能为空"));
       }
-      long groupId = Long.parseLong(groupIdStr);
 
       return resolveId(userId).compose(numericId -> {
         if (numericId == 0) {

@@ -69,12 +69,11 @@ public class C2GService extends ServiceBase {
           ErrorCode.BAD_REQUEST, "body 不能为空"));
       }
       JsonObject body = new JsonObject(bodyStr);
-      String groupIdStr = body.getString("groupId");
-      if (groupIdStr == null || groupIdStr.isEmpty()) {
+      String groupId = body.getString("groupId");
+      if (groupId == null || groupId.isEmpty()) {
         return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
           ErrorCode.BAD_REQUEST, "groupId 不能为空"));
       }
-      long groupId = Long.parseLong(groupIdStr);
 
       JsonObject msgObj = body.getJsonObject("message");
       if (msgObj == null) {
@@ -98,13 +97,12 @@ public class C2GService extends ServiceBase {
       final String fSenderUserId = senderUserId;
       final String fSenderUserName = senderUserName;
       final String fSenderNickname = senderNickname;
-      final long fGroupId = groupId;
+      final String fGroupId = groupId;
       final String fContent = content;
       final int fMsgType = msgType;
       final long fClientMsgId = clientMsgId;
       final byte fCodecId = codecId;
 
-      // 将发送者 NanoID 解析为 numeric id
       return resolveId(fSenderUserId).compose(senderNumericId -> {
         if (senderNumericId == 0) {
           return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
@@ -141,7 +139,7 @@ public class C2GService extends ServiceBase {
 
   private Future<C2GRespResult> doSend(GroupMsgContext ctx, long senderNumericId) {
     long snowflakeId = snowflake.nextId();
-    return seqClient.fetchNextSequence(ctx.getGroupId())
+    return seqClient.fetchNextSequence(SeqClientService.toLongKey(ctx.getGroupId()))
       .compose(seq -> {
         long now = System.currentTimeMillis();
 
@@ -163,7 +161,7 @@ public class C2GService extends ServiceBase {
         if (member.getUserId() == senderNumericId) {
           continue;
         }
-        // 推送目标用 NanoID（userId），从成员表的 userName 字段取
+        // 推送目标用 member.userName（NanoID），对应 im_user.user_id
         String targetNanoId = member.getUserName();
         if (targetNanoId == null) {
           continue;
@@ -179,7 +177,7 @@ public class C2GService extends ServiceBase {
                 .build();
               GroupProto.C2GNotify notify = GroupProto.C2GNotify.newBuilder()
                 .setSenderId(ctx.getSenderUserId())
-                .setGroupId(String.valueOf(ctx.getGroupId()))
+                .setGroupId(ctx.getGroupId())
                 .setMessage(msgContent)
                 .setSeq(seq)
                 .build();
@@ -188,7 +186,7 @@ public class C2GService extends ServiceBase {
             } else {
               JsonObject json = new JsonObject();
               json.put("senderId", ctx.getSenderUserId());
-              json.put("groupId", String.valueOf(ctx.getGroupId()));
+              json.put("groupId", ctx.getGroupId());
               if (ctx.getSenderUserName() != null) json.put("senderUserName", ctx.getSenderUserName());
               if (ctx.getSenderNickname() != null) json.put("senderNickname", ctx.getSenderNickname());
               JsonObject jsonMsg = new JsonObject();
@@ -216,14 +214,14 @@ public class C2GService extends ServiceBase {
     if (codecId == ProtobufCodec.CODEC_ID) {
       respBody = GroupProto.C2GResp.newBuilder()
         .setCode(result.code()).setMessage(result.message())
-        .setMessageId(result.messageId()).setGroupId(String.valueOf(result.groupId()))
+        .setMessageId(result.messageId()).setGroupId(result.groupId())
         .setServerTime(result.serverTime()).setSeq(result.seq())
         .build();
     } else {
       respBody = new JsonObject()
         .put("code", result.code()).put("message", result.message())
         .put("messageId", String.valueOf(result.messageId()))
-        .put("groupId", String.valueOf(result.groupId()))
+        .put("groupId", result.groupId())
         .put("serverTime", result.serverTime())
         .put("seq", result.seq());
     }
@@ -236,5 +234,5 @@ public class C2GService extends ServiceBase {
   }
 
   private record C2GRespResult(int code, String message, long messageId,
-                                long groupId, long seq, long serverTime) {}
+                                String groupId, long seq, long serverTime) {}
 }
