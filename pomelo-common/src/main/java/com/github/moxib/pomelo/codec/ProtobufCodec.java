@@ -104,6 +104,8 @@ public class ProtobufCodec<T> implements MessageCodec<T> {
     // 群管理
     registerProto(CommonProto.Cmd.CMD_GROUP_CREATE_REQ_VALUE, GroupMgmtProto.CreateGroupReq.parser(), GroupMgmtProto.CreateGroupReq.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_CREATE_RESP_VALUE, GroupMgmtProto.CreateGroupResp.parser(), GroupMgmtProto.CreateGroupResp.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_INVITE_REQ_VALUE, GroupMgmtProto.InviteToGroupReq.parser(), GroupMgmtProto.InviteToGroupReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_INVITE_RESP_VALUE, GroupMgmtProto.InviteToGroupResp.parser(), GroupMgmtProto.InviteToGroupResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_GET_INFO_REQ_VALUE, GroupMgmtProto.GetGroupInfoReq.parser(), GroupMgmtProto.GetGroupInfoReq.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_GET_INFO_RESP_VALUE, GroupMgmtProto.GetGroupInfoResp.parser(), GroupMgmtProto.GetGroupInfoResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_GET_MEMBERS_REQ_VALUE, GroupMgmtProto.GetGroupMembersReq.parser(), GroupMgmtProto.GetGroupMembersReq.class);

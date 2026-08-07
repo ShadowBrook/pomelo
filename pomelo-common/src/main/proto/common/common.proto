@@ -59,6 +59,8 @@ enum Cmd {
     // 群管理操作
     CMD_GROUP_CREATE_REQ    = 0x0070;  // C→S 创建群请求
     CMD_GROUP_CREATE_RESP   = 0x0071;  // S→C 创建群响应
+    CMD_GROUP_INVITE_REQ    = 0x0072;  // C→S 邀请入群请求
+    CMD_GROUP_INVITE_RESP   = 0x0073;  // S→C 邀请入群响应
     CMD_GROUP_GET_INFO_REQ  = 0x0086;  // C→S 获取群信息请求
     CMD_GROUP_GET_INFO_RESP = 0x0087;  // S→C 获取群信息响应
     CMD_GROUP_GET_MEMBERS_REQ  = 0x0088;  // C→S 获取群成员请求
