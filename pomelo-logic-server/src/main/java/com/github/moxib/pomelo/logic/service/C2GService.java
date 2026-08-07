@@ -7,6 +7,7 @@ import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
+import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
 import com.github.moxib.pomelo.logic.model.GroupMsgContext;
 import com.github.moxib.pomelo.model.PushEnvelope;
@@ -31,17 +32,19 @@ public class C2GService extends ServiceBase {
   private final Vertx vertx;
   private final PushRouter pushRouter;
   private final GroupRepository groupRepo;
+  private final MessageRepository messageRepo;
   private final SeqClientService seqClient;
   private final SnowflakeIdGenerator snowflake;
   private final SessionRouteTable routeTable;
   private final CodecRegistry codecRegistry;
 
   public C2GService(Vertx vertx, PushRouter pushRouter, GroupRepository groupRepo,
-                    SeqClientService seqClient, SnowflakeIdGenerator snowflake,
-                    SessionRouteTable routeTable) {
+                    MessageRepository messageRepo, SeqClientService seqClient,
+                    SnowflakeIdGenerator snowflake, SessionRouteTable routeTable) {
     this.vertx = vertx;
     this.pushRouter = pushRouter;
     this.groupRepo = groupRepo;
+    this.messageRepo = messageRepo;
     this.seqClient = seqClient;
     this.snowflake = snowflake;
     this.routeTable = routeTable;
@@ -66,11 +69,12 @@ public class C2GService extends ServiceBase {
           ErrorCode.BAD_REQUEST, "body 不能为空"));
       }
       JsonObject body = new JsonObject(bodyStr);
-      String groupId = body.getString("groupId");
-      if (groupId == null || groupId.isEmpty()) {
+      String groupIdStr = body.getString("groupId");
+      if (groupIdStr == null || groupIdStr.isEmpty()) {
         return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
           ErrorCode.BAD_REQUEST, "groupId 不能为空"));
       }
+      long groupId = Long.parseLong(groupIdStr);
 
       JsonObject msgObj = body.getJsonObject("message");
       if (msgObj == null) {
@@ -94,32 +98,39 @@ public class C2GService extends ServiceBase {
       final String fSenderUserId = senderUserId;
       final String fSenderUserName = senderUserName;
       final String fSenderNickname = senderNickname;
-      final String fGroupId = groupId;
+      final long fGroupId = groupId;
       final String fContent = content;
       final int fMsgType = msgType;
       final long fClientMsgId = clientMsgId;
       final byte fCodecId = codecId;
 
-      return groupRepo.isMember(fGroupId, fSenderUserId).compose(isMember -> {
-        if (!isMember) {
+      // 将发送者 NanoID 解析为 numeric id
+      return resolveId(fSenderUserId).compose(senderNumericId -> {
+        if (senderNumericId == 0) {
           return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
-            ErrorCode.UNAUTHORIZED, "你不是该群成员"));
+            ErrorCode.UNAUTHORIZED, "发送者不存在"));
         }
+        return groupRepo.isMember(fGroupId, senderNumericId).compose(isMember -> {
+          if (!isMember) {
+            return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
+              ErrorCode.UNAUTHORIZED, "你不是该群成员"));
+          }
 
-        GroupMsgContext ctx = GroupMsgContext.builder()
-          .messageId(fClientMsgId)
-          .groupId(fGroupId)
-          .senderUserId(fSenderUserId)
-          .senderUserName(fSenderUserName)
-          .senderNickname(fSenderNickname)
-          .msgType(fMsgType)
-          .content(fContent)
-          .timestamp(System.currentTimeMillis())
-          .codecId(fCodecId)
-          .build();
+          GroupMsgContext ctx = GroupMsgContext.builder()
+            .messageId(fClientMsgId)
+            .groupId(fGroupId)
+            .senderUserId(fSenderUserId)
+            .senderUserName(fSenderUserName)
+            .senderNickname(fSenderNickname)
+            .msgType(fMsgType)
+            .content(fContent)
+            .timestamp(System.currentTimeMillis())
+            .codecId(fCodecId)
+            .build();
 
-        return doSend(ctx)
-          .map(result -> buildC2GResponse(message, fCodecId, result));
+          return doSend(ctx, senderNumericId)
+            .map(result -> buildC2GResponse(message, fCodecId, result));
+        });
       });
     } catch (Exception e) {
       LOG.error("C2G 消息处理失败", e);
@@ -128,35 +139,36 @@ public class C2GService extends ServiceBase {
     }
   }
 
-  private Future<C2GRespResult> doSend(GroupMsgContext ctx) {
+  private Future<C2GRespResult> doSend(GroupMsgContext ctx, long senderNumericId) {
     long snowflakeId = snowflake.nextId();
-    return seqClient.fetchNextSequenceByKey(ctx.getGroupId())
+    return seqClient.fetchNextSequence(ctx.getGroupId())
       .compose(seq -> {
         long now = System.currentTimeMillis();
-        long senderNumericId;
-        try { senderNumericId = Long.parseLong(ctx.getSenderUserId()); }
-        catch (NumberFormatException e) { senderNumericId = snowflakeId; }
 
         return groupRepo.saveMessage(snowflakeId, ctx.getGroupId(), senderNumericId,
             ctx.getMsgType(), ctx.getContent(), seq, now)
           .map(inserted -> {
             if (inserted) {
-              pushToGroupMembers(ctx, seq, snowflakeId);
+              pushToGroupMembers(ctx, seq, snowflakeId, senderNumericId);
             }
             return new C2GRespResult(0, "success", snowflakeId, ctx.getGroupId(), seq, now);
           });
       });
   }
 
-  private void pushToGroupMembers(GroupMsgContext ctx, long seq, long snowflakeId) {
+  private void pushToGroupMembers(GroupMsgContext ctx, long seq, long snowflakeId, long senderNumericId) {
     groupRepo.findMembers(ctx.getGroupId()).onSuccess(members -> {
       int pushCount = 0;
       for (GroupMemberRecord member : members) {
-        String memberId = member.getUserId();
-        if (memberId.equals(ctx.getSenderUserId())) {
+        if (member.getUserId() == senderNumericId) {
           continue;
         }
-        routeTable.resolveCodec(memberId)
+        // 推送目标用 NanoID（userId），从成员表的 userName 字段取
+        String targetNanoId = member.getUserName();
+        if (targetNanoId == null) {
+          continue;
+        }
+        routeTable.resolveCodec(targetNanoId)
           .onSuccess(recipientCodec -> {
             byte[] pbBody;
             byte pushCodec;
@@ -167,7 +179,7 @@ public class C2GService extends ServiceBase {
                 .build();
               GroupProto.C2GNotify notify = GroupProto.C2GNotify.newBuilder()
                 .setSenderId(ctx.getSenderUserId())
-                .setGroupId(ctx.getGroupId())
+                .setGroupId(String.valueOf(ctx.getGroupId()))
                 .setMessage(msgContent)
                 .setSeq(seq)
                 .build();
@@ -176,7 +188,7 @@ public class C2GService extends ServiceBase {
             } else {
               JsonObject json = new JsonObject();
               json.put("senderId", ctx.getSenderUserId());
-              json.put("groupId", ctx.getGroupId());
+              json.put("groupId", String.valueOf(ctx.getGroupId()));
               if (ctx.getSenderUserName() != null) json.put("senderUserName", ctx.getSenderUserName());
               if (ctx.getSenderNickname() != null) json.put("senderNickname", ctx.getSenderNickname());
               JsonObject jsonMsg = new JsonObject();
@@ -189,7 +201,7 @@ public class C2GService extends ServiceBase {
               pbBody = json.toBuffer().getBytes();
               pushCodec = 1;
             }
-            PushEnvelope env = new PushEnvelope(memberId, CMD_C2G_NOTIFY_VALUE, pbBody, pushCodec);
+            PushEnvelope env = new PushEnvelope(targetNanoId, CMD_C2G_NOTIFY_VALUE, pbBody, pushCodec);
             pushRouter.push(env);
           });
         pushCount++;
@@ -204,20 +216,25 @@ public class C2GService extends ServiceBase {
     if (codecId == ProtobufCodec.CODEC_ID) {
       respBody = GroupProto.C2GResp.newBuilder()
         .setCode(result.code()).setMessage(result.message())
-        .setMessageId(result.messageId()).setGroupId(result.groupId())
+        .setMessageId(result.messageId()).setGroupId(String.valueOf(result.groupId()))
         .setServerTime(result.serverTime()).setSeq(result.seq())
         .build();
     } else {
       respBody = new JsonObject()
         .put("code", result.code()).put("message", result.message())
         .put("messageId", String.valueOf(result.messageId()))
-        .put("groupId", result.groupId())
+        .put("groupId", String.valueOf(result.groupId()))
         .put("serverTime", result.serverTime())
         .put("seq", result.seq());
     }
     return buildResponse(request, CMD_C2G_RESP_VALUE, respBody);
   }
 
+  private Future<Long> resolveId(String userId) {
+    try { return Future.succeededFuture(Long.parseLong(userId)); }
+    catch (NumberFormatException e) { return messageRepo.findUserId(userId); }
+  }
+
   private record C2GRespResult(int code, String message, long messageId,
-                                String groupId, long seq, long serverTime) {}
+                                long groupId, long seq, long serverTime) {}
 }

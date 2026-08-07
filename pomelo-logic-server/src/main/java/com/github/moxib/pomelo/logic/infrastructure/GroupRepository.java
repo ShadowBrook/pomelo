@@ -10,22 +10,23 @@ public interface GroupRepository {
 
   Future<Void> createGroup(GroupInfo group);
 
-  Future<GroupInfo> findById(String groupId);
+  Future<GroupInfo> findById(long groupId);
 
-  Future<List<GroupInfo>> findGroupsByUserId(String userId);
+  Future<List<GroupInfo>> findGroupsByUserId(long userId);
 
-  Future<List<GroupMemberRecord>> findMembers(String groupId);
+  Future<List<GroupMemberRecord>> findMembers(long groupId);
 
-  Future<Void> addMember(long id, String groupId, String userId, int role, long now);
+  /** userId 使用 im_user.id (BIGINT) */
+  Future<Void> addMember(long id, long groupId, long userId, int role, long now);
 
-  Future<Void> removeMember(String groupId, String userId);
+  Future<Void> removeMember(long groupId, long userId);
 
-  Future<Boolean> isMember(String groupId, String userId);
+  Future<Boolean> isMember(long groupId, long userId);
 
-  Future<Void> updateLastReadSeq(String groupId, String userId, long seq);
+  Future<Void> updateLastReadSeq(long groupId, long userId, long seq);
 
-  Future<Boolean> saveMessage(long id, String groupId, long senderNumericId,
+  Future<Boolean> saveMessage(long id, long groupId, long senderNumericId,
                                int msgType, String content, long seq, long createdAt);
 
-  Future<List<GroupMsgWithSender>> pullMessages(String groupId, long cursor, int limit, boolean backward);
+  Future<List<GroupMsgWithSender>> pullMessages(long groupId, long cursor, int limit, boolean backward);
 }

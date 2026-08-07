@@ -5,6 +5,7 @@ import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
+import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -19,10 +20,12 @@ public class GroupAckService extends ServiceBase {
   private static final Logger LOG = LoggerFactory.getLogger(GroupAckService.class);
 
   private final GroupRepository groupRepo;
+  private final MessageRepository messageRepo;
   private final CodecRegistry codecRegistry;
 
-  public GroupAckService(Vertx vertx, GroupRepository groupRepo) {
+  public GroupAckService(Vertx vertx, GroupRepository groupRepo, MessageRepository messageRepo) {
     this.groupRepo = groupRepo;
+    this.messageRepo = messageRepo;
     this.codecRegistry = new CodecRegistry();
     codecRegistry.registerProtobuf(CMD_GROUP_ACK_REQ_VALUE,
       GroupMgmtProto.GroupAckReq.parser(), req -> null, Object.class);
@@ -43,36 +46,48 @@ public class GroupAckService extends ServiceBase {
           ErrorCode.BAD_REQUEST, "body 不能为空"));
       }
       JsonObject body = new JsonObject(bodyStr);
-      String groupId = body.getString("groupId");
+      String groupIdStr = body.getString("groupId");
       long lastReadSeq = body.getLong("lastReadSeq", 0L);
 
-      if (groupId == null || groupId.isEmpty()) {
+      if (groupIdStr == null || groupIdStr.isEmpty()) {
         return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
           ErrorCode.BAD_REQUEST, "groupId 不能为空"));
       }
+      long groupId = Long.parseLong(groupIdStr);
 
-      return groupRepo.isMember(groupId, userId).compose(isMember -> {
-        if (!isMember) {
+      return resolveId(userId).compose(numericId -> {
+        if (numericId == 0) {
           return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
-            ErrorCode.UNAUTHORIZED, "你不是该群成员"));
+            ErrorCode.UNAUTHORIZED, "用户不存在"));
         }
-        return groupRepo.updateLastReadSeq(groupId, userId, lastReadSeq)
-          .map(v -> {
-            byte codecId = message.getCodecId();
-            Object respBody;
-            if (codecId == ProtobufCodec.CODEC_ID) {
-              respBody = GroupMgmtProto.GroupAckResp.newBuilder()
-                .setCode(0).setMessage("success").build();
-            } else {
-              respBody = jsonBody().put("code", 0).put("message", "success");
-            }
-            return buildResponse(message, CMD_GROUP_ACK_RESP_VALUE, respBody);
-          });
+        return groupRepo.isMember(groupId, numericId).compose(isMember -> {
+          if (!isMember) {
+            return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
+              ErrorCode.UNAUTHORIZED, "你不是该群成员"));
+          }
+          return groupRepo.updateLastReadSeq(groupId, numericId, lastReadSeq)
+            .map(v -> {
+              byte codecId = message.getCodecId();
+              Object respBody;
+              if (codecId == ProtobufCodec.CODEC_ID) {
+                respBody = GroupMgmtProto.GroupAckResp.newBuilder()
+                  .setCode(0).setMessage("success").build();
+              } else {
+                respBody = jsonBody().put("code", 0).put("message", "success");
+              }
+              return buildResponse(message, CMD_GROUP_ACK_RESP_VALUE, respBody);
+            });
+        });
       });
     } catch (Exception e) {
       LOG.error("群 ACK 处理失败", e);
       return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
         ErrorCode.INTERNAL_ERROR, "处理失败：" + e.getMessage()));
     }
+  }
+
+  private Future<Long> resolveId(String userId) {
+    try { return Future.succeededFuture(Long.parseLong(userId)); }
+    catch (NumberFormatException e) { return messageRepo.findUserId(userId); }
   }
 }

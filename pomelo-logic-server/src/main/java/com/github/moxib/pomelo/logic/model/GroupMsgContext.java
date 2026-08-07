@@ -3,7 +3,7 @@ package com.github.moxib.pomelo.logic.model;
 public class GroupMsgContext {
 
   private final long messageId;
-  private final String groupId;
+  private final long groupId;
   private final String senderUserId;
   private final String senderUserName;
   private final String senderNickname;
@@ -27,7 +27,7 @@ public class GroupMsgContext {
   public static Builder builder() { return new Builder(); }
 
   public long getMessageId() { return messageId; }
-  public String getGroupId() { return groupId; }
+  public long getGroupId() { return groupId; }
   public String getSenderUserId() { return senderUserId; }
   public String getSenderUserName() { return senderUserName; }
   public String getSenderNickname() { return senderNickname; }
@@ -38,7 +38,7 @@ public class GroupMsgContext {
 
   public static class Builder {
     private long messageId;
-    private String groupId;
+    private long groupId;
     private String senderUserId;
     private String senderUserName;
     private String senderNickname;
@@ -48,7 +48,7 @@ public class GroupMsgContext {
     private byte codecId;
 
     public Builder messageId(long messageId) { this.messageId = messageId; return this; }
-    public Builder groupId(String groupId) { this.groupId = groupId; return this; }
+    public Builder groupId(long groupId) { this.groupId = groupId; return this; }
     public Builder senderUserId(String senderUserId) { this.senderUserId = senderUserId; return this; }
     public Builder senderUserName(String senderUserName) { this.senderUserName = senderUserName; return this; }
     public Builder senderNickname(String senderNickname) { this.senderNickname = senderNickname; return this; }

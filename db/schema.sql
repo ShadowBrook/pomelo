@@ -31,19 +31,20 @@ CREATE INDEX idx_user_status ON im_user(status);
 
 
 -- 2. 群组元数据表
+--    id: 雪花ID，服务端生成
 CREATE TABLE IF NOT EXISTS im_group (
-    id           VARCHAR(64)  PRIMARY KEY,           -- NanoID 系统生成（对外唯一标识）
-    name         VARCHAR(128) NOT NULL,               -- 群名
-    avatar       VARCHAR(512),                       -- 群头像 URL
-    description  TEXT,                                -- 群公告/简介
-    owner_id     VARCHAR(64) NOT NULL,                -- 群主 userId (NanoID)
-    max_members  INT         NOT NULL DEFAULT 200,    -- 群成员上限
-    created_at   BIGINT      NOT NULL,               -- 创建时间 (Unix毫秒)
-    updated_at   BIGINT      NOT NULL                -- 更新时间 (Unix毫秒)
+    id           BIGINT       PRIMARY KEY,              -- 雪花ID (服务端生成)
+    name         VARCHAR(128) NOT NULL,                 -- 群名
+    avatar       VARCHAR(512),                         -- 群头像 URL
+    description  TEXT,                                  -- 群公告/简介
+    owner_id     VARCHAR(64) NOT NULL,                  -- 群主 userId (NanoID)
+    max_members  INT         NOT NULL DEFAULT 200,      -- 群成员上限
+    created_at   BIGINT      NOT NULL,                  -- 创建时间 (Unix毫秒)
+    updated_at   BIGINT      NOT NULL                   -- 更新时间 (Unix毫秒)
 );
 
 COMMENT ON TABLE  im_group              IS '群组元数据表';
-COMMENT ON COLUMN im_group.id           IS 'NanoID 系统生成（对外唯一标识）';
+COMMENT ON COLUMN im_group.id           IS '雪花ID (服务端生成)';
 COMMENT ON COLUMN im_group.name         IS '群名';
 COMMENT ON COLUMN im_group.avatar       IS '群头像URL';
 COMMENT ON COLUMN im_group.description  IS '群公告/简介';
@@ -96,13 +97,13 @@ CREATE INDEX idx_c2c_created_at_brin ON im_message_c2c USING BRIN (created_at);
 
 -- 4. 群聊消息表
 CREATE TABLE IF NOT EXISTS im_message_group (
-    id         BIGINT       NOT NULL,             -- 雪花ID (客户端生成)
-    sender_id  BIGINT       NOT NULL,             -- 发送者 im_user.id
-    group_id   VARCHAR(64)  NOT NULL,             -- 群组ID
-    msg_type   SMALLINT     NOT NULL,             -- 1=text, 2=image, 3=voice, 4=video, 5=file, 6=emoji, 7=system
-    content    TEXT,                              -- 文本内容或资源链接
-    seq        BIGINT       NOT NULL,             -- 群同步版本号（设计保留，群消息暂未接入）
-    created_at BIGINT       NOT NULL,             -- 创建时间 (Unix毫秒)
+    id         BIGINT   NOT NULL,               -- 雪花ID (客户端生成)
+    sender_id  BIGINT   NOT NULL,               -- 发送者 im_user.id
+    group_id   BIGINT   NOT NULL,               -- im_group.id (雪花ID)
+    msg_type   SMALLINT NOT NULL,               -- 1=text, 2=image, 3=voice, 4=video, 5=file, 6=emoji, 7=system
+    content    TEXT,                            -- 文本内容或资源链接
+    seq        BIGINT   NOT NULL,               -- 群同步版本号
+    created_at BIGINT   NOT NULL,               -- 创建时间 (Unix毫秒)
     PRIMARY KEY (id)
 ) PARTITION BY HASH (id);
 
@@ -127,14 +128,16 @@ CREATE INDEX idx_group_seq ON im_message_group (seq);
 
 -- 5. 群组成员表
 --    id: 雪花ID，服务端分配，作为成员关系主键
+--    group_id: im_group.id (雪花ID)
+--    user_id: im_user.id (雪花ID)
 CREATE TABLE IF NOT EXISTS im_group_member (
-    id            BIGINT       NOT NULL,              -- 雪花ID (服务端生成)
-    group_id      VARCHAR(64)  NOT NULL,
-    user_id       VARCHAR(64)  NOT NULL,
-    role          SMALLINT     NOT NULL DEFAULT 0,    -- 0=成员, 1=管理员, 2=群主
-    last_read_seq BIGINT       NOT NULL DEFAULT 0,   -- 已读游标
-    muted_until   BIGINT       NOT NULL DEFAULT 0,   -- 禁言截止时间戳 (Unix毫秒)，0=未禁言
-    joined_at     BIGINT       NOT NULL,
+    id            BIGINT   NOT NULL,                    -- 雪花ID (服务端生成)
+    group_id      BIGINT   NOT NULL,                    -- im_group.id
+    user_id       BIGINT   NOT NULL,                    -- im_user.id
+    role          SMALLINT NOT NULL DEFAULT 0,          -- 0=成员, 1=管理员, 2=群主
+    last_read_seq BIGINT   NOT NULL DEFAULT 0,          -- 已读游标
+    muted_until   BIGINT   NOT NULL DEFAULT 0,          -- 禁言截止时间戳 (Unix毫秒)，0=未禁言
+    joined_at     BIGINT   NOT NULL,
     PRIMARY KEY (id),
     UNIQUE (group_id, user_id)
 );

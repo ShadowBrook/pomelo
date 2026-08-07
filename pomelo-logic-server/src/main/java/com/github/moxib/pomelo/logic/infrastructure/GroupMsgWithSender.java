@@ -8,13 +8,13 @@ public class GroupMsgWithSender {
 
   private final long id;
   private final long senderNumericId;
-  private final String groupId;
+  private final long groupId;
   private final int msgType;
   private final String content;
   private final long seq;
   private final long createdAt;
 
-  public GroupMsgWithSender(long id, long senderNumericId, String groupId, int msgType,
+  public GroupMsgWithSender(long id, long senderNumericId, long groupId, int msgType,
                              String content, long seq, long createdAt) {
     this.id = id;
     this.senderNumericId = senderNumericId;
@@ -27,7 +27,7 @@ public class GroupMsgWithSender {
 
   public long getId() { return id; }
   public long getSenderNumericId() { return senderNumericId; }
-  public String getGroupId() { return groupId; }
+  public long getGroupId() { return groupId; }
   public int getMsgType() { return msgType; }
   public String getContent() { return content; }
   public long getSeq() { return seq; }
