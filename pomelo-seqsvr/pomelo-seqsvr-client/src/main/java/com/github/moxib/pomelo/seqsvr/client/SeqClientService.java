@@ -58,6 +58,32 @@ public class SeqClientService {
   }
 
   /**
+   * 按字符串 key 获取下一个序列号（群聊等非数值 ID 场景）。
+   * 内部将字符串确定性哈希为 long 后走标准分配路径。
+   */
+  public Future<Long> fetchNextSequenceByKey(String key) {
+    return attempt(toSectionId(toLongKey(key), maxIdSize), true, 0);
+  }
+
+  /**
+   * 将字符串 key 确定性哈希为 64-bit 非负 long。
+   * 使用类似 toSectionId 的最终化步骤，保证同 key 结果稳定。
+   */
+  static long toLongKey(String key) {
+    long h = 0;
+    for (int i = 0; i < key.length(); i++) {
+      h = h * 31 + key.charAt(i);
+    }
+    // 最终化：扩散高位信息到低位，避免连续 key 的 section 碰撞
+    h ^= (h >>> 33);
+    h *= 0xff51afd7ed558ccdL;
+    h ^= (h >>> 33);
+    h *= 0xc4ceb9fe1a85ec53L;
+    h ^= (h >>> 33);
+    return h < 0 ? -(h + 1) : h;
+  }
+
+  /**
    * 获取当前序列号（不递增）。
    */
   public Future<Long> getCurrentSequence(long userId) {
