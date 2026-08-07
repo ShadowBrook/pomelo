@@ -8,6 +8,7 @@ import com.github.moxib.pomelo.proto.ctrl.CtrlProto;
 import com.github.moxib.pomelo.proto.group.GroupProto;
 import com.github.moxib.pomelo.proto.heartbeat.HeartbeatProto;
 import com.github.moxib.pomelo.proto.pull.PullProto;
+import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
 import com.github.moxib.pomelo.proto.relation.RelationProto;
 import com.google.protobuf.Message;
 import com.google.protobuf.Parser;
@@ -99,6 +100,21 @@ public class ProtobufCodec<T> implements MessageCodec<T> {
     registerProto(CommonProto.Cmd.CMD_FRIEND_DELETE_REQ_VALUE, RelationProto.FriendDeleteReq.parser(), RelationProto.FriendDeleteReq.class);
     registerProto(CommonProto.Cmd.CMD_FRIEND_DELETE_RESP_VALUE, RelationProto.FriendDeleteResp.parser(), RelationProto.FriendDeleteResp.class);
     registerProto(CommonProto.Cmd.CMD_FRIEND_DELETE_NOTIFY_VALUE, RelationProto.FriendDeleteNotify.parser(), RelationProto.FriendDeleteNotify.class);
+
+    // 群管理
+    registerProto(CommonProto.Cmd.CMD_GROUP_CREATE_REQ_VALUE, GroupMgmtProto.CreateGroupReq.parser(), GroupMgmtProto.CreateGroupReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_CREATE_RESP_VALUE, GroupMgmtProto.CreateGroupResp.parser(), GroupMgmtProto.CreateGroupResp.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_GET_INFO_REQ_VALUE, GroupMgmtProto.GetGroupInfoReq.parser(), GroupMgmtProto.GetGroupInfoReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_GET_INFO_RESP_VALUE, GroupMgmtProto.GetGroupInfoResp.parser(), GroupMgmtProto.GetGroupInfoResp.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_GET_MEMBERS_REQ_VALUE, GroupMgmtProto.GetGroupMembersReq.parser(), GroupMgmtProto.GetGroupMembersReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_GET_MEMBERS_RESP_VALUE, GroupMgmtProto.GetGroupMembersResp.parser(), GroupMgmtProto.GetGroupMembersResp.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_GET_MY_GROUPS_REQ_VALUE, GroupMgmtProto.GetMyGroupsReq.parser(), GroupMgmtProto.GetMyGroupsReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_GET_MY_GROUPS_RESP_VALUE, GroupMgmtProto.GetMyGroupsResp.parser(), GroupMgmtProto.GetMyGroupsResp.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_MEMBER_CHANGE_NOTIFY_VALUE, GroupMgmtProto.GroupMemberChangeNotify.parser(), GroupMgmtProto.GroupMemberChangeNotify.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_PULL_MSG_REQ_VALUE, GroupMgmtProto.PullGroupMsgReq.parser(), GroupMgmtProto.PullGroupMsgReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_PULL_MSG_RESP_VALUE, GroupMgmtProto.PullGroupMsgResp.parser(), GroupMgmtProto.PullGroupMsgResp.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_ACK_REQ_VALUE, GroupMgmtProto.GroupAckReq.parser(), GroupMgmtProto.GroupAckReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_ACK_RESP_VALUE, GroupMgmtProto.GroupAckResp.parser(), GroupMgmtProto.GroupAckResp.class);
   }
 
   /**

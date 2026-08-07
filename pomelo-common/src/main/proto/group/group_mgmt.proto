@@ -1,0 +1,146 @@
+syntax = "proto3";
+
+package im.group;
+
+option java_package = "com.github.moxib.pomelo.proto.group";
+option java_outer_classname = "GroupMgmtProto";
+
+import "common/common.proto";
+
+// ============================================================================
+// 创建群
+// ============================================================================
+message CreateGroupReq {
+    string name    = 1;
+    string avatar  = 2;
+}
+
+message CreateGroupResp {
+    int32 code       = 1;
+    string message   = 2;
+    GroupInfo group  = 3;
+}
+
+// ============================================================================
+// 群基本信息（复用于多个响应）
+// ============================================================================
+message GroupInfo {
+    string group_id    = 1;
+    string name        = 2;
+    string avatar      = 3;
+    string description = 4;
+    string owner_id    = 5;
+    int32 member_count = 6;
+    int32 max_members  = 7;
+    int64 created_at   = 8;
+}
+
+// ============================================================================
+// 获取群信息
+// ============================================================================
+message GetGroupInfoReq {
+    string group_id = 1;
+}
+
+message GetGroupInfoResp {
+    int32 code       = 1;
+    string message   = 2;
+    GroupInfo group  = 3;
+}
+
+// ============================================================================
+// 获取群成员
+// ============================================================================
+message GetGroupMembersReq {
+    string group_id = 1;
+}
+
+message GroupMember {
+    string user_id   = 1;
+    string user_name = 2;
+    string nickname  = 3;
+    string avatar    = 4;
+    int32 role       = 5;
+    int64 joined_at  = 6;
+}
+
+message GetGroupMembersResp {
+    int32 code                    = 1;
+    string message                = 2;
+    repeated GroupMember members  = 3;
+}
+
+// ============================================================================
+// 获取我的群列表
+// ============================================================================
+message GetMyGroupsReq {
+}
+
+message GetMyGroupsResp {
+    int32 code                 = 1;
+    string message             = 2;
+    repeated GroupInfo groups  = 3;
+}
+
+// ============================================================================
+// 成员变更推送
+// ============================================================================
+message GroupMemberChangeNotify {
+    string group_id     = 1;
+    ChangeType type     = 2;
+    string user_id      = 3;
+    string operator_id  = 4;
+    string user_name    = 5;
+    string nickname     = 6;
+
+    enum ChangeType {
+        INVITED = 0;
+        JOINED = 1;
+        LEFT = 2;
+        KICKED = 3;
+        ADMIN_SET = 4;
+        OWNER_TRANSFERRED = 5;
+    }
+}
+
+// ============================================================================
+// 拉取群消息
+// ============================================================================
+message PullGroupMsgReq {
+    string group_id   = 1;
+    int64 cursor      = 2;
+    int32 limit       = 3;
+    bool is_backward  = 4;
+}
+
+message GroupMsgRecord {
+    string id                  = 1;
+    string sender_id           = 2;
+    string group_id            = 3;
+    int32 msg_type             = 4;
+    string content             = 5;
+    int64 seq                  = 6;
+    int64 created_at           = 7;
+    string sender_name         = 8;
+    string sender_nickname     = 9;
+}
+
+message PullGroupMsgResp {
+    int32 code                         = 1;
+    string message                     = 2;
+    repeated GroupMsgRecord messages   = 3;
+    bool has_more                      = 4;
+}
+
+// ============================================================================
+// 群 ACK（已读回执）
+// ============================================================================
+message GroupAckReq {
+    string group_id      = 1;
+    int64 last_read_seq  = 2;
+}
+
+message GroupAckResp {
+    int32 code     = 1;
+    string message = 2;
+}

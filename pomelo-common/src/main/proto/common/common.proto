@@ -56,6 +56,21 @@ enum Cmd {
     CMD_FRIEND_DELETE_RESP   = 0x0069;  // S→C 删除好友响应
     CMD_FRIEND_DELETE_NOTIFY = 0x006A;  // S→C 删除好友推送
 
+    // 群管理操作
+    CMD_GROUP_CREATE_REQ    = 0x0070;  // C→S 创建群请求
+    CMD_GROUP_CREATE_RESP   = 0x0071;  // S→C 创建群响应
+    CMD_GROUP_GET_INFO_REQ  = 0x0086;  // C→S 获取群信息请求
+    CMD_GROUP_GET_INFO_RESP = 0x0087;  // S→C 获取群信息响应
+    CMD_GROUP_GET_MEMBERS_REQ  = 0x0088;  // C→S 获取群成员请求
+    CMD_GROUP_GET_MEMBERS_RESP = 0x0089;  // S→C 获取群成员响应
+    CMD_GROUP_GET_MY_GROUPS_REQ  = 0x0090;  // C→S 获取我的群列表请求
+    CMD_GROUP_GET_MY_GROUPS_RESP = 0x0091;  // S→C 获取我的群列表响应
+    CMD_GROUP_MEMBER_CHANGE_NOTIFY = 0x0093;  // S→C 成员变更推送
+    CMD_GROUP_PULL_MSG_REQ  = 0x0094;  // C→S 拉取群消息请求
+    CMD_GROUP_PULL_MSG_RESP = 0x0095;  // S→C 拉取群消息响应
+    CMD_GROUP_ACK_REQ       = 0x0096;  // C→S 群ACK请求
+    CMD_GROUP_ACK_RESP      = 0x0097;  // S→C 群ACK响应
+
     CMD_ERROR = 0xFFFF;  // S→C 通用错误响应
 }
 
