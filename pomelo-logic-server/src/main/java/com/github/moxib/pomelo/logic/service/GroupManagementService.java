@@ -18,6 +18,8 @@ import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.moxib.pomelo.logic.id.NanoIdGenerator;
+
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 public class GroupManagementService extends ServiceBase {
@@ -92,7 +94,8 @@ public class GroupManagementService extends ServiceBase {
     }
     String avatar = body.getString("avatar", "");
 
-    long groupId = snowflake.nextId();
+    long id = snowflake.nextId();
+    String groupId = genNanoId();
     long now = System.currentTimeMillis();
 
     return resolveId(userId).compose(ownerNumericId -> {
@@ -102,7 +105,7 @@ public class GroupManagementService extends ServiceBase {
       }
 
       GroupInfo group = GroupInfo.builder()
-        .groupId(groupId).name(name.trim()).avatar(avatar)
+        .id(id).groupId(groupId).name(name.trim()).avatar(avatar)
         .description("").ownerId(userId)
         .memberCount(1).maxMembers(200)
         .createdAt(now).updatedAt(now)
@@ -120,7 +123,7 @@ public class GroupManagementService extends ServiceBase {
             respBody = jsonBody().put("code", 0).put("message", "success")
               .put("group", toJsonGroupInfo(group));
           }
-          LOG.info("群创建成功: groupId={} name={} owner={}", groupId, name, userId);
+          LOG.info("群创建成功: id={} groupId={} name={} owner={}", id, groupId, name, userId);
           return buildResponse(message, CMD_GROUP_CREATE_RESP_VALUE, respBody);
         });
     });
@@ -133,10 +136,9 @@ public class GroupManagementService extends ServiceBase {
         ErrorCode.BAD_REQUEST, "body 不能为空"));
     }
     JsonObject body = new JsonObject(bodyStr);
-    String groupIdStr = body.getString("groupId");
-    long groupId = Long.parseLong(groupIdStr);
+    String groupId = body.getString("groupId");
 
-    return groupRepo.findById(groupId)
+    return groupRepo.findByGroupId(groupId)
       .compose(group -> {
         if (group == null) {
           return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_GET_INFO_RESP_VALUE,
@@ -162,8 +164,7 @@ public class GroupManagementService extends ServiceBase {
         ErrorCode.BAD_REQUEST, "body 不能为空"));
     }
     JsonObject body = new JsonObject(bodyStr);
-    String groupIdStr = body.getString("groupId");
-    long groupId = Long.parseLong(groupIdStr);
+    String groupId = body.getString("groupId");
 
     return groupRepo.findMembers(groupId)
       .compose(members -> {
@@ -174,7 +175,7 @@ public class GroupManagementService extends ServiceBase {
             GroupMgmtProto.GetGroupMembersResp.newBuilder().setCode(0).setMessage("success");
           for (GroupMemberRecord m : members) {
             resp.addMembers(GroupMgmtProto.GroupMember.newBuilder()
-              .setUserId(String.valueOf(m.getUserId()))
+              .setUserId(nn(m.getUserName()))
               .setUserName(nn(m.getUserName()))
               .setNickname(nn(m.getNickname()))
               .setAvatar(nn(m.getAvatar()))
@@ -187,7 +188,7 @@ public class GroupManagementService extends ServiceBase {
           json.put("members", arr);
           for (GroupMemberRecord m : members) {
             JsonObject jm = new JsonObject();
-            jm.put("userId", String.valueOf(m.getUserId()));
+            jm.put("userId", nn(m.getUserName()));
             jm.put("userName", nn(m.getUserName()));
             jm.put("nickname", nn(m.getNickname()));
             jm.put("avatar", nn(m.getAvatar()));
@@ -239,11 +240,15 @@ public class GroupManagementService extends ServiceBase {
     catch (NumberFormatException e) { return messageRepo.findUserId(userId); }
   }
 
+  private static String genNanoId() {
+    return NanoIdGenerator.next();
+  }
+
   private static String nn(String s) { return s != null ? s : ""; }
 
   private GroupMgmtProto.GroupInfo toProtoGroupInfo(GroupInfo g) {
     return GroupMgmtProto.GroupInfo.newBuilder()
-      .setGroupId(String.valueOf(g.getGroupId()))
+      .setGroupId(g.getGroupId())
       .setName(g.getName())
       .setAvatar(nn(g.getAvatar())).setDescription(nn(g.getDescription()))
       .setOwnerId(g.getOwnerId()).setMemberCount(g.getMemberCount())
@@ -253,7 +258,7 @@ public class GroupManagementService extends ServiceBase {
 
   private JsonObject toJsonGroupInfo(GroupInfo g) {
     return new JsonObject()
-      .put("groupId", String.valueOf(g.getGroupId()))
+      .put("groupId", g.getGroupId())
       .put("name", g.getName())
       .put("avatar", nn(g.getAvatar())).put("description", nn(g.getDescription()))
       .put("ownerId", g.getOwnerId()).put("memberCount", g.getMemberCount())

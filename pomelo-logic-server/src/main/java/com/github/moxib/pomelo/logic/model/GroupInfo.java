@@ -2,7 +2,8 @@ package com.github.moxib.pomelo.logic.model;
 
 public class GroupInfo {
 
-  private final long groupId;
+  private final long id;
+  private final String groupId;
   private final String name;
   private final String avatar;
   private final String description;
@@ -13,6 +14,7 @@ public class GroupInfo {
   private final long updatedAt;
 
   private GroupInfo(Builder builder) {
+    this.id = builder.id;
     this.groupId = builder.groupId;
     this.name = builder.name;
     this.avatar = builder.avatar;
@@ -26,7 +28,8 @@ public class GroupInfo {
 
   public static Builder builder() { return new Builder(); }
 
-  public long getGroupId() { return groupId; }
+  public long getId() { return id; }
+  public String getGroupId() { return groupId; }
   public String getName() { return name; }
   public String getAvatar() { return avatar; }
   public String getDescription() { return description; }
@@ -37,7 +40,8 @@ public class GroupInfo {
   public long getUpdatedAt() { return updatedAt; }
 
   public static class Builder {
-    private long groupId;
+    private long id;
+    private String groupId;
     private String name;
     private String avatar;
     private String description;
@@ -47,7 +51,8 @@ public class GroupInfo {
     private long createdAt;
     private long updatedAt;
 
-    public Builder groupId(long groupId) { this.groupId = groupId; return this; }
+    public Builder id(long id) { this.id = id; return this; }
+    public Builder groupId(String groupId) { this.groupId = groupId; return this; }
     public Builder name(String name) { this.name = name; return this; }
     public Builder avatar(String avatar) { this.avatar = avatar; return this; }
     public Builder description(String description) { this.description = description; return this; }
