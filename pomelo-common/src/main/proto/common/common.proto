@@ -72,6 +72,8 @@ enum Cmd {
     CMD_GROUP_PULL_MSG_RESP = 0x0095;  // S→C 拉取群消息响应
     CMD_GROUP_ACK_REQ       = 0x0096;  // C→S 群ACK请求
     CMD_GROUP_ACK_RESP      = 0x0097;  // S→C 群ACK响应
+    CMD_GROUP_MSG_READ_REQ  = 0x0098;  // C→S 查询群消息已读用户列表
+    CMD_GROUP_MSG_READ_RESP = 0x0099;  // S→C 返回群消息已读用户列表
 
     CMD_ERROR = 0xFFFF;  // S→C 通用错误响应
 }

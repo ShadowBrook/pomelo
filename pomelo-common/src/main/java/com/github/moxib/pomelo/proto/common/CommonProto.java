@@ -400,6 +400,22 @@ public final class CommonProto {
     CMD_GROUP_ACK_RESP(151),
     /**
      * <pre>
+     * C→S 查询群消息已读用户列表
+     * </pre>
+     *
+     * <code>CMD_GROUP_MSG_READ_REQ = 152;</code>
+     */
+    CMD_GROUP_MSG_READ_REQ(152),
+    /**
+     * <pre>
+     * S→C 返回群消息已读用户列表
+     * </pre>
+     *
+     * <code>CMD_GROUP_MSG_READ_RESP = 153;</code>
+     */
+    CMD_GROUP_MSG_READ_RESP(153),
+    /**
+     * <pre>
      * S→C 通用错误响应
      * </pre>
      *
@@ -783,6 +799,22 @@ public final class CommonProto {
     public static final int CMD_GROUP_ACK_RESP_VALUE = 151;
     /**
      * <pre>
+     * C→S 查询群消息已读用户列表
+     * </pre>
+     *
+     * <code>CMD_GROUP_MSG_READ_REQ = 152;</code>
+     */
+    public static final int CMD_GROUP_MSG_READ_REQ_VALUE = 152;
+    /**
+     * <pre>
+     * S→C 返回群消息已读用户列表
+     * </pre>
+     *
+     * <code>CMD_GROUP_MSG_READ_RESP = 153;</code>
+     */
+    public static final int CMD_GROUP_MSG_READ_RESP_VALUE = 153;
+    /**
+     * <pre>
      * S→C 通用错误响应
      * </pre>
      *
@@ -862,6 +894,8 @@ public final class CommonProto {
         case 149: return CMD_GROUP_PULL_MSG_RESP;
         case 150: return CMD_GROUP_ACK_REQ;
         case 151: return CMD_GROUP_ACK_RESP;
+        case 152: return CMD_GROUP_MSG_READ_REQ;
+        case 153: return CMD_GROUP_MSG_READ_RESP;
         case 65535: return CMD_ERROR;
         default: return null;
       }
@@ -3109,7 +3143,7 @@ java.lang.String defaultValue) {
       "\003 \001(\003\022/\n\003ext\030\004 \003(\0132\".im.common.MessageCo" +
       "ntent.ExtEntry\032*\n\010ExtEntry\022\013\n\003key\030\001 \001(\t\022" +
       "\r\n\005value\030\002 \001(\t:\0028\001\"*\n\tErrorBody\022\014\n\004code\030" +
-      "\001 \001(\005\022\017\n\007message\030\002 \001(\t*\376\010\n\003Cmd\022\017\n\013CMD_UN" +
+      "\001 \001(\005\022\017\n\007message\030\002 \001(\t*\271\t\n\003Cmd\022\017\n\013CMD_UN" +
       "KNOWN\020\000\022\020\n\014CMD_AUTH_REQ\020\001\022\021\n\rCMD_AUTH_RE" +
       "SP\020\002\022\022\n\016CMD_LOGOUT_REQ\020\003\022\023\n\017CMD_LOGOUT_R" +
       "ESP\020\004\022\017\n\013CMD_C2C_REQ\020\020\022\020\n\014CMD_C2C_RESP\020\021" +
@@ -3137,15 +3171,16 @@ java.lang.String defaultValue) {
       "ROUPS_RESP\020\221\001\022#\n\036CMD_GROUP_MEMBER_CHANGE" +
       "_NOTIFY\020\223\001\022\033\n\026CMD_GROUP_PULL_MSG_REQ\020\224\001\022" +
       "\034\n\027CMD_GROUP_PULL_MSG_RESP\020\225\001\022\026\n\021CMD_GRO" +
-      "UP_ACK_REQ\020\226\001\022\027\n\022CMD_GROUP_ACK_RESP\020\227\001\022\017" +
-      "\n\tCMD_ERROR\020\377\377\003*\252\001\n\007MsgType\022\024\n\020MSG_TYPE_" +
-      "UNKNOWN\020\000\022\021\n\rMSG_TYPE_TEXT\020\001\022\022\n\016MSG_TYPE" +
-      "_IMAGE\020\002\022\022\n\016MSG_TYPE_VOICE\020\003\022\022\n\016MSG_TYPE" +
-      "_VIDEO\020\004\022\021\n\rMSG_TYPE_FILE\020\005\022\022\n\016MSG_TYPE_" +
-      "EMOJI\020\006\022\023\n\017MSG_TYPE_SYSTEM\020\007*!\n\007AckType\022" +
-      "\014\n\010RECEIVED\020\000\022\010\n\004SEEN\020\001B3\n$com.github.mo" +
-      "xib.pomelo.proto.commonB\013CommonProtob\006pr" +
-      "oto3"
+      "UP_ACK_REQ\020\226\001\022\027\n\022CMD_GROUP_ACK_RESP\020\227\001\022\033" +
+      "\n\026CMD_GROUP_MSG_READ_REQ\020\230\001\022\034\n\027CMD_GROUP" +
+      "_MSG_READ_RESP\020\231\001\022\017\n\tCMD_ERROR\020\377\377\003*\252\001\n\007M" +
+      "sgType\022\024\n\020MSG_TYPE_UNKNOWN\020\000\022\021\n\rMSG_TYPE" +
+      "_TEXT\020\001\022\022\n\016MSG_TYPE_IMAGE\020\002\022\022\n\016MSG_TYPE_" +
+      "VOICE\020\003\022\022\n\016MSG_TYPE_VIDEO\020\004\022\021\n\rMSG_TYPE_" +
+      "FILE\020\005\022\022\n\016MSG_TYPE_EMOJI\020\006\022\023\n\017MSG_TYPE_S" +
+      "YSTEM\020\007*!\n\007AckType\022\014\n\010RECEIVED\020\000\022\010\n\004SEEN" +
+      "\020\001B3\n$com.github.moxib.pomelo.proto.comm" +
+      "onB\013CommonProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

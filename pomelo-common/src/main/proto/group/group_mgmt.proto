@@ -157,3 +157,24 @@ message GroupAckResp {
     int32 code     = 1;
     string message = 2;
 }
+
+// ============================================================================
+// 查询群消息已读用户列表
+// ============================================================================
+message GetGroupMsgReadStatusReq {
+    string group_id   = 1;
+    string message_id = 2;
+    int64 seq         = 3;   // 消息的 seq（服务端也可从 message_id 查，传 seq 省一次查）
+}
+
+message GroupMsgReader {
+    string user_id   = 1;
+    string nickname  = 2;
+    string avatar    = 3;
+}
+
+message GetGroupMsgReadStatusResp {
+    int32 code                       = 1;
+    string message                   = 2;
+    repeated GroupMsgReader readers  = 3;
+}

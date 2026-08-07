@@ -83,6 +83,14 @@ public class PgGroupRepository implements GroupRepository {
     VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING
     """;
 
+  private static final String FIND_MSG_READERS_SQL = """
+    SELECT u.user_id, u.nickname, u.avatar
+    FROM im_group_member gm
+    JOIN im_user u ON gm.user_id = u.id
+    WHERE gm.group_id = $1 AND gm.last_read_seq >= $2
+    ORDER BY u.nickname
+    """;
+
   private static final String PULL_MSG_BACKWARD_SQL = """
     SELECT id, sender_id, group_id, msg_type, content, seq, created_at
     FROM im_message_group WHERE group_id = $1 AND seq < $2 ORDER BY seq DESC LIMIT $3
@@ -209,6 +217,22 @@ public class PgGroupRepository implements GroupRepository {
         return inserted;
       })
       .onFailure(e -> LOG.error("群消息持久化失败 id={}: {}", id, e.getMessage()));
+  }
+
+  @Override
+  public Future<List<GroupMsgReader>> findMsgReaders(String groupId, long seq) {
+    return pool.preparedQuery(FIND_MSG_READERS_SQL)
+      .execute(Tuple.of(groupId, seq))
+      .map(rows -> {
+        List<GroupMsgReader> list = new ArrayList<>();
+        for (Row row : rows) {
+          list.add(new GroupMsgReader(
+            row.getString("user_id"),
+            row.getString("nickname"),
+            row.getString("avatar")));
+        }
+        return list;
+      });
   }
 
   @Override

@@ -6,6 +6,7 @@ import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
+import com.github.moxib.pomelo.logic.infrastructure.GroupMsgReader;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.GroupInfo;
@@ -48,6 +49,7 @@ public class GroupManagementService extends ServiceBase {
     codecRegistry.registerJson(CMD_GROUP_GET_INFO_REQ_VALUE, JsonObject.class);
     codecRegistry.registerJson(CMD_GROUP_GET_MEMBERS_REQ_VALUE, JsonObject.class);
     codecRegistry.registerJson(CMD_GROUP_GET_MY_GROUPS_REQ_VALUE, JsonObject.class);
+    codecRegistry.registerJson(CMD_GROUP_MSG_READ_REQ_VALUE, JsonObject.class);
 
     codecRegistry.registerProtobuf(CMD_GROUP_CREATE_REQ_VALUE,
       GroupMgmtProto.CreateGroupReq.parser(), req -> null, Object.class);
@@ -59,6 +61,8 @@ public class GroupManagementService extends ServiceBase {
       GroupMgmtProto.GetGroupMembersReq.parser(), req -> null, Object.class);
     codecRegistry.registerProtobuf(CMD_GROUP_GET_MY_GROUPS_REQ_VALUE,
       GroupMgmtProto.GetMyGroupsReq.parser(), req -> null, Object.class);
+    codecRegistry.registerProtobuf(CMD_GROUP_MSG_READ_REQ_VALUE,
+      GroupMgmtProto.GetGroupMsgReadStatusReq.parser(), req -> null, Object.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {
@@ -69,6 +73,7 @@ public class GroupManagementService extends ServiceBase {
       if (cmd == CMD_GROUP_GET_INFO_REQ_VALUE) return handleGetGroupInfo(message);
       if (cmd == CMD_GROUP_GET_MEMBERS_REQ_VALUE) return handleGetMembers(message);
       if (cmd == CMD_GROUP_GET_MY_GROUPS_REQ_VALUE) return handleGetMyGroups(message);
+      if (cmd == CMD_GROUP_MSG_READ_REQ_VALUE) return handleGetMsgReadStatus(message);
       return Future.succeededFuture(buildErrorResp(message, CMD_ERROR_VALUE,
         ErrorCode.UNKNOWN_CMD, "不支持的群管理操作"));
     } catch (Exception e) {
@@ -292,6 +297,49 @@ public class GroupManagementService extends ServiceBase {
           return buildResponse(message, CMD_GROUP_GET_MY_GROUPS_RESP_VALUE, respBody);
         });
     });
+  }
+
+  private Future<ImMessage> handleGetMsgReadStatus(ImMessage message) {
+    String bodyStr = getBodyAsString(message);
+    if (bodyStr == null) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_MSG_READ_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "body 不能为空"));
+    }
+    JsonObject body = new JsonObject(bodyStr);
+    String groupId = body.getString("groupId");
+    long seq = body.getLong("seq", 0L);
+    if (groupId == null || groupId.isEmpty() || seq <= 0) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_MSG_READ_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "groupId 和 seq 不能为空"));
+    }
+
+    return groupRepo.findMsgReaders(groupId, seq)
+      .map(readers -> {
+        byte codecId = message.getCodecId();
+        Object respBody;
+        if (codecId == ProtobufCodec.CODEC_ID) {
+          GroupMgmtProto.GetGroupMsgReadStatusResp.Builder resp =
+            GroupMgmtProto.GetGroupMsgReadStatusResp.newBuilder().setCode(0).setMessage("success");
+          for (GroupMsgReader r : readers) {
+            resp.addReaders(GroupMgmtProto.GroupMsgReader.newBuilder()
+              .setUserId(r.getUserId()).setNickname(nn(r.getNickname())).setAvatar(nn(r.getAvatar())).build());
+          }
+          respBody = resp.build();
+        } else {
+          JsonObject json = jsonBody().put("code", 0).put("message", "success");
+          JsonArray arr = new JsonArray();
+          json.put("readers", arr);
+          for (GroupMsgReader r : readers) {
+            JsonObject jr = new JsonObject();
+            jr.put("userId", r.getUserId());
+            jr.put("nickname", nn(r.getNickname()));
+            jr.put("avatar", nn(r.getAvatar()));
+            arr.add(jr);
+          }
+          respBody = json;
+        }
+        return buildResponse(message, CMD_GROUP_MSG_READ_RESP_VALUE, respBody);
+      });
   }
 
   private Future<Long> resolveId(String userId) {
