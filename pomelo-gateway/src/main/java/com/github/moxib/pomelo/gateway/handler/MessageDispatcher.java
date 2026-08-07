@@ -165,6 +165,9 @@ public class MessageDispatcher {
   private static String cmdToAddress(int cmd) {
     if (cmd == CMD_C2C_REQ_VALUE)          return "logic.c2c";
     if (cmd == CMD_C2G_REQ_VALUE)          return "logic.c2g";
+    if (cmd == CMD_GROUP_PULL_MSG_REQ_VALUE)  return "logic.gpull";
+    if (cmd == CMD_GROUP_ACK_REQ_VALUE)       return "logic.gack";
+    if (cmd >= 0x0070 && cmd <= 0x0097)       return "logic.group";
     if (cmd == CMD_AUTH_REQ_VALUE)         return "logic.auth";
     if (cmd == CMD_LOGOUT_REQ_VALUE)       return "logic.auth";
     if (cmd == CMD_CTRL_REQ_VALUE)         return "logic.ctrl";
