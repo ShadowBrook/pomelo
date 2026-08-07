@@ -5,6 +5,7 @@ import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
+import com.github.moxib.pomelo.logic.infrastructure.PgGroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.PgMessageRepository;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
@@ -34,6 +35,9 @@ public class LogicVerticle extends VerticleBase {
   private CtrlService ctrlService;
   private C2GService c2gService;
   private FriendService friendService;
+  private GroupManagementService groupService;
+  private GroupPullService groupPullService;
+  private GroupAckService groupAckService;
 
   @Override
   public Future<?> start() {
@@ -53,8 +57,12 @@ public class LogicVerticle extends VerticleBase {
         pullService = new PullService(vertx, messageRepo);
         heartbeatService = new HeartbeatService();
         ctrlService = new CtrlService();
-        c2gService = new C2GService();
+        var groupRepo = new PgGroupRepository(vertx);
+        c2gService = new C2GService(vertx, pushRouter, groupRepo, seqClient, snowflake, routeTable);
         friendService = new FriendService(vertx, pushRouter, messageRepo);
+        groupService = new GroupManagementService(vertx, pushRouter, groupRepo, routeTable);
+        groupPullService = new GroupPullService(vertx, groupRepo, messageRepo);
+        groupAckService = new GroupAckService(vertx, groupRepo);
 
         var bus = vertx.eventBus();
         bus.consumer("logic.c2c",     (Message<Buffer> msg) -> dispatch(msg, c2cService::process));
@@ -64,6 +72,9 @@ public class LogicVerticle extends VerticleBase {
         bus.consumer("logic.ping",    (Message<Buffer> msg) -> dispatch(msg, heartbeatService::process));
         bus.consumer("logic.ctrl",    (Message<Buffer> msg) -> dispatch(msg, ctrlService::process));
         bus.consumer("logic.c2g",     (Message<Buffer> msg) -> dispatch(msg, c2gService::process));
+        bus.consumer("logic.group",   (Message<Buffer> msg) -> dispatch(msg, groupService::process));
+        bus.consumer("logic.gpull",   (Message<Buffer> msg) -> dispatch(msg, groupPullService::process));
+        bus.consumer("logic.gack",    (Message<Buffer> msg) -> dispatch(msg, groupAckService::process));
         bus.consumer("logic.friend",  (Message<Buffer> msg) -> dispatch(msg, friendService::process));
 
         LOG.info("LogicVerticle 已启动，所有 EventBus consumer 注册完成");
