@@ -159,12 +159,17 @@ public class GroupManagementService extends ServiceBase {
           return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
             ErrorCode.NOT_FOUND, "用户不存在"));
         }
-        return groupRepo.isMember(groupId, inviteeNumericId).compose(alreadyMember -> {
-          if (alreadyMember) {
+        return groupRepo.isFriend(operatorNumericId, inviteeNumericId).compose(isFriend -> {
+          if (!isFriend) {
             return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
-              ErrorCode.CONFLICT, "用户已在群中"));
+              ErrorCode.UNAUTHORIZED, "只能邀请好友入群"));
           }
-          long now = System.currentTimeMillis();
+          return groupRepo.isMember(groupId, inviteeNumericId).compose(alreadyMember -> {
+            if (alreadyMember) {
+              return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
+                ErrorCode.CONFLICT, "用户已在群中"));
+            }
+            long now = System.currentTimeMillis();
           return groupRepo.addMember(snowflake.nextId(), groupId, inviteeNumericId, 0, now)
             .map(v -> {
               byte codecId = message.getCodecId();
@@ -178,6 +183,7 @@ public class GroupManagementService extends ServiceBase {
               LOG.info("成员已邀请: groupId={} invitee={}", groupId, inviteeId);
               return buildResponse(message, CMD_GROUP_INVITE_RESP_VALUE, respBody);
             });
+          });
         });
       }));
   }

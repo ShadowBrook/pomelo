@@ -24,6 +24,8 @@ public interface GroupRepository {
 
   Future<Boolean> isMember(String groupId, long userId);
 
+  Future<Boolean> isFriend(long userId1, long userId2);
+
   Future<Void> updateLastReadSeq(String groupId, long userId, long seq);
 
   Future<Boolean> saveMessage(long id, String groupId, long senderNumericId,
