@@ -48,8 +48,8 @@ public class PgGroupRepository implements GroupRepository {
     """;
 
   private static final String ADD_MEMBER_SQL = """
-    INSERT INTO im_group_member (group_id, user_id, role, joined_at)
-    VALUES ($1, $2, $3, $4) ON CONFLICT (group_id, user_id) DO NOTHING
+    INSERT INTO im_group_member (id, group_id, user_id, role, joined_at)
+    VALUES ($1, $2, $3, $4, $5) ON CONFLICT (group_id, user_id) DO NOTHING
     """;
 
   private static final String REMOVE_MEMBER_SQL = """
@@ -140,9 +140,9 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<Void> addMember(String groupId, String userId, int role, long now) {
+  public Future<Void> addMember(long id, String groupId, String userId, int role, long now) {
     return pool.preparedQuery(ADD_MEMBER_SQL)
-      .execute(Tuple.of(groupId, userId, role, now))
+      .execute(Tuple.of(id, groupId, userId, role, now))
       .onSuccess(r -> LOG.debug("成员加入: groupId={} userId={}", groupId, userId))
       .onFailure(e -> LOG.error("成员加入失败: {}", e.getMessage()))
       .mapEmpty();

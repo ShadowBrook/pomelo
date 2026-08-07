@@ -16,7 +16,7 @@ public interface GroupRepository {
 
   Future<List<GroupMemberRecord>> findMembers(String groupId);
 
-  Future<Void> addMember(String groupId, String userId, int role, long now);
+  Future<Void> addMember(long id, String groupId, String userId, int role, long now);
 
   Future<Void> removeMember(String groupId, String userId);
 
