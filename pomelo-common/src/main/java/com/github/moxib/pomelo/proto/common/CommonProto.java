@@ -280,6 +280,110 @@ public final class CommonProto {
     CMD_FRIEND_DELETE_NOTIFY(106),
     /**
      * <pre>
+     * 群管理操作
+     * </pre>
+     *
+     * <code>CMD_GROUP_CREATE_REQ = 112;</code>
+     */
+    CMD_GROUP_CREATE_REQ(112),
+    /**
+     * <pre>
+     * S→C 创建群响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_CREATE_RESP = 113;</code>
+     */
+    CMD_GROUP_CREATE_RESP(113),
+    /**
+     * <pre>
+     * C→S 获取群信息请求
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_INFO_REQ = 134;</code>
+     */
+    CMD_GROUP_GET_INFO_REQ(134),
+    /**
+     * <pre>
+     * S→C 获取群信息响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_INFO_RESP = 135;</code>
+     */
+    CMD_GROUP_GET_INFO_RESP(135),
+    /**
+     * <pre>
+     * C→S 获取群成员请求
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_MEMBERS_REQ = 136;</code>
+     */
+    CMD_GROUP_GET_MEMBERS_REQ(136),
+    /**
+     * <pre>
+     * S→C 获取群成员响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_MEMBERS_RESP = 137;</code>
+     */
+    CMD_GROUP_GET_MEMBERS_RESP(137),
+    /**
+     * <pre>
+     * C→S 获取我的群列表请求
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_MY_GROUPS_REQ = 144;</code>
+     */
+    CMD_GROUP_GET_MY_GROUPS_REQ(144),
+    /**
+     * <pre>
+     * S→C 获取我的群列表响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_MY_GROUPS_RESP = 145;</code>
+     */
+    CMD_GROUP_GET_MY_GROUPS_RESP(145),
+    /**
+     * <pre>
+     * S→C 成员变更推送
+     * </pre>
+     *
+     * <code>CMD_GROUP_MEMBER_CHANGE_NOTIFY = 147;</code>
+     */
+    CMD_GROUP_MEMBER_CHANGE_NOTIFY(147),
+    /**
+     * <pre>
+     * C→S 拉取群消息请求
+     * </pre>
+     *
+     * <code>CMD_GROUP_PULL_MSG_REQ = 148;</code>
+     */
+    CMD_GROUP_PULL_MSG_REQ(148),
+    /**
+     * <pre>
+     * S→C 拉取群消息响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_PULL_MSG_RESP = 149;</code>
+     */
+    CMD_GROUP_PULL_MSG_RESP(149),
+    /**
+     * <pre>
+     * C→S 群ACK请求
+     * </pre>
+     *
+     * <code>CMD_GROUP_ACK_REQ = 150;</code>
+     */
+    CMD_GROUP_ACK_REQ(150),
+    /**
+     * <pre>
+     * S→C 群ACK响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_ACK_RESP = 151;</code>
+     */
+    CMD_GROUP_ACK_RESP(151),
+    /**
+     * <pre>
      * S→C 通用错误响应
      * </pre>
      *
@@ -543,6 +647,110 @@ public final class CommonProto {
     public static final int CMD_FRIEND_DELETE_NOTIFY_VALUE = 106;
     /**
      * <pre>
+     * 群管理操作
+     * </pre>
+     *
+     * <code>CMD_GROUP_CREATE_REQ = 112;</code>
+     */
+    public static final int CMD_GROUP_CREATE_REQ_VALUE = 112;
+    /**
+     * <pre>
+     * S→C 创建群响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_CREATE_RESP = 113;</code>
+     */
+    public static final int CMD_GROUP_CREATE_RESP_VALUE = 113;
+    /**
+     * <pre>
+     * C→S 获取群信息请求
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_INFO_REQ = 134;</code>
+     */
+    public static final int CMD_GROUP_GET_INFO_REQ_VALUE = 134;
+    /**
+     * <pre>
+     * S→C 获取群信息响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_INFO_RESP = 135;</code>
+     */
+    public static final int CMD_GROUP_GET_INFO_RESP_VALUE = 135;
+    /**
+     * <pre>
+     * C→S 获取群成员请求
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_MEMBERS_REQ = 136;</code>
+     */
+    public static final int CMD_GROUP_GET_MEMBERS_REQ_VALUE = 136;
+    /**
+     * <pre>
+     * S→C 获取群成员响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_MEMBERS_RESP = 137;</code>
+     */
+    public static final int CMD_GROUP_GET_MEMBERS_RESP_VALUE = 137;
+    /**
+     * <pre>
+     * C→S 获取我的群列表请求
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_MY_GROUPS_REQ = 144;</code>
+     */
+    public static final int CMD_GROUP_GET_MY_GROUPS_REQ_VALUE = 144;
+    /**
+     * <pre>
+     * S→C 获取我的群列表响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_GET_MY_GROUPS_RESP = 145;</code>
+     */
+    public static final int CMD_GROUP_GET_MY_GROUPS_RESP_VALUE = 145;
+    /**
+     * <pre>
+     * S→C 成员变更推送
+     * </pre>
+     *
+     * <code>CMD_GROUP_MEMBER_CHANGE_NOTIFY = 147;</code>
+     */
+    public static final int CMD_GROUP_MEMBER_CHANGE_NOTIFY_VALUE = 147;
+    /**
+     * <pre>
+     * C→S 拉取群消息请求
+     * </pre>
+     *
+     * <code>CMD_GROUP_PULL_MSG_REQ = 148;</code>
+     */
+    public static final int CMD_GROUP_PULL_MSG_REQ_VALUE = 148;
+    /**
+     * <pre>
+     * S→C 拉取群消息响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_PULL_MSG_RESP = 149;</code>
+     */
+    public static final int CMD_GROUP_PULL_MSG_RESP_VALUE = 149;
+    /**
+     * <pre>
+     * C→S 群ACK请求
+     * </pre>
+     *
+     * <code>CMD_GROUP_ACK_REQ = 150;</code>
+     */
+    public static final int CMD_GROUP_ACK_REQ_VALUE = 150;
+    /**
+     * <pre>
+     * S→C 群ACK响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_ACK_RESP = 151;</code>
+     */
+    public static final int CMD_GROUP_ACK_RESP_VALUE = 151;
+    /**
+     * <pre>
      * S→C 通用错误响应
      * </pre>
      *
@@ -607,6 +815,19 @@ public final class CommonProto {
         case 104: return CMD_FRIEND_DELETE_REQ;
         case 105: return CMD_FRIEND_DELETE_RESP;
         case 106: return CMD_FRIEND_DELETE_NOTIFY;
+        case 112: return CMD_GROUP_CREATE_REQ;
+        case 113: return CMD_GROUP_CREATE_RESP;
+        case 134: return CMD_GROUP_GET_INFO_REQ;
+        case 135: return CMD_GROUP_GET_INFO_RESP;
+        case 136: return CMD_GROUP_GET_MEMBERS_REQ;
+        case 137: return CMD_GROUP_GET_MEMBERS_RESP;
+        case 144: return CMD_GROUP_GET_MY_GROUPS_REQ;
+        case 145: return CMD_GROUP_GET_MY_GROUPS_RESP;
+        case 147: return CMD_GROUP_MEMBER_CHANGE_NOTIFY;
+        case 148: return CMD_GROUP_PULL_MSG_REQ;
+        case 149: return CMD_GROUP_PULL_MSG_RESP;
+        case 150: return CMD_GROUP_ACK_REQ;
+        case 151: return CMD_GROUP_ACK_RESP;
         case 65535: return CMD_ERROR;
         default: return null;
       }
@@ -2854,7 +3075,7 @@ java.lang.String defaultValue) {
       "\003 \001(\003\022/\n\003ext\030\004 \003(\0132\".im.common.MessageCo" +
       "ntent.ExtEntry\032*\n\010ExtEntry\022\013\n\003key\030\001 \001(\t\022" +
       "\r\n\005value\030\002 \001(\t:\0028\001\"*\n\tErrorBody\022\014\n\004code\030" +
-      "\001 \001(\005\022\017\n\007message\030\002 \001(\t*\302\005\n\003Cmd\022\017\n\013CMD_UN" +
+      "\001 \001(\005\022\017\n\007message\030\002 \001(\t*\311\010\n\003Cmd\022\017\n\013CMD_UN" +
       "KNOWN\020\000\022\020\n\014CMD_AUTH_REQ\020\001\022\021\n\rCMD_AUTH_RE" +
       "SP\020\002\022\022\n\016CMD_LOGOUT_REQ\020\003\022\023\n\017CMD_LOGOUT_R" +
       "ESP\020\004\022\017\n\013CMD_C2C_REQ\020\020\022\020\n\014CMD_C2C_RESP\020\021" +
@@ -2871,14 +3092,24 @@ java.lang.String defaultValue) {
       "CCEPT_REQ\020e\022\032\n\026CMD_FRIEND_ACCEPT_RESP\020f\022" +
       "\034\n\030CMD_FRIEND_ACCEPT_NOTIFY\020g\022\031\n\025CMD_FRI" +
       "END_DELETE_REQ\020h\022\032\n\026CMD_FRIEND_DELETE_RE" +
-      "SP\020i\022\034\n\030CMD_FRIEND_DELETE_NOTIFY\020j\022\017\n\tCM" +
-      "D_ERROR\020\377\377\003*\252\001\n\007MsgType\022\024\n\020MSG_TYPE_UNKN" +
-      "OWN\020\000\022\021\n\rMSG_TYPE_TEXT\020\001\022\022\n\016MSG_TYPE_IMA" +
-      "GE\020\002\022\022\n\016MSG_TYPE_VOICE\020\003\022\022\n\016MSG_TYPE_VID" +
-      "EO\020\004\022\021\n\rMSG_TYPE_FILE\020\005\022\022\n\016MSG_TYPE_EMOJ" +
-      "I\020\006\022\023\n\017MSG_TYPE_SYSTEM\020\007*!\n\007AckType\022\014\n\010R" +
-      "ECEIVED\020\000\022\010\n\004SEEN\020\001B3\n$com.github.moxib." +
-      "pomelo.proto.commonB\013CommonProtob\006proto3"
+      "SP\020i\022\034\n\030CMD_FRIEND_DELETE_NOTIFY\020j\022\030\n\024CM" +
+      "D_GROUP_CREATE_REQ\020p\022\031\n\025CMD_GROUP_CREATE" +
+      "_RESP\020q\022\033\n\026CMD_GROUP_GET_INFO_REQ\020\206\001\022\034\n\027" +
+      "CMD_GROUP_GET_INFO_RESP\020\207\001\022\036\n\031CMD_GROUP_" +
+      "GET_MEMBERS_REQ\020\210\001\022\037\n\032CMD_GROUP_GET_MEMB" +
+      "ERS_RESP\020\211\001\022 \n\033CMD_GROUP_GET_MY_GROUPS_R" +
+      "EQ\020\220\001\022!\n\034CMD_GROUP_GET_MY_GROUPS_RESP\020\221\001" +
+      "\022#\n\036CMD_GROUP_MEMBER_CHANGE_NOTIFY\020\223\001\022\033\n" +
+      "\026CMD_GROUP_PULL_MSG_REQ\020\224\001\022\034\n\027CMD_GROUP_" +
+      "PULL_MSG_RESP\020\225\001\022\026\n\021CMD_GROUP_ACK_REQ\020\226\001" +
+      "\022\027\n\022CMD_GROUP_ACK_RESP\020\227\001\022\017\n\tCMD_ERROR\020\377" +
+      "\377\003*\252\001\n\007MsgType\022\024\n\020MSG_TYPE_UNKNOWN\020\000\022\021\n\r" +
+      "MSG_TYPE_TEXT\020\001\022\022\n\016MSG_TYPE_IMAGE\020\002\022\022\n\016M" +
+      "SG_TYPE_VOICE\020\003\022\022\n\016MSG_TYPE_VIDEO\020\004\022\021\n\rM" +
+      "SG_TYPE_FILE\020\005\022\022\n\016MSG_TYPE_EMOJI\020\006\022\023\n\017MS" +
+      "G_TYPE_SYSTEM\020\007*!\n\007AckType\022\014\n\010RECEIVED\020\000" +
+      "\022\010\n\004SEEN\020\001B3\n$com.github.moxib.pomelo.pr" +
+      "oto.commonB\013CommonProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
