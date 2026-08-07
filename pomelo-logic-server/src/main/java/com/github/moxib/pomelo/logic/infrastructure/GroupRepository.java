@@ -32,4 +32,10 @@ public interface GroupRepository {
                                int msgType, String content, long seq, long createdAt);
 
   Future<List<GroupMsgWithSender>> pullMessages(String groupId, long cursor, int limit, boolean backward);
+
+  /**
+   * 查询群消息的已读用户列表。
+   * 通过群成员 last_read_seq 是否 >= 消息 seq 来判断已读。
+   */
+  Future<List<GroupMsgReader>> findMsgReaders(String groupId, long seq);
 }
