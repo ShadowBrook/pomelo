@@ -130,9 +130,7 @@ public class C2GService extends ServiceBase {
 
   private Future<C2GRespResult> doSend(GroupMsgContext ctx) {
     long snowflakeId = snowflake.nextId();
-    // 将 groupId (NanoID) 确定性哈希为数值 key → seqsvr 按 section 路由分配群维度 seq
-    long groupKey = ctx.getGroupId().hashCode() & 0xFFFFFFFFL;
-    return seqClient.fetchNextSequence(groupKey)
+    return seqClient.fetchNextSequenceByKey(ctx.getGroupId())
       .compose(seq -> {
         long now = System.currentTimeMillis();
         long senderNumericId;
