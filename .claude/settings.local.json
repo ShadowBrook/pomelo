@@ -6,7 +6,10 @@
       "Bash(mvn protobuf:compile:*)",
       "Bash(mvn dependency:tree:*)",
       "Bash(mvn compile:*)",
-      "Bash(mvn compiler:compile:*)"
+      "Bash(mvn compiler:compile:*)",
+      "mcp__idea__read_file",
+      "mcp__idea__search_symbol",
+      "mcp__idea__search_text"
     ]
   }
 }

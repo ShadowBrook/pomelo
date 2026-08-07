@@ -108,26 +108,34 @@ public class C2GService extends ServiceBase {
           return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
             ErrorCode.UNAUTHORIZED, "发送者不存在"));
         }
-        return groupRepo.isMember(fGroupId, senderNumericId).compose(isMember -> {
-          if (!isMember) {
+        return groupRepo.findByGroupId(fGroupId).compose(group -> {
+          if (group == null) {
             return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
-              ErrorCode.UNAUTHORIZED, "你不是该群成员"));
+              ErrorCode.NOT_FOUND, "群不存在"));
           }
+          long internalGroupId = group.getId();
 
-          GroupMsgContext ctx = GroupMsgContext.builder()
-            .messageId(fClientMsgId)
-            .groupId(fGroupId)
-            .senderUserId(fSenderUserId)
-            .senderUserName(fSenderUserName)
-            .senderNickname(fSenderNickname)
-            .msgType(fMsgType)
-            .content(fContent)
-            .timestamp(System.currentTimeMillis())
-            .codecId(fCodecId)
-            .build();
+          return groupRepo.isMember(fGroupId, senderNumericId).compose(isMember -> {
+            if (!isMember) {
+              return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
+                ErrorCode.UNAUTHORIZED, "你不是该群成员"));
+            }
 
-          return doSend(ctx, senderNumericId)
-            .map(result -> buildC2GResponse(message, fCodecId, result));
+            GroupMsgContext ctx = GroupMsgContext.builder()
+              .messageId(fClientMsgId)
+              .groupId(fGroupId)
+              .senderUserId(fSenderUserId)
+              .senderUserName(fSenderUserName)
+              .senderNickname(fSenderNickname)
+              .msgType(fMsgType)
+              .content(fContent)
+              .timestamp(System.currentTimeMillis())
+              .codecId(fCodecId)
+              .build();
+
+            return doSend(ctx, senderNumericId, internalGroupId)
+              .map(result -> buildC2GResponse(message, fCodecId, result));
+          });
         });
       });
     } catch (Exception e) {
@@ -137,9 +145,9 @@ public class C2GService extends ServiceBase {
     }
   }
 
-  private Future<C2GRespResult> doSend(GroupMsgContext ctx, long senderNumericId) {
+  private Future<C2GRespResult> doSend(GroupMsgContext ctx, long senderNumericId, long internalGroupId) {
     long snowflakeId = snowflake.nextId();
-    return seqClient.fetchNextSequence(SeqClientService.toLongKey(ctx.getGroupId()))
+    return seqClient.fetchNextSequence(internalGroupId)
       .compose(seq -> {
         long now = System.currentTimeMillis();
 

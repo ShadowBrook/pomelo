@@ -188,11 +188,30 @@ services:
     restart: unless-stopped
     networks: [pomelo-net]
 
+  # ============ Silo 对象存储（MinIO 分支） ============
+
+  silo:
+    image: pgsty/silo:RELEASE.2026-08-06T00-00-00Z
+    container_name: pomelo-silo
+    command: server /data --console-address :9001
+    ports:
+      - "9002:9000"   # S3 API
+      - "9003:9001"   # Web Console
+    environment:
+      MINIO_ROOT_USER: pomelo-admin
+      MINIO_ROOT_PASSWORD: pomelo-admin-password
+    volumes:
+      - silo-data:/data
+    restart: unless-stopped
+    networks:
+      - pomelo-net
+
 volumes:
   pgdata:
   seqsvr-data-1:
   seqsvr-data-2:
   seqsvr-data-3:
+  silo-data:
 
 networks:
   pomelo-net:

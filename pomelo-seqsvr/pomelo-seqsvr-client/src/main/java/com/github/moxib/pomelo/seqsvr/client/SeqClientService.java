@@ -151,23 +151,6 @@ public class SeqClientService {
   }
 
   /**
-   * 将字符串 key 确定性哈希为 64-bit 非负 long，供 fetchNextSequence 等需要数值 key 的接口使用。
-   * 同一字符串始终产生相同 long，适用于群 ID 等非数值标识符的场景。
-   */
-  public static long toLongKey(String key) {
-    long h = 0;
-    for (int i = 0; i < key.length(); i++) {
-      h = h * 31 + key.charAt(i);
-    }
-    h ^= (h >>> 33);
-    h *= 0xff51afd7ed558ccdL;
-    h ^= (h >>> 33);
-    h *= 0xc4ceb9fe1a85ec53L;
-    h ^= (h >>> 33);
-    return h < 0 ? -(h + 1) : h;
-  }
-
-  /**
    * 将业务 key 确定性哈希到正数 id 空间（默认全量空间）。
    */
   static int toSectionId(long key) {
