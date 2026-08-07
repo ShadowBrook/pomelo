@@ -1,0 +1,31 @@
+package com.github.moxib.pomelo.logic.infrastructure;
+
+import com.github.moxib.pomelo.logic.model.GroupInfo;
+import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
+import io.vertx.core.Future;
+
+import java.util.List;
+
+public interface GroupRepository {
+
+  Future<Void> createGroup(GroupInfo group);
+
+  Future<GroupInfo> findById(String groupId);
+
+  Future<List<GroupInfo>> findGroupsByUserId(String userId);
+
+  Future<List<GroupMemberRecord>> findMembers(String groupId);
+
+  Future<Void> addMember(String groupId, String userId, int role, long now);
+
+  Future<Void> removeMember(String groupId, String userId);
+
+  Future<Boolean> isMember(String groupId, String userId);
+
+  Future<Void> updateLastReadSeq(String groupId, String userId, long seq);
+
+  Future<Boolean> saveMessage(long id, String groupId, long senderNumericId,
+                               int msgType, String content, long seq, long createdAt);
+
+  Future<List<GroupMsgWithSender>> pullMessages(String groupId, long cursor, int limit, boolean backward);
+}
