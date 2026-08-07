@@ -44,12 +44,15 @@ public class GroupManagementService extends ServiceBase {
     this.codecRegistry = new CodecRegistry();
 
     codecRegistry.registerJson(CMD_GROUP_CREATE_REQ_VALUE, JsonObject.class);
+    codecRegistry.registerJson(CMD_GROUP_INVITE_REQ_VALUE, JsonObject.class);
     codecRegistry.registerJson(CMD_GROUP_GET_INFO_REQ_VALUE, JsonObject.class);
     codecRegistry.registerJson(CMD_GROUP_GET_MEMBERS_REQ_VALUE, JsonObject.class);
     codecRegistry.registerJson(CMD_GROUP_GET_MY_GROUPS_REQ_VALUE, JsonObject.class);
 
     codecRegistry.registerProtobuf(CMD_GROUP_CREATE_REQ_VALUE,
       GroupMgmtProto.CreateGroupReq.parser(), req -> null, Object.class);
+    codecRegistry.registerProtobuf(CMD_GROUP_INVITE_REQ_VALUE,
+      GroupMgmtProto.InviteToGroupReq.parser(), req -> null, Object.class);
     codecRegistry.registerProtobuf(CMD_GROUP_GET_INFO_REQ_VALUE,
       GroupMgmtProto.GetGroupInfoReq.parser(), req -> null, Object.class);
     codecRegistry.registerProtobuf(CMD_GROUP_GET_MEMBERS_REQ_VALUE,
@@ -62,6 +65,7 @@ public class GroupManagementService extends ServiceBase {
     int cmd = message.getCmd();
     try {
       if (cmd == CMD_GROUP_CREATE_REQ_VALUE) return handleCreateGroup(message);
+      if (cmd == CMD_GROUP_INVITE_REQ_VALUE) return handleInviteToGroup(message);
       if (cmd == CMD_GROUP_GET_INFO_REQ_VALUE) return handleGetGroupInfo(message);
       if (cmd == CMD_GROUP_GET_MEMBERS_REQ_VALUE) return handleGetMembers(message);
       if (cmd == CMD_GROUP_GET_MY_GROUPS_REQ_VALUE) return handleGetMyGroups(message);
@@ -127,6 +131,55 @@ public class GroupManagementService extends ServiceBase {
           return buildResponse(message, CMD_GROUP_CREATE_RESP_VALUE, respBody);
         });
     });
+  }
+
+  private Future<ImMessage> handleInviteToGroup(ImMessage message) {
+    String operatorId = getUserIdFromHeaders(message);
+    if (operatorId == null || operatorId.isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
+        ErrorCode.UNAUTHORIZED, "未认证用户"));
+    }
+
+    String bodyStr = getBodyAsString(message);
+    if (bodyStr == null) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "body 不能为空"));
+    }
+    JsonObject body = new JsonObject(bodyStr);
+    String groupId = body.getString("groupId");
+    String inviteeId = body.getString("userId");
+    if (groupId == null || groupId.isEmpty() || inviteeId == null || inviteeId.isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "groupId 和 userId 不能为空"));
+    }
+
+    return resolveId(operatorId).compose(operatorNumericId ->
+      resolveId(inviteeId).compose(inviteeNumericId -> {
+        if (inviteeNumericId == 0) {
+          return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
+            ErrorCode.NOT_FOUND, "用户不存在"));
+        }
+        return groupRepo.isMember(groupId, inviteeNumericId).compose(alreadyMember -> {
+          if (alreadyMember) {
+            return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
+              ErrorCode.CONFLICT, "用户已在群中"));
+          }
+          long now = System.currentTimeMillis();
+          return groupRepo.addMember(snowflake.nextId(), groupId, inviteeNumericId, 0, now)
+            .map(v -> {
+              byte codecId = message.getCodecId();
+              Object respBody;
+              if (codecId == ProtobufCodec.CODEC_ID) {
+                respBody = GroupMgmtProto.InviteToGroupResp.newBuilder()
+                  .setCode(0).setMessage("success").build();
+              } else {
+                respBody = jsonBody().put("code", 0).put("message", "success");
+              }
+              LOG.info("成员已邀请: groupId={} invitee={}", groupId, inviteeId);
+              return buildResponse(message, CMD_GROUP_INVITE_RESP_VALUE, respBody);
+            });
+        });
+      }));
   }
 
   private Future<ImMessage> handleGetGroupInfo(ImMessage message) {

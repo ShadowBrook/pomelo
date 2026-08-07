@@ -2932,6 +2932,1378 @@ public final class GroupMgmtProto {
 
   }
 
+  public interface InviteToGroupReqOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:im.group.InviteToGroupReq)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>string group_id = 1;</code>
+     * @return The groupId.
+     */
+    java.lang.String getGroupId();
+    /**
+     * <code>string group_id = 1;</code>
+     * @return The bytes for groupId.
+     */
+    com.google.protobuf.ByteString
+        getGroupIdBytes();
+
+    /**
+     * <pre>
+     * 被邀请者 userId (NanoID)
+     * </pre>
+     *
+     * <code>string user_id = 2;</code>
+     * @return The userId.
+     */
+    java.lang.String getUserId();
+    /**
+     * <pre>
+     * 被邀请者 userId (NanoID)
+     * </pre>
+     *
+     * <code>string user_id = 2;</code>
+     * @return The bytes for userId.
+     */
+    com.google.protobuf.ByteString
+        getUserIdBytes();
+  }
+  /**
+   * <pre>
+   * ============================================================================
+   * 邀请入群
+   * ============================================================================
+   * </pre>
+   *
+   * Protobuf type {@code im.group.InviteToGroupReq}
+   */
+  public static final class InviteToGroupReq extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:im.group.InviteToGroupReq)
+      InviteToGroupReqOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use InviteToGroupReq.newBuilder() to construct.
+    private InviteToGroupReq(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private InviteToGroupReq() {
+      groupId_ = "";
+      userId_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new InviteToGroupReq();
+    }
+
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.github.moxib.pomelo.proto.group.GroupMgmtProto.internal_static_im_group_InviteToGroupReq_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.github.moxib.pomelo.proto.group.GroupMgmtProto.internal_static_im_group_InviteToGroupReq_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq.class, com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq.Builder.class);
+    }
+
+    public static final int GROUP_ID_FIELD_NUMBER = 1;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object groupId_ = "";
+    /**
+     * <code>string group_id = 1;</code>
+     * @return The groupId.
+     */
+    @java.lang.Override
+    public java.lang.String getGroupId() {
+      java.lang.Object ref = groupId_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        groupId_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string group_id = 1;</code>
+     * @return The bytes for groupId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getGroupIdBytes() {
+      java.lang.Object ref = groupId_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        groupId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int USER_ID_FIELD_NUMBER = 2;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object userId_ = "";
+    /**
+     * <pre>
+     * 被邀请者 userId (NanoID)
+     * </pre>
+     *
+     * <code>string user_id = 2;</code>
+     * @return The userId.
+     */
+    @java.lang.Override
+    public java.lang.String getUserId() {
+      java.lang.Object ref = userId_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        userId_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * 被邀请者 userId (NanoID)
+     * </pre>
+     *
+     * <code>string user_id = 2;</code>
+     * @return The bytes for userId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getUserIdBytes() {
+      java.lang.Object ref = userId_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        userId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, groupId_);
+      }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, userId_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, groupId_);
+      }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, userId_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq)) {
+        return super.equals(obj);
+      }
+      com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq other = (com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq) obj;
+
+      if (!getGroupId()
+          .equals(other.getGroupId())) return false;
+      if (!getUserId()
+          .equals(other.getUserId())) return false;
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
+      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (37 * hash) + USER_ID_FIELD_NUMBER;
+      hash = (53 * hash) + getUserId().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     * ============================================================================
+     * 邀请入群
+     * ============================================================================
+     * </pre>
+     *
+     * Protobuf type {@code im.group.InviteToGroupReq}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:im.group.InviteToGroupReq)
+        com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReqOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.github.moxib.pomelo.proto.group.GroupMgmtProto.internal_static_im_group_InviteToGroupReq_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.github.moxib.pomelo.proto.group.GroupMgmtProto.internal_static_im_group_InviteToGroupReq_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq.class, com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq.Builder.class);
+      }
+
+      // Construct using com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq.newBuilder()
+      private Builder() {
+
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        bitField0_ = 0;
+        groupId_ = "";
+        userId_ = "";
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.github.moxib.pomelo.proto.group.GroupMgmtProto.internal_static_im_group_InviteToGroupReq_descriptor;
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq getDefaultInstanceForType() {
+        return com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq build() {
+        com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq buildPartial() {
+        com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq result = new com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq(this);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartial0(com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq result) {
+        int from_bitField0_ = bitField0_;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.groupId_ = groupId_;
+        }
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          result.userId_ = userId_;
+        }
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq) {
+          return mergeFrom((com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq other) {
+        if (other == com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq.getDefaultInstance()) return this;
+        if (!other.getGroupId().isEmpty()) {
+          groupId_ = other.groupId_;
+          bitField0_ |= 0x00000001;
+          onChanged();
+        }
+        if (!other.getUserId().isEmpty()) {
+          userId_ = other.userId_;
+          bitField0_ |= 0x00000002;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 10: {
+                groupId_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000001;
+                break;
+              } // case 10
+              case 18: {
+                userId_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000002;
+                break;
+              } // case 18
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.unwrapIOException();
+        } finally {
+          onChanged();
+        } // finally
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object groupId_ = "";
+      /**
+       * <code>string group_id = 1;</code>
+       * @return The groupId.
+       */
+      public java.lang.String getGroupId() {
+        java.lang.Object ref = groupId_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          groupId_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string group_id = 1;</code>
+       * @return The bytes for groupId.
+       */
+      public com.google.protobuf.ByteString
+          getGroupIdBytes() {
+        java.lang.Object ref = groupId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          groupId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string group_id = 1;</code>
+       * @param value The groupId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setGroupId(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        groupId_ = value;
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string group_id = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearGroupId() {
+        groupId_ = getDefaultInstance().getGroupId();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string group_id = 1;</code>
+       * @param value The bytes for groupId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setGroupIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        groupId_ = value;
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object userId_ = "";
+      /**
+       * <pre>
+       * 被邀请者 userId (NanoID)
+       * </pre>
+       *
+       * <code>string user_id = 2;</code>
+       * @return The userId.
+       */
+      public java.lang.String getUserId() {
+        java.lang.Object ref = userId_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          userId_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 被邀请者 userId (NanoID)
+       * </pre>
+       *
+       * <code>string user_id = 2;</code>
+       * @return The bytes for userId.
+       */
+      public com.google.protobuf.ByteString
+          getUserIdBytes() {
+        java.lang.Object ref = userId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          userId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 被邀请者 userId (NanoID)
+       * </pre>
+       *
+       * <code>string user_id = 2;</code>
+       * @param value The userId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setUserId(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        userId_ = value;
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 被邀请者 userId (NanoID)
+       * </pre>
+       *
+       * <code>string user_id = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearUserId() {
+        userId_ = getDefaultInstance().getUserId();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 被邀请者 userId (NanoID)
+       * </pre>
+       *
+       * <code>string user_id = 2;</code>
+       * @param value The bytes for userId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setUserIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        userId_ = value;
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:im.group.InviteToGroupReq)
+    }
+
+    // @@protoc_insertion_point(class_scope:im.group.InviteToGroupReq)
+    private static final com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq();
+    }
+
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<InviteToGroupReq>
+        PARSER = new com.google.protobuf.AbstractParser<InviteToGroupReq>() {
+      @java.lang.Override
+      public InviteToGroupReq parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
+      }
+    };
+
+    public static com.google.protobuf.Parser<InviteToGroupReq> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<InviteToGroupReq> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
+  public interface InviteToGroupRespOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:im.group.InviteToGroupResp)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <code>int32 code = 1;</code>
+     * @return The code.
+     */
+    int getCode();
+
+    /**
+     * <code>string message = 2;</code>
+     * @return The message.
+     */
+    java.lang.String getMessage();
+    /**
+     * <code>string message = 2;</code>
+     * @return The bytes for message.
+     */
+    com.google.protobuf.ByteString
+        getMessageBytes();
+  }
+  /**
+   * Protobuf type {@code im.group.InviteToGroupResp}
+   */
+  public static final class InviteToGroupResp extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:im.group.InviteToGroupResp)
+      InviteToGroupRespOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use InviteToGroupResp.newBuilder() to construct.
+    private InviteToGroupResp(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private InviteToGroupResp() {
+      message_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new InviteToGroupResp();
+    }
+
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.github.moxib.pomelo.proto.group.GroupMgmtProto.internal_static_im_group_InviteToGroupResp_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.github.moxib.pomelo.proto.group.GroupMgmtProto.internal_static_im_group_InviteToGroupResp_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp.class, com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp.Builder.class);
+    }
+
+    public static final int CODE_FIELD_NUMBER = 1;
+    private int code_ = 0;
+    /**
+     * <code>int32 code = 1;</code>
+     * @return The code.
+     */
+    @java.lang.Override
+    public int getCode() {
+      return code_;
+    }
+
+    public static final int MESSAGE_FIELD_NUMBER = 2;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object message_ = "";
+    /**
+     * <code>string message = 2;</code>
+     * @return The message.
+     */
+    @java.lang.Override
+    public java.lang.String getMessage() {
+      java.lang.Object ref = message_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        message_ = s;
+        return s;
+      }
+    }
+    /**
+     * <code>string message = 2;</code>
+     * @return The bytes for message.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getMessageBytes() {
+      java.lang.Object ref = message_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        message_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (code_ != 0) {
+        output.writeInt32(1, code_);
+      }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, message_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (code_ != 0) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(1, code_);
+      }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, message_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp)) {
+        return super.equals(obj);
+      }
+      com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp other = (com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp) obj;
+
+      if (getCode()
+          != other.getCode()) return false;
+      if (!getMessage()
+          .equals(other.getMessage())) return false;
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + CODE_FIELD_NUMBER;
+      hash = (53 * hash) + getCode();
+      hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
+      hash = (53 * hash) + getMessage().hashCode();
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * Protobuf type {@code im.group.InviteToGroupResp}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:im.group.InviteToGroupResp)
+        com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupRespOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.github.moxib.pomelo.proto.group.GroupMgmtProto.internal_static_im_group_InviteToGroupResp_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.github.moxib.pomelo.proto.group.GroupMgmtProto.internal_static_im_group_InviteToGroupResp_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp.class, com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp.Builder.class);
+      }
+
+      // Construct using com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp.newBuilder()
+      private Builder() {
+
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        bitField0_ = 0;
+        code_ = 0;
+        message_ = "";
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.github.moxib.pomelo.proto.group.GroupMgmtProto.internal_static_im_group_InviteToGroupResp_descriptor;
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp getDefaultInstanceForType() {
+        return com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp build() {
+        com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp buildPartial() {
+        com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp result = new com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp(this);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartial0(com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp result) {
+        int from_bitField0_ = bitField0_;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.code_ = code_;
+        }
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          result.message_ = message_;
+        }
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp) {
+          return mergeFrom((com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp other) {
+        if (other == com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp.getDefaultInstance()) return this;
+        if (other.getCode() != 0) {
+          setCode(other.getCode());
+        }
+        if (!other.getMessage().isEmpty()) {
+          message_ = other.message_;
+          bitField0_ |= 0x00000002;
+          onChanged();
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 8: {
+                code_ = input.readInt32();
+                bitField0_ |= 0x00000001;
+                break;
+              } // case 8
+              case 18: {
+                message_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000002;
+                break;
+              } // case 18
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.unwrapIOException();
+        } finally {
+          onChanged();
+        } // finally
+        return this;
+      }
+      private int bitField0_;
+
+      private int code_ ;
+      /**
+       * <code>int32 code = 1;</code>
+       * @return The code.
+       */
+      @java.lang.Override
+      public int getCode() {
+        return code_;
+      }
+      /**
+       * <code>int32 code = 1;</code>
+       * @param value The code to set.
+       * @return This builder for chaining.
+       */
+      public Builder setCode(int value) {
+
+        code_ = value;
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>int32 code = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearCode() {
+        bitField0_ = (bitField0_ & ~0x00000001);
+        code_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object message_ = "";
+      /**
+       * <code>string message = 2;</code>
+       * @return The message.
+       */
+      public java.lang.String getMessage() {
+        java.lang.Object ref = message_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          message_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <code>string message = 2;</code>
+       * @return The bytes for message.
+       */
+      public com.google.protobuf.ByteString
+          getMessageBytes() {
+        java.lang.Object ref = message_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          message_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <code>string message = 2;</code>
+       * @param value The message to set.
+       * @return This builder for chaining.
+       */
+      public Builder setMessage(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        message_ = value;
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string message = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearMessage() {
+        message_ = getDefaultInstance().getMessage();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+      /**
+       * <code>string message = 2;</code>
+       * @param value The bytes for message to set.
+       * @return This builder for chaining.
+       */
+      public Builder setMessageBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        message_ = value;
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:im.group.InviteToGroupResp)
+    }
+
+    // @@protoc_insertion_point(class_scope:im.group.InviteToGroupResp)
+    private static final com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp();
+    }
+
+    public static com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<InviteToGroupResp>
+        PARSER = new com.google.protobuf.AbstractParser<InviteToGroupResp>() {
+      @java.lang.Override
+      public InviteToGroupResp parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
+      }
+    };
+
+    public static com.google.protobuf.Parser<InviteToGroupResp> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<InviteToGroupResp> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupResp getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   public interface GetGroupInfoReqOrBuilder extends
       // @@protoc_insertion_point(interface_extends:im.group.GetGroupInfoReq)
       com.google.protobuf.MessageOrBuilder {
@@ -14495,6 +15867,16 @@ public final class GroupMgmtProto {
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_im_group_GroupInfo_fieldAccessorTable;
   private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_im_group_InviteToGroupReq_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_im_group_InviteToGroupReq_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_im_group_InviteToGroupResp_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_im_group_InviteToGroupResp_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_im_group_GetGroupInfoReq_descriptor;
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
@@ -14576,40 +15958,43 @@ public final class GroupMgmtProto {
       "nfo\022\020\n\010group_id\030\001 \001(\t\022\014\n\004name\030\002 \001(\t\022\016\n\006a" +
       "vatar\030\003 \001(\t\022\023\n\013description\030\004 \001(\t\022\020\n\010owne" +
       "r_id\030\005 \001(\t\022\024\n\014member_count\030\006 \001(\005\022\023\n\013max_" +
-      "members\030\007 \001(\005\022\022\n\ncreated_at\030\010 \001(\003\"#\n\017Get" +
-      "GroupInfoReq\022\020\n\010group_id\030\001 \001(\t\"U\n\020GetGro" +
-      "upInfoResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(" +
-      "\t\022\"\n\005group\030\003 \001(\0132\023.im.group.GroupInfo\"&\n" +
-      "\022GetGroupMembersReq\022\020\n\010group_id\030\001 \001(\t\"t\n" +
-      "\013GroupMember\022\017\n\007user_id\030\001 \001(\t\022\021\n\tuser_na" +
-      "me\030\002 \001(\t\022\020\n\010nickname\030\003 \001(\t\022\016\n\006avatar\030\004 \001" +
-      "(\t\022\014\n\004role\030\005 \001(\005\022\021\n\tjoined_at\030\006 \001(\003\"\\\n\023G" +
-      "etGroupMembersResp\022\014\n\004code\030\001 \001(\005\022\017\n\007mess" +
-      "age\030\002 \001(\t\022&\n\007members\030\003 \003(\0132\025.im.group.Gr" +
-      "oupMember\"\020\n\016GetMyGroupsReq\"U\n\017GetMyGrou" +
-      "psResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022#\n" +
-      "\006groups\030\003 \003(\0132\023.im.group.GroupInfo\"\225\002\n\027G" +
-      "roupMemberChangeNotify\022\020\n\010group_id\030\001 \001(\t" +
-      "\022:\n\004type\030\002 \001(\0162,.im.group.GroupMemberCha" +
-      "ngeNotify.ChangeType\022\017\n\007user_id\030\003 \001(\t\022\023\n" +
-      "\013operator_id\030\004 \001(\t\022\021\n\tuser_name\030\005 \001(\t\022\020\n" +
-      "\010nickname\030\006 \001(\t\"a\n\nChangeType\022\013\n\007INVITED" +
-      "\020\000\022\n\n\006JOINED\020\001\022\010\n\004LEFT\020\002\022\n\n\006KICKED\020\003\022\r\n\t" +
-      "ADMIN_SET\020\004\022\025\n\021OWNER_TRANSFERRED\020\005\"W\n\017Pu" +
-      "llGroupMsgReq\022\020\n\010group_id\030\001 \001(\t\022\016\n\006curso" +
-      "r\030\002 \001(\003\022\r\n\005limit\030\003 \001(\005\022\023\n\013is_backward\030\004 " +
-      "\001(\010\"\263\001\n\016GroupMsgRecord\022\n\n\002id\030\001 \001(\t\022\021\n\tse" +
-      "nder_id\030\002 \001(\t\022\020\n\010group_id\030\003 \001(\t\022\020\n\010msg_t" +
-      "ype\030\004 \001(\005\022\017\n\007content\030\005 \001(\t\022\013\n\003seq\030\006 \001(\003\022" +
-      "\022\n\ncreated_at\030\007 \001(\003\022\023\n\013sender_name\030\010 \001(\t" +
-      "\022\027\n\017sender_nickname\030\t \001(\t\"o\n\020PullGroupMs" +
-      "gResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022*\n\010" +
-      "messages\030\003 \003(\0132\030.im.group.GroupMsgRecord" +
-      "\022\020\n\010has_more\030\004 \001(\010\"6\n\013GroupAckReq\022\020\n\010gro" +
-      "up_id\030\001 \001(\t\022\025\n\rlast_read_seq\030\002 \001(\003\"-\n\014Gr" +
-      "oupAckResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(" +
-      "\tB5\n#com.github.moxib.pomelo.proto.group" +
-      "B\016GroupMgmtProtob\006proto3"
+      "members\030\007 \001(\005\022\022\n\ncreated_at\030\010 \001(\003\"5\n\020Inv" +
+      "iteToGroupReq\022\020\n\010group_id\030\001 \001(\t\022\017\n\007user_" +
+      "id\030\002 \001(\t\"2\n\021InviteToGroupResp\022\014\n\004code\030\001 " +
+      "\001(\005\022\017\n\007message\030\002 \001(\t\"#\n\017GetGroupInfoReq\022" +
+      "\020\n\010group_id\030\001 \001(\t\"U\n\020GetGroupInfoResp\022\014\n" +
+      "\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022\"\n\005group\030\003 " +
+      "\001(\0132\023.im.group.GroupInfo\"&\n\022GetGroupMemb" +
+      "ersReq\022\020\n\010group_id\030\001 \001(\t\"t\n\013GroupMember\022" +
+      "\017\n\007user_id\030\001 \001(\t\022\021\n\tuser_name\030\002 \001(\t\022\020\n\010n" +
+      "ickname\030\003 \001(\t\022\016\n\006avatar\030\004 \001(\t\022\014\n\004role\030\005 " +
+      "\001(\005\022\021\n\tjoined_at\030\006 \001(\003\"\\\n\023GetGroupMember" +
+      "sResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022&\n\007" +
+      "members\030\003 \003(\0132\025.im.group.GroupMember\"\020\n\016" +
+      "GetMyGroupsReq\"U\n\017GetMyGroupsResp\022\014\n\004cod" +
+      "e\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022#\n\006groups\030\003 \003(\013" +
+      "2\023.im.group.GroupInfo\"\225\002\n\027GroupMemberCha" +
+      "ngeNotify\022\020\n\010group_id\030\001 \001(\t\022:\n\004type\030\002 \001(" +
+      "\0162,.im.group.GroupMemberChangeNotify.Cha" +
+      "ngeType\022\017\n\007user_id\030\003 \001(\t\022\023\n\013operator_id\030" +
+      "\004 \001(\t\022\021\n\tuser_name\030\005 \001(\t\022\020\n\010nickname\030\006 \001" +
+      "(\t\"a\n\nChangeType\022\013\n\007INVITED\020\000\022\n\n\006JOINED\020" +
+      "\001\022\010\n\004LEFT\020\002\022\n\n\006KICKED\020\003\022\r\n\tADMIN_SET\020\004\022\025" +
+      "\n\021OWNER_TRANSFERRED\020\005\"W\n\017PullGroupMsgReq" +
+      "\022\020\n\010group_id\030\001 \001(\t\022\016\n\006cursor\030\002 \001(\003\022\r\n\005li" +
+      "mit\030\003 \001(\005\022\023\n\013is_backward\030\004 \001(\010\"\263\001\n\016Group" +
+      "MsgRecord\022\n\n\002id\030\001 \001(\t\022\021\n\tsender_id\030\002 \001(\t" +
+      "\022\020\n\010group_id\030\003 \001(\t\022\020\n\010msg_type\030\004 \001(\005\022\017\n\007" +
+      "content\030\005 \001(\t\022\013\n\003seq\030\006 \001(\003\022\022\n\ncreated_at" +
+      "\030\007 \001(\003\022\023\n\013sender_name\030\010 \001(\t\022\027\n\017sender_ni" +
+      "ckname\030\t \001(\t\"o\n\020PullGroupMsgResp\022\014\n\004code" +
+      "\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022*\n\010messages\030\003 \003(" +
+      "\0132\030.im.group.GroupMsgRecord\022\020\n\010has_more\030" +
+      "\004 \001(\010\"6\n\013GroupAckReq\022\020\n\010group_id\030\001 \001(\t\022\025" +
+      "\n\rlast_read_seq\030\002 \001(\003\"-\n\014GroupAckResp\022\014\n" +
+      "\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\tB5\n#com.gith" +
+      "ub.moxib.pomelo.proto.groupB\016GroupMgmtPr" +
+      "otob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -14634,80 +16019,92 @@ public final class GroupMgmtProto {
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GroupInfo_descriptor,
         new java.lang.String[] { "GroupId", "Name", "Avatar", "Description", "OwnerId", "MemberCount", "MaxMembers", "CreatedAt", });
-    internal_static_im_group_GetGroupInfoReq_descriptor =
+    internal_static_im_group_InviteToGroupReq_descriptor =
       getDescriptor().getMessageTypes().get(3);
+    internal_static_im_group_InviteToGroupReq_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_im_group_InviteToGroupReq_descriptor,
+        new java.lang.String[] { "GroupId", "UserId", });
+    internal_static_im_group_InviteToGroupResp_descriptor =
+      getDescriptor().getMessageTypes().get(4);
+    internal_static_im_group_InviteToGroupResp_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_im_group_InviteToGroupResp_descriptor,
+        new java.lang.String[] { "Code", "Message", });
+    internal_static_im_group_GetGroupInfoReq_descriptor =
+      getDescriptor().getMessageTypes().get(5);
     internal_static_im_group_GetGroupInfoReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GetGroupInfoReq_descriptor,
         new java.lang.String[] { "GroupId", });
     internal_static_im_group_GetGroupInfoResp_descriptor =
-      getDescriptor().getMessageTypes().get(4);
+      getDescriptor().getMessageTypes().get(6);
     internal_static_im_group_GetGroupInfoResp_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GetGroupInfoResp_descriptor,
         new java.lang.String[] { "Code", "Message", "Group", });
     internal_static_im_group_GetGroupMembersReq_descriptor =
-      getDescriptor().getMessageTypes().get(5);
+      getDescriptor().getMessageTypes().get(7);
     internal_static_im_group_GetGroupMembersReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GetGroupMembersReq_descriptor,
         new java.lang.String[] { "GroupId", });
     internal_static_im_group_GroupMember_descriptor =
-      getDescriptor().getMessageTypes().get(6);
+      getDescriptor().getMessageTypes().get(8);
     internal_static_im_group_GroupMember_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GroupMember_descriptor,
         new java.lang.String[] { "UserId", "UserName", "Nickname", "Avatar", "Role", "JoinedAt", });
     internal_static_im_group_GetGroupMembersResp_descriptor =
-      getDescriptor().getMessageTypes().get(7);
+      getDescriptor().getMessageTypes().get(9);
     internal_static_im_group_GetGroupMembersResp_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GetGroupMembersResp_descriptor,
         new java.lang.String[] { "Code", "Message", "Members", });
     internal_static_im_group_GetMyGroupsReq_descriptor =
-      getDescriptor().getMessageTypes().get(8);
+      getDescriptor().getMessageTypes().get(10);
     internal_static_im_group_GetMyGroupsReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GetMyGroupsReq_descriptor,
         new java.lang.String[] { });
     internal_static_im_group_GetMyGroupsResp_descriptor =
-      getDescriptor().getMessageTypes().get(9);
+      getDescriptor().getMessageTypes().get(11);
     internal_static_im_group_GetMyGroupsResp_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GetMyGroupsResp_descriptor,
         new java.lang.String[] { "Code", "Message", "Groups", });
     internal_static_im_group_GroupMemberChangeNotify_descriptor =
-      getDescriptor().getMessageTypes().get(10);
+      getDescriptor().getMessageTypes().get(12);
     internal_static_im_group_GroupMemberChangeNotify_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GroupMemberChangeNotify_descriptor,
         new java.lang.String[] { "GroupId", "Type", "UserId", "OperatorId", "UserName", "Nickname", });
     internal_static_im_group_PullGroupMsgReq_descriptor =
-      getDescriptor().getMessageTypes().get(11);
+      getDescriptor().getMessageTypes().get(13);
     internal_static_im_group_PullGroupMsgReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_PullGroupMsgReq_descriptor,
         new java.lang.String[] { "GroupId", "Cursor", "Limit", "IsBackward", });
     internal_static_im_group_GroupMsgRecord_descriptor =
-      getDescriptor().getMessageTypes().get(12);
+      getDescriptor().getMessageTypes().get(14);
     internal_static_im_group_GroupMsgRecord_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GroupMsgRecord_descriptor,
         new java.lang.String[] { "Id", "SenderId", "GroupId", "MsgType", "Content", "Seq", "CreatedAt", "SenderName", "SenderNickname", });
     internal_static_im_group_PullGroupMsgResp_descriptor =
-      getDescriptor().getMessageTypes().get(13);
+      getDescriptor().getMessageTypes().get(15);
     internal_static_im_group_PullGroupMsgResp_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_PullGroupMsgResp_descriptor,
         new java.lang.String[] { "Code", "Message", "Messages", "HasMore", });
     internal_static_im_group_GroupAckReq_descriptor =
-      getDescriptor().getMessageTypes().get(14);
+      getDescriptor().getMessageTypes().get(16);
     internal_static_im_group_GroupAckReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GroupAckReq_descriptor,
         new java.lang.String[] { "GroupId", "LastReadSeq", });
     internal_static_im_group_GroupAckResp_descriptor =
-      getDescriptor().getMessageTypes().get(15);
+      getDescriptor().getMessageTypes().get(17);
     internal_static_im_group_GroupAckResp_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GroupAckResp_descriptor,
