@@ -9,12 +9,12 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record PullRequest(
-  long lastMsgId,
+  long seq,
   int limit,
   String userId,
   String peerId
 ) {
   public static PullRequest fromProto(PullProto.PullReq proto) {
-    return new PullRequest(proto.getLastMsgId(), proto.getLimit(), null, null);
+    return new PullRequest(proto.getSeq(), proto.getLimit(), null, null);
   }
 }

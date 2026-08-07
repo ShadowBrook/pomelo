@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
@@ -13,14 +12,12 @@ import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.ack.AckProto;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
@@ -28,26 +25,20 @@ public class AckService extends ServiceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(AckService.class);
 
-  private final Vertx vertx;
   private final PushRouter pushRouter;
   private final MessageRepository messageRepo;
   private final SessionRouteTable routeTable;
-  private final CodecRegistry codecRegistry;
 
-  public AckService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo, SessionRouteTable routeTable) {
-    this.vertx = vertx;
+  public AckService(PushRouter pushRouter, MessageRepository messageRepo, SessionRouteTable routeTable) {
     this.pushRouter = pushRouter;
     this.messageRepo = messageRepo;
     this.routeTable = routeTable;
-    this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_ACK_REQ_VALUE, AckProto.AckReq.parser(), AckRequest::fromProto, AckRequest.class);
-    codecRegistry.registerJson(CMD_ACK_REQ_VALUE, AckRequest.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {
     try {
       byte codecId = message.getCodecId();
-      AckRequest req = decode(codecRegistry, message, AckRequest.class);
+      AckRequest req = decode(message, AckRequest.class);
       List<Long> messageIds = req.messageIds();
       int ackType = req.ackType();
 
@@ -87,7 +78,7 @@ public class AckService extends ServiceBase {
       .compose(records -> {
         if (records.isEmpty()) {
           LOG.warn("ACK: 未找到匹配消息 count={}", messageIds.size());
-          return Future.succeededFuture(Collections.<AckNotifyContext>emptyList());
+          return Future.succeededFuture(Collections.emptyList());
         }
         return messageRepo.batchUpdateStatus(messageIds, newStatus)
           .compose(v -> {

@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
@@ -8,9 +7,10 @@ import com.github.moxib.pomelo.logic.infrastructure.GroupMsgWithSender;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.UserIdInfo;
-import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
+import com.github.moxib.pomelo.proto.common.CommonProto;
+import com.github.moxib.pomelo.proto.pull.PullProto;
+import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
@@ -32,15 +32,10 @@ public class GroupPullService extends ServiceBase {
 
   private final GroupRepository groupRepo;
   private final MessageRepository messageRepo;
-  private final CodecRegistry codecRegistry;
 
-  public GroupPullService(Vertx vertx, GroupRepository groupRepo, MessageRepository messageRepo) {
+  public GroupPullService(GroupRepository groupRepo, MessageRepository messageRepo) {
     this.groupRepo = groupRepo;
     this.messageRepo = messageRepo;
-    this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_GROUP_PULL_MSG_REQ_VALUE,
-      GroupMgmtProto.PullGroupMsgReq.parser(), req -> null, Object.class);
-    codecRegistry.registerJson(CMD_GROUP_PULL_MSG_REQ_VALUE, JsonObject.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {
@@ -101,23 +96,25 @@ public class GroupPullService extends ServiceBase {
                                                Map<Long, UserIdInfo> idToInfo) {
     Object respBody;
     if (codecId == ProtobufCodec.CODEC_ID) {
-      GroupMgmtProto.PullGroupMsgResp.Builder resp = GroupMgmtProto.PullGroupMsgResp.newBuilder()
+      PullProto.PullResp.Builder resp = PullProto.PullResp.newBuilder()
         .setCode(0).setMessage("success").setHasMore(msgs.size() >= limit);
       for (GroupMsgWithSender m : msgs) {
         UserIdInfo senderInfo = idToInfo.get(m.getSenderNumericId());
-        GroupMgmtProto.GroupMsgRecord.Builder record = GroupMgmtProto.GroupMsgRecord.newBuilder()
-          .setId(String.valueOf(m.getId()))
-          .setSenderId(senderInfo != null ? senderInfo.userId() : String.valueOf(m.getSenderNumericId()))
-          .setGroupId(m.getGroupId())
-          .setMsgType(m.getMsgType())
-          .setContent(m.getContent() != null ? m.getContent() : "")
-          .setSeq(m.getSeq())
-          .setCreatedAt(m.getCreatedAt());
-        if (senderInfo != null) {
-          if (senderInfo.userName() != null) record.setSenderName(senderInfo.userName());
-          if (senderInfo.nickname() != null) record.setSenderNickname(senderInfo.nickname());
+        CommonProto.MessageContent.Builder mc = CommonProto.MessageContent.newBuilder()
+          .setMsgTypeValue(m.getMsgType())
+          .setContent(ByteString.copyFromUtf8(m.getContent() != null ? m.getContent() : ""))
+          .setTimestamp(m.getCreatedAt());
+        mc.putExt("id", String.valueOf(m.getId()));
+        mc.putExt("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(m.getSenderNumericId()));
+        mc.putExt("groupId", m.getGroupId());
+        if (senderInfo != null && senderInfo.userName() != null) {
+          mc.putExt("senderUserName", senderInfo.userName());
         }
-        resp.addMessages(record);
+        if (senderInfo != null && senderInfo.nickname() != null) {
+          mc.putExt("senderNickname", senderInfo.nickname());
+        }
+        mc.putExt("seq", String.valueOf(m.getSeq()));
+        resp.addMessages(mc);
       }
       respBody = resp.build();
     } else {
@@ -149,8 +146,10 @@ public class GroupPullService extends ServiceBase {
 
   private ImMessage buildEmptyPullResp(ImMessage request, byte codecId) {
     Object respBody;
+    // PbPullGroupMsgResp still works — regenerated proto only changed messages field type to MessageContent
+    // Empty list is empty list regardless of element type
     if (codecId == ProtobufCodec.CODEC_ID) {
-      respBody = GroupMgmtProto.PullGroupMsgResp.newBuilder()
+      respBody = PullProto.PullResp.newBuilder()
         .setCode(0).setMessage("success").setHasMore(false).build();
     } else {
       respBody = jsonBody().put("code", 0).put("message", "success")

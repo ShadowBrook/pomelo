@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
@@ -46,28 +45,16 @@ public class FriendService extends ServiceBase {
     DELETE FROM im_friend WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
     """;
 
-  private final Vertx vertx;
   private final PushRouter pushRouter;
   private final MessageRepository messageRepo;
-  private final CodecRegistry codecRegistry;
   private final Pool pgPool;
   private final int searchLimit;
 
   public FriendService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo) {
-    this.vertx = vertx;
     this.pushRouter = pushRouter;
     this.messageRepo = messageRepo;
     this.pgPool = PgPoolFactory.get(vertx);
     this.searchLimit = ConfigHolder.getInt("friend.searchLimit", 20);
-    this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_FRIEND_SEARCH_REQ_VALUE, RelationProto.SearchUserReq.parser(), SearchRequest::fromProto, SearchRequest.class);
-    codecRegistry.registerJson(CMD_FRIEND_SEARCH_REQ_VALUE, SearchRequest.class);
-    codecRegistry.registerProtobuf(CMD_FRIEND_ADD_REQ_VALUE, RelationProto.FriendAddReq.parser(), FriendOpRequest::fromAddProto, FriendOpRequest.class);
-    codecRegistry.registerJson(CMD_FRIEND_ADD_REQ_VALUE, FriendOpRequest.class);
-    codecRegistry.registerProtobuf(CMD_FRIEND_ACCEPT_REQ_VALUE, RelationProto.FriendAcceptReq.parser(), FriendOpRequest::fromAcceptProto, FriendOpRequest.class);
-    codecRegistry.registerJson(CMD_FRIEND_ACCEPT_REQ_VALUE, FriendOpRequest.class);
-    codecRegistry.registerProtobuf(CMD_FRIEND_DELETE_REQ_VALUE, RelationProto.FriendDeleteReq.parser(), FriendOpRequest::fromDeleteProto, FriendOpRequest.class);
-    codecRegistry.registerJson(CMD_FRIEND_DELETE_REQ_VALUE, FriendOpRequest.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {
@@ -85,7 +72,7 @@ public class FriendService extends ServiceBase {
   }
 
   private Future<ImMessage> handleSearch(ImMessage message) {
-    SearchRequest req = decode(codecRegistry, message, SearchRequest.class);
+    SearchRequest req = decode(message, SearchRequest.class);
     String keyword = req.keyword();
     byte codecId = message.getCodecId();
 
@@ -182,7 +169,7 @@ public class FriendService extends ServiceBase {
   private record ResolvedIds(long userId, long friendId) {}
 
   private Parsed parseFriendReq(ImMessage message) {
-    FriendOpRequest req = decode(codecRegistry, message, FriendOpRequest.class);
+    FriendOpRequest req = decode(message, FriendOpRequest.class);
     return new Parsed(req.userId(), req.friendId());
   }
 

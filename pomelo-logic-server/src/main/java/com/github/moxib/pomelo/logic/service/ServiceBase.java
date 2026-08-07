@@ -1,13 +1,14 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.logic.codec.CodecRegistryHolder;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import io.vertx.core.json.JsonObject;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -24,7 +25,7 @@ public abstract class ServiceBase {
       .cmd(cmd)
       .messageId(request.getMessageId())
       .body(encodeBody(codecId, cmd, body))
-      .varHeaders(new java.util.HashMap<>())
+      .varHeaders(new HashMap<>())
       .build();
   }
 
@@ -38,7 +39,7 @@ public abstract class ServiceBase {
   }
 
   protected byte[] encodeBody(byte codecId, int cmd, Object body) {
-    var codec = new CodecRegistry().getCodec(cmd, codecId);
+    var codec = CodecRegistryHolder.REGISTRY.getCodec(cmd, codecId);
     if (codec != null) {
       try { return codec.encode(body); }
       catch (UnsupportedOperationException ignored) {}
@@ -70,10 +71,10 @@ public abstract class ServiceBase {
   }
 
   /**
-   * 类型安全的消息解码 — 从 CodecRegistry 中查找对应 codec 并解码到指定 DTO 类型。
+   * 类型安全的消息解码 — 从全局 CodecRegistryHolder 中查找对应 codec 并解码到指定 DTO 类型。
    */
   @SuppressWarnings("unchecked")
-  protected <T> T decode(CodecRegistry registry, ImMessage message, Class<T> type) {
-    return (T) registry.getCodec(message.getCmd(), message.getCodecId()).decode(message.getBody());
+  protected <T> T decode(ImMessage message, Class<T> type) {
+    return (T) CodecRegistryHolder.REGISTRY.getCodec(message.getCmd(), message.getCodecId()).decode(message.getBody());
   }
 }

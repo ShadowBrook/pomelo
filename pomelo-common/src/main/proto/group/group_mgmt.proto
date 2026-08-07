@@ -117,35 +117,6 @@ message GroupMemberChangeNotify {
 }
 
 // ============================================================================
-// 拉取群消息
-// ============================================================================
-message PullGroupMsgReq {
-    string group_id   = 1;
-    int64 cursor      = 2;
-    int32 limit       = 3;
-    bool is_backward  = 4;
-}
-
-message GroupMsgRecord {
-    string id                  = 1;
-    string sender_id           = 2;
-    string group_id            = 3;
-    int32 msg_type             = 4;
-    string content             = 5;
-    int64 seq                  = 6;
-    int64 created_at           = 7;
-    string sender_name         = 8;
-    string sender_nickname     = 9;
-}
-
-message PullGroupMsgResp {
-    int32 code                         = 1;
-    string message                     = 2;
-    repeated GroupMsgRecord messages   = 3;
-    bool has_more                      = 4;
-}
-
-// ============================================================================
 // 群 ACK（已读回执）
 // ============================================================================
 message GroupAckReq {

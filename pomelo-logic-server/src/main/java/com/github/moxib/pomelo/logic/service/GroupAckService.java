@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
@@ -8,7 +7,6 @@ import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
 import io.vertx.core.Future;
-import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,15 +19,10 @@ public class GroupAckService extends ServiceBase {
 
   private final GroupRepository groupRepo;
   private final MessageRepository messageRepo;
-  private final CodecRegistry codecRegistry;
 
-  public GroupAckService(Vertx vertx, GroupRepository groupRepo, MessageRepository messageRepo) {
+  public GroupAckService(GroupRepository groupRepo, MessageRepository messageRepo) {
     this.groupRepo = groupRepo;
     this.messageRepo = messageRepo;
-    this.codecRegistry = new CodecRegistry();
-    codecRegistry.registerProtobuf(CMD_GROUP_ACK_REQ_VALUE,
-      GroupMgmtProto.GroupAckReq.parser(), req -> null, Object.class);
-    codecRegistry.registerJson(CMD_GROUP_ACK_REQ_VALUE, JsonObject.class);
   }
 
   public Future<ImMessage> process(ImMessage message) {
@@ -59,7 +52,7 @@ public class GroupAckService extends ServiceBase {
           return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
             ErrorCode.UNAUTHORIZED, "用户不存在"));
         }
-        LOG.info("群 ACK: userId={} groupId={} lastReadSeq={}", userId, groupId, lastReadSeq);
+        LOG.debug("群 ACK: userId={} groupId={} lastReadSeq={}", userId, groupId, lastReadSeq);
       return groupRepo.isMember(groupId, numericId).compose(isMember -> {
           if (!isMember) {
             return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,

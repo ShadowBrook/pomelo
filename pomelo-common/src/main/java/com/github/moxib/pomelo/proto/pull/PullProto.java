@@ -31,13 +31,13 @@ public final class PullProto {
 
     /**
      * <pre>
-     * 最后一条消息 ID
+     * 游标：离线拉取时 = sinceSeq，会话历史拉取时 = beforeTime
      * </pre>
      *
-     * <code>int64 last_msg_id = 2;</code>
-     * @return The lastMsgId.
+     * <code>int64 seq = 2;</code>
+     * @return The seq.
      */
-    long getLastMsgId();
+    long getSeq();
   }
   /**
    * <pre>
@@ -95,19 +95,19 @@ public final class PullProto {
       return limit_;
     }
 
-    public static final int LAST_MSG_ID_FIELD_NUMBER = 2;
-    private long lastMsgId_ = 0L;
+    public static final int SEQ_FIELD_NUMBER = 2;
+    private long seq_ = 0L;
     /**
      * <pre>
-     * 最后一条消息 ID
+     * 游标：离线拉取时 = sinceSeq，会话历史拉取时 = beforeTime
      * </pre>
      *
-     * <code>int64 last_msg_id = 2;</code>
-     * @return The lastMsgId.
+     * <code>int64 seq = 2;</code>
+     * @return The seq.
      */
     @java.lang.Override
-    public long getLastMsgId() {
-      return lastMsgId_;
+    public long getSeq() {
+      return seq_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -127,8 +127,8 @@ public final class PullProto {
       if (limit_ != 0) {
         output.writeInt32(1, limit_);
       }
-      if (lastMsgId_ != 0L) {
-        output.writeInt64(2, lastMsgId_);
+      if (seq_ != 0L) {
+        output.writeInt64(2, seq_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -143,9 +143,9 @@ public final class PullProto {
         size += com.google.protobuf.CodedOutputStream
           .computeInt32Size(1, limit_);
       }
-      if (lastMsgId_ != 0L) {
+      if (seq_ != 0L) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(2, lastMsgId_);
+          .computeInt64Size(2, seq_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -164,8 +164,8 @@ public final class PullProto {
 
       if (getLimit()
           != other.getLimit()) return false;
-      if (getLastMsgId()
-          != other.getLastMsgId()) return false;
+      if (getSeq()
+          != other.getSeq()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -179,9 +179,9 @@ public final class PullProto {
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + LIMIT_FIELD_NUMBER;
       hash = (53 * hash) + getLimit();
-      hash = (37 * hash) + LAST_MSG_ID_FIELD_NUMBER;
+      hash = (37 * hash) + SEQ_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
-          getLastMsgId());
+          getSeq());
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -320,7 +320,7 @@ public final class PullProto {
         super.clear();
         bitField0_ = 0;
         limit_ = 0;
-        lastMsgId_ = 0L;
+        seq_ = 0L;
         return this;
       }
 
@@ -358,7 +358,7 @@ public final class PullProto {
           result.limit_ = limit_;
         }
         if (((from_bitField0_ & 0x00000002) != 0)) {
-          result.lastMsgId_ = lastMsgId_;
+          result.seq_ = seq_;
         }
       }
 
@@ -409,8 +409,8 @@ public final class PullProto {
         if (other.getLimit() != 0) {
           setLimit(other.getLimit());
         }
-        if (other.getLastMsgId() != 0L) {
-          setLastMsgId(other.getLastMsgId());
+        if (other.getSeq() != 0L) {
+          setSeq(other.getSeq());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
@@ -444,7 +444,7 @@ public final class PullProto {
                 break;
               } // case 8
               case 16: {
-                lastMsgId_ = input.readInt64();
+                seq_ = input.readInt64();
                 bitField0_ |= 0x00000002;
                 break;
               } // case 16
@@ -509,46 +509,46 @@ public final class PullProto {
         return this;
       }
 
-      private long lastMsgId_ ;
+      private long seq_ ;
       /**
        * <pre>
-       * 最后一条消息 ID
+       * 游标：离线拉取时 = sinceSeq，会话历史拉取时 = beforeTime
        * </pre>
        *
-       * <code>int64 last_msg_id = 2;</code>
-       * @return The lastMsgId.
+       * <code>int64 seq = 2;</code>
+       * @return The seq.
        */
       @java.lang.Override
-      public long getLastMsgId() {
-        return lastMsgId_;
+      public long getSeq() {
+        return seq_;
       }
       /**
        * <pre>
-       * 最后一条消息 ID
+       * 游标：离线拉取时 = sinceSeq，会话历史拉取时 = beforeTime
        * </pre>
        *
-       * <code>int64 last_msg_id = 2;</code>
-       * @param value The lastMsgId to set.
+       * <code>int64 seq = 2;</code>
+       * @param value The seq to set.
        * @return This builder for chaining.
        */
-      public Builder setLastMsgId(long value) {
+      public Builder setSeq(long value) {
 
-        lastMsgId_ = value;
+        seq_ = value;
         bitField0_ |= 0x00000002;
         onChanged();
         return this;
       }
       /**
        * <pre>
-       * 最后一条消息 ID
+       * 游标：离线拉取时 = sinceSeq，会话历史拉取时 = beforeTime
        * </pre>
        *
-       * <code>int64 last_msg_id = 2;</code>
+       * <code>int64 seq = 2;</code>
        * @return This builder for chaining.
        */
-      public Builder clearLastMsgId() {
+      public Builder clearSeq() {
         bitField0_ = (bitField0_ & ~0x00000002);
-        lastMsgId_ = 0L;
+        seq_ = 0L;
         onChanged();
         return this;
       }
@@ -1879,6 +1879,884 @@ public final class PullProto {
 
   }
 
+  public interface PullGroupMsgReqOrBuilder extends
+      // @@protoc_insertion_point(interface_extends:im.pull.PullGroupMsgReq)
+      com.google.protobuf.MessageOrBuilder {
+
+    /**
+     * <pre>
+     * 群 ID
+     * </pre>
+     *
+     * <code>string group_id = 1;</code>
+     * @return The groupId.
+     */
+    java.lang.String getGroupId();
+    /**
+     * <pre>
+     * 群 ID
+     * </pre>
+     *
+     * <code>string group_id = 1;</code>
+     * @return The bytes for groupId.
+     */
+    com.google.protobuf.ByteString
+        getGroupIdBytes();
+
+    /**
+     * <pre>
+     * 游标（seq 或时间戳，取决于 is_backward）
+     * </pre>
+     *
+     * <code>int64 cursor = 2;</code>
+     * @return The cursor.
+     */
+    long getCursor();
+
+    /**
+     * <pre>
+     * 拉取数量限制
+     * </pre>
+     *
+     * <code>int32 limit = 3;</code>
+     * @return The limit.
+     */
+    int getLimit();
+
+    /**
+     * <pre>
+     * true=拉更早的历史，false=拉增量
+     * </pre>
+     *
+     * <code>bool is_backward = 4;</code>
+     * @return The isBackward.
+     */
+    boolean getIsBackward();
+  }
+  /**
+   * <pre>
+   * ============================================================================
+   * 群消息拉取（请求字段与 PullReq 不同，响应复用 PullResp）
+   * ============================================================================
+   * </pre>
+   *
+   * Protobuf type {@code im.pull.PullGroupMsgReq}
+   */
+  public static final class PullGroupMsgReq extends
+      com.google.protobuf.GeneratedMessageV3 implements
+      // @@protoc_insertion_point(message_implements:im.pull.PullGroupMsgReq)
+      PullGroupMsgReqOrBuilder {
+  private static final long serialVersionUID = 0L;
+    // Use PullGroupMsgReq.newBuilder() to construct.
+    private PullGroupMsgReq(com.google.protobuf.GeneratedMessageV3.Builder<?> builder) {
+      super(builder);
+    }
+    private PullGroupMsgReq() {
+      groupId_ = "";
+    }
+
+    @java.lang.Override
+    @SuppressWarnings({"unused"})
+    protected java.lang.Object newInstance(
+        UnusedPrivateParameter unused) {
+      return new PullGroupMsgReq();
+    }
+
+    public static final com.google.protobuf.Descriptors.Descriptor
+        getDescriptor() {
+      return com.github.moxib.pomelo.proto.pull.PullProto.internal_static_im_pull_PullGroupMsgReq_descriptor;
+    }
+
+    @java.lang.Override
+    protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+        internalGetFieldAccessorTable() {
+      return com.github.moxib.pomelo.proto.pull.PullProto.internal_static_im_pull_PullGroupMsgReq_fieldAccessorTable
+          .ensureFieldAccessorsInitialized(
+              com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq.class, com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq.Builder.class);
+    }
+
+    public static final int GROUP_ID_FIELD_NUMBER = 1;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object groupId_ = "";
+    /**
+     * <pre>
+     * 群 ID
+     * </pre>
+     *
+     * <code>string group_id = 1;</code>
+     * @return The groupId.
+     */
+    @java.lang.Override
+    public java.lang.String getGroupId() {
+      java.lang.Object ref = groupId_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        groupId_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * 群 ID
+     * </pre>
+     *
+     * <code>string group_id = 1;</code>
+     * @return The bytes for groupId.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getGroupIdBytes() {
+      java.lang.Object ref = groupId_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        groupId_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int CURSOR_FIELD_NUMBER = 2;
+    private long cursor_ = 0L;
+    /**
+     * <pre>
+     * 游标（seq 或时间戳，取决于 is_backward）
+     * </pre>
+     *
+     * <code>int64 cursor = 2;</code>
+     * @return The cursor.
+     */
+    @java.lang.Override
+    public long getCursor() {
+      return cursor_;
+    }
+
+    public static final int LIMIT_FIELD_NUMBER = 3;
+    private int limit_ = 0;
+    /**
+     * <pre>
+     * 拉取数量限制
+     * </pre>
+     *
+     * <code>int32 limit = 3;</code>
+     * @return The limit.
+     */
+    @java.lang.Override
+    public int getLimit() {
+      return limit_;
+    }
+
+    public static final int IS_BACKWARD_FIELD_NUMBER = 4;
+    private boolean isBackward_ = false;
+    /**
+     * <pre>
+     * true=拉更早的历史，false=拉增量
+     * </pre>
+     *
+     * <code>bool is_backward = 4;</code>
+     * @return The isBackward.
+     */
+    @java.lang.Override
+    public boolean getIsBackward() {
+      return isBackward_;
+    }
+
+    private byte memoizedIsInitialized = -1;
+    @java.lang.Override
+    public final boolean isInitialized() {
+      byte isInitialized = memoizedIsInitialized;
+      if (isInitialized == 1) return true;
+      if (isInitialized == 0) return false;
+
+      memoizedIsInitialized = 1;
+      return true;
+    }
+
+    @java.lang.Override
+    public void writeTo(com.google.protobuf.CodedOutputStream output)
+                        throws java.io.IOException {
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, groupId_);
+      }
+      if (cursor_ != 0L) {
+        output.writeInt64(2, cursor_);
+      }
+      if (limit_ != 0) {
+        output.writeInt32(3, limit_);
+      }
+      if (isBackward_ != false) {
+        output.writeBool(4, isBackward_);
+      }
+      getUnknownFields().writeTo(output);
+    }
+
+    @java.lang.Override
+    public int getSerializedSize() {
+      int size = memoizedSize;
+      if (size != -1) return size;
+
+      size = 0;
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, groupId_);
+      }
+      if (cursor_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, cursor_);
+      }
+      if (limit_ != 0) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(3, limit_);
+      }
+      if (isBackward_ != false) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeBoolSize(4, isBackward_);
+      }
+      size += getUnknownFields().getSerializedSize();
+      memoizedSize = size;
+      return size;
+    }
+
+    @java.lang.Override
+    public boolean equals(final java.lang.Object obj) {
+      if (obj == this) {
+       return true;
+      }
+      if (!(obj instanceof com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq)) {
+        return super.equals(obj);
+      }
+      com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq other = (com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq) obj;
+
+      if (!getGroupId()
+          .equals(other.getGroupId())) return false;
+      if (getCursor()
+          != other.getCursor()) return false;
+      if (getLimit()
+          != other.getLimit()) return false;
+      if (getIsBackward()
+          != other.getIsBackward()) return false;
+      if (!getUnknownFields().equals(other.getUnknownFields())) return false;
+      return true;
+    }
+
+    @java.lang.Override
+    public int hashCode() {
+      if (memoizedHashCode != 0) {
+        return memoizedHashCode;
+      }
+      int hash = 41;
+      hash = (19 * hash) + getDescriptor().hashCode();
+      hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
+      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (37 * hash) + CURSOR_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getCursor());
+      hash = (37 * hash) + LIMIT_FIELD_NUMBER;
+      hash = (53 * hash) + getLimit();
+      hash = (37 * hash) + IS_BACKWARD_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashBoolean(
+          getIsBackward());
+      hash = (29 * hash) + getUnknownFields().hashCode();
+      memoizedHashCode = hash;
+      return hash;
+    }
+
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseFrom(
+        java.nio.ByteBuffer data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseFrom(
+        java.nio.ByteBuffer data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseFrom(
+        com.google.protobuf.ByteString data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseFrom(
+        com.google.protobuf.ByteString data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseFrom(byte[] data)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data);
+    }
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseFrom(
+        byte[] data,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws com.google.protobuf.InvalidProtocolBufferException {
+      return PARSER.parseFrom(data, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseDelimitedFrom(java.io.InputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input);
+    }
+
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseDelimitedFrom(
+        java.io.InputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseDelimitedWithIOException(PARSER, input, extensionRegistry);
+    }
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseFrom(
+        com.google.protobuf.CodedInputStream input)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input);
+    }
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq parseFrom(
+        com.google.protobuf.CodedInputStream input,
+        com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+        throws java.io.IOException {
+      return com.google.protobuf.GeneratedMessageV3
+          .parseWithIOException(PARSER, input, extensionRegistry);
+    }
+
+    @java.lang.Override
+    public Builder newBuilderForType() { return newBuilder(); }
+    public static Builder newBuilder() {
+      return DEFAULT_INSTANCE.toBuilder();
+    }
+    public static Builder newBuilder(com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq prototype) {
+      return DEFAULT_INSTANCE.toBuilder().mergeFrom(prototype);
+    }
+    @java.lang.Override
+    public Builder toBuilder() {
+      return this == DEFAULT_INSTANCE
+          ? new Builder() : new Builder().mergeFrom(this);
+    }
+
+    @java.lang.Override
+    protected Builder newBuilderForType(
+        com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+      Builder builder = new Builder(parent);
+      return builder;
+    }
+    /**
+     * <pre>
+     * ============================================================================
+     * 群消息拉取（请求字段与 PullReq 不同，响应复用 PullResp）
+     * ============================================================================
+     * </pre>
+     *
+     * Protobuf type {@code im.pull.PullGroupMsgReq}
+     */
+    public static final class Builder extends
+        com.google.protobuf.GeneratedMessageV3.Builder<Builder> implements
+        // @@protoc_insertion_point(builder_implements:im.pull.PullGroupMsgReq)
+        com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReqOrBuilder {
+      public static final com.google.protobuf.Descriptors.Descriptor
+          getDescriptor() {
+        return com.github.moxib.pomelo.proto.pull.PullProto.internal_static_im_pull_PullGroupMsgReq_descriptor;
+      }
+
+      @java.lang.Override
+      protected com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+          internalGetFieldAccessorTable() {
+        return com.github.moxib.pomelo.proto.pull.PullProto.internal_static_im_pull_PullGroupMsgReq_fieldAccessorTable
+            .ensureFieldAccessorsInitialized(
+                com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq.class, com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq.Builder.class);
+      }
+
+      // Construct using com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq.newBuilder()
+      private Builder() {
+
+      }
+
+      private Builder(
+          com.google.protobuf.GeneratedMessageV3.BuilderParent parent) {
+        super(parent);
+
+      }
+      @java.lang.Override
+      public Builder clear() {
+        super.clear();
+        bitField0_ = 0;
+        groupId_ = "";
+        cursor_ = 0L;
+        limit_ = 0;
+        isBackward_ = false;
+        return this;
+      }
+
+      @java.lang.Override
+      public com.google.protobuf.Descriptors.Descriptor
+          getDescriptorForType() {
+        return com.github.moxib.pomelo.proto.pull.PullProto.internal_static_im_pull_PullGroupMsgReq_descriptor;
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq getDefaultInstanceForType() {
+        return com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq.getDefaultInstance();
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq build() {
+        com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq result = buildPartial();
+        if (!result.isInitialized()) {
+          throw newUninitializedMessageException(result);
+        }
+        return result;
+      }
+
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq buildPartial() {
+        com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq result = new com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq(this);
+        if (bitField0_ != 0) { buildPartial0(result); }
+        onBuilt();
+        return result;
+      }
+
+      private void buildPartial0(com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq result) {
+        int from_bitField0_ = bitField0_;
+        if (((from_bitField0_ & 0x00000001) != 0)) {
+          result.groupId_ = groupId_;
+        }
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          result.cursor_ = cursor_;
+        }
+        if (((from_bitField0_ & 0x00000004) != 0)) {
+          result.limit_ = limit_;
+        }
+        if (((from_bitField0_ & 0x00000008) != 0)) {
+          result.isBackward_ = isBackward_;
+        }
+      }
+
+      @java.lang.Override
+      public Builder clone() {
+        return super.clone();
+      }
+      @java.lang.Override
+      public Builder setField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.setField(field, value);
+      }
+      @java.lang.Override
+      public Builder clearField(
+          com.google.protobuf.Descriptors.FieldDescriptor field) {
+        return super.clearField(field);
+      }
+      @java.lang.Override
+      public Builder clearOneof(
+          com.google.protobuf.Descriptors.OneofDescriptor oneof) {
+        return super.clearOneof(oneof);
+      }
+      @java.lang.Override
+      public Builder setRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          int index, java.lang.Object value) {
+        return super.setRepeatedField(field, index, value);
+      }
+      @java.lang.Override
+      public Builder addRepeatedField(
+          com.google.protobuf.Descriptors.FieldDescriptor field,
+          java.lang.Object value) {
+        return super.addRepeatedField(field, value);
+      }
+      @java.lang.Override
+      public Builder mergeFrom(com.google.protobuf.Message other) {
+        if (other instanceof com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq) {
+          return mergeFrom((com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq)other);
+        } else {
+          super.mergeFrom(other);
+          return this;
+        }
+      }
+
+      public Builder mergeFrom(com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq other) {
+        if (other == com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq.getDefaultInstance()) return this;
+        if (!other.getGroupId().isEmpty()) {
+          groupId_ = other.groupId_;
+          bitField0_ |= 0x00000001;
+          onChanged();
+        }
+        if (other.getCursor() != 0L) {
+          setCursor(other.getCursor());
+        }
+        if (other.getLimit() != 0) {
+          setLimit(other.getLimit());
+        }
+        if (other.getIsBackward() != false) {
+          setIsBackward(other.getIsBackward());
+        }
+        this.mergeUnknownFields(other.getUnknownFields());
+        onChanged();
+        return this;
+      }
+
+      @java.lang.Override
+      public final boolean isInitialized() {
+        return true;
+      }
+
+      @java.lang.Override
+      public Builder mergeFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws java.io.IOException {
+        if (extensionRegistry == null) {
+          throw new java.lang.NullPointerException();
+        }
+        try {
+          boolean done = false;
+          while (!done) {
+            int tag = input.readTag();
+            switch (tag) {
+              case 0:
+                done = true;
+                break;
+              case 10: {
+                groupId_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000001;
+                break;
+              } // case 10
+              case 16: {
+                cursor_ = input.readInt64();
+                bitField0_ |= 0x00000002;
+                break;
+              } // case 16
+              case 24: {
+                limit_ = input.readInt32();
+                bitField0_ |= 0x00000004;
+                break;
+              } // case 24
+              case 32: {
+                isBackward_ = input.readBool();
+                bitField0_ |= 0x00000008;
+                break;
+              } // case 32
+              default: {
+                if (!super.parseUnknownField(input, extensionRegistry, tag)) {
+                  done = true; // was an endgroup tag
+                }
+                break;
+              } // default:
+            } // switch (tag)
+          } // while (!done)
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.unwrapIOException();
+        } finally {
+          onChanged();
+        } // finally
+        return this;
+      }
+      private int bitField0_;
+
+      private java.lang.Object groupId_ = "";
+      /**
+       * <pre>
+       * 群 ID
+       * </pre>
+       *
+       * <code>string group_id = 1;</code>
+       * @return The groupId.
+       */
+      public java.lang.String getGroupId() {
+        java.lang.Object ref = groupId_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          groupId_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 群 ID
+       * </pre>
+       *
+       * <code>string group_id = 1;</code>
+       * @return The bytes for groupId.
+       */
+      public com.google.protobuf.ByteString
+          getGroupIdBytes() {
+        java.lang.Object ref = groupId_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          groupId_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 群 ID
+       * </pre>
+       *
+       * <code>string group_id = 1;</code>
+       * @param value The groupId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setGroupId(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        groupId_ = value;
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 群 ID
+       * </pre>
+       *
+       * <code>string group_id = 1;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearGroupId() {
+        groupId_ = getDefaultInstance().getGroupId();
+        bitField0_ = (bitField0_ & ~0x00000001);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 群 ID
+       * </pre>
+       *
+       * <code>string group_id = 1;</code>
+       * @param value The bytes for groupId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setGroupIdBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        groupId_ = value;
+        bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+
+      private long cursor_ ;
+      /**
+       * <pre>
+       * 游标（seq 或时间戳，取决于 is_backward）
+       * </pre>
+       *
+       * <code>int64 cursor = 2;</code>
+       * @return The cursor.
+       */
+      @java.lang.Override
+      public long getCursor() {
+        return cursor_;
+      }
+      /**
+       * <pre>
+       * 游标（seq 或时间戳，取决于 is_backward）
+       * </pre>
+       *
+       * <code>int64 cursor = 2;</code>
+       * @param value The cursor to set.
+       * @return This builder for chaining.
+       */
+      public Builder setCursor(long value) {
+
+        cursor_ = value;
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 游标（seq 或时间戳，取决于 is_backward）
+       * </pre>
+       *
+       * <code>int64 cursor = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearCursor() {
+        bitField0_ = (bitField0_ & ~0x00000002);
+        cursor_ = 0L;
+        onChanged();
+        return this;
+      }
+
+      private int limit_ ;
+      /**
+       * <pre>
+       * 拉取数量限制
+       * </pre>
+       *
+       * <code>int32 limit = 3;</code>
+       * @return The limit.
+       */
+      @java.lang.Override
+      public int getLimit() {
+        return limit_;
+      }
+      /**
+       * <pre>
+       * 拉取数量限制
+       * </pre>
+       *
+       * <code>int32 limit = 3;</code>
+       * @param value The limit to set.
+       * @return This builder for chaining.
+       */
+      public Builder setLimit(int value) {
+
+        limit_ = value;
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 拉取数量限制
+       * </pre>
+       *
+       * <code>int32 limit = 3;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearLimit() {
+        bitField0_ = (bitField0_ & ~0x00000004);
+        limit_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private boolean isBackward_ ;
+      /**
+       * <pre>
+       * true=拉更早的历史，false=拉增量
+       * </pre>
+       *
+       * <code>bool is_backward = 4;</code>
+       * @return The isBackward.
+       */
+      @java.lang.Override
+      public boolean getIsBackward() {
+        return isBackward_;
+      }
+      /**
+       * <pre>
+       * true=拉更早的历史，false=拉增量
+       * </pre>
+       *
+       * <code>bool is_backward = 4;</code>
+       * @param value The isBackward to set.
+       * @return This builder for chaining.
+       */
+      public Builder setIsBackward(boolean value) {
+
+        isBackward_ = value;
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * true=拉更早的历史，false=拉增量
+       * </pre>
+       *
+       * <code>bool is_backward = 4;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearIsBackward() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        isBackward_ = false;
+        onChanged();
+        return this;
+      }
+      @java.lang.Override
+      public final Builder setUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.setUnknownFields(unknownFields);
+      }
+
+      @java.lang.Override
+      public final Builder mergeUnknownFields(
+          final com.google.protobuf.UnknownFieldSet unknownFields) {
+        return super.mergeUnknownFields(unknownFields);
+      }
+
+
+      // @@protoc_insertion_point(builder_scope:im.pull.PullGroupMsgReq)
+    }
+
+    // @@protoc_insertion_point(class_scope:im.pull.PullGroupMsgReq)
+    private static final com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq DEFAULT_INSTANCE;
+    static {
+      DEFAULT_INSTANCE = new com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq();
+    }
+
+    public static com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq getDefaultInstance() {
+      return DEFAULT_INSTANCE;
+    }
+
+    private static final com.google.protobuf.Parser<PullGroupMsgReq>
+        PARSER = new com.google.protobuf.AbstractParser<PullGroupMsgReq>() {
+      @java.lang.Override
+      public PullGroupMsgReq parsePartialFrom(
+          com.google.protobuf.CodedInputStream input,
+          com.google.protobuf.ExtensionRegistryLite extensionRegistry)
+          throws com.google.protobuf.InvalidProtocolBufferException {
+        Builder builder = newBuilder();
+        try {
+          builder.mergeFrom(input, extensionRegistry);
+        } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+          throw e.setUnfinishedMessage(builder.buildPartial());
+        } catch (com.google.protobuf.UninitializedMessageException e) {
+          throw e.asInvalidProtocolBufferException().setUnfinishedMessage(builder.buildPartial());
+        } catch (java.io.IOException e) {
+          throw new com.google.protobuf.InvalidProtocolBufferException(e)
+              .setUnfinishedMessage(builder.buildPartial());
+        }
+        return builder.buildPartial();
+      }
+    };
+
+    public static com.google.protobuf.Parser<PullGroupMsgReq> parser() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.google.protobuf.Parser<PullGroupMsgReq> getParserForType() {
+      return PARSER;
+    }
+
+    @java.lang.Override
+    public com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq getDefaultInstanceForType() {
+      return DEFAULT_INSTANCE;
+    }
+
+  }
+
   private static final com.google.protobuf.Descriptors.Descriptor
     internal_static_im_pull_PullReq_descriptor;
   private static final 
@@ -1889,6 +2767,11 @@ public final class PullProto {
   private static final 
     com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
       internal_static_im_pull_PullResp_fieldAccessorTable;
+  private static final com.google.protobuf.Descriptors.Descriptor
+    internal_static_im_pull_PullGroupMsgReq_descriptor;
+  private static final 
+    com.google.protobuf.GeneratedMessageV3.FieldAccessorTable
+      internal_static_im_pull_PullGroupMsgReq_fieldAccessorTable;
 
   public static com.google.protobuf.Descriptors.FileDescriptor
       getDescriptor() {
@@ -1899,12 +2782,14 @@ public final class PullProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\017pull/pull.proto\022\007im.pull\032\023common/commo" +
-      "n.proto\"-\n\007PullReq\022\r\n\005limit\030\001 \001(\005\022\023\n\013las" +
-      "t_msg_id\030\002 \001(\003\"h\n\010PullResp\022\014\n\004code\030\001 \001(\005" +
-      "\022\017\n\007message\030\002 \001(\t\022+\n\010messages\030\003 \003(\0132\031.im" +
-      ".common.MessageContent\022\020\n\010has_more\030\004 \001(\010" +
-      "B/\n\"com.github.moxib.pomelo.proto.pullB\t" +
-      "PullProtob\006proto3"
+      "n.proto\"%\n\007PullReq\022\r\n\005limit\030\001 \001(\005\022\013\n\003seq" +
+      "\030\002 \001(\003\"h\n\010PullResp\022\014\n\004code\030\001 \001(\005\022\017\n\007mess" +
+      "age\030\002 \001(\t\022+\n\010messages\030\003 \003(\0132\031.im.common." +
+      "MessageContent\022\020\n\010has_more\030\004 \001(\010\"W\n\017Pull" +
+      "GroupMsgReq\022\020\n\010group_id\030\001 \001(\t\022\016\n\006cursor\030" +
+      "\002 \001(\003\022\r\n\005limit\030\003 \001(\005\022\023\n\013is_backward\030\004 \001(" +
+      "\010B/\n\"com.github.moxib.pomelo.proto.pullB" +
+      "\tPullProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -1916,13 +2801,19 @@ public final class PullProto {
     internal_static_im_pull_PullReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_pull_PullReq_descriptor,
-        new java.lang.String[] { "Limit", "LastMsgId", });
+        new java.lang.String[] { "Limit", "Seq", });
     internal_static_im_pull_PullResp_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_im_pull_PullResp_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_pull_PullResp_descriptor,
         new java.lang.String[] { "Code", "Message", "Messages", "HasMore", });
+    internal_static_im_pull_PullGroupMsgReq_descriptor =
+      getDescriptor().getMessageTypes().get(2);
+    internal_static_im_pull_PullGroupMsgReq_fieldAccessorTable = new
+      com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
+        internal_static_im_pull_PullGroupMsgReq_descriptor,
+        new java.lang.String[] { "GroupId", "Cursor", "Limit", "IsBackward", });
     com.github.moxib.pomelo.proto.common.CommonProto.getDescriptor();
   }
 
