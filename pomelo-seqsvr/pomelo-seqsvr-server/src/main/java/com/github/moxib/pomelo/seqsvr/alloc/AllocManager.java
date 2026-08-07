@@ -124,14 +124,16 @@ public class AllocManager {
   public Future<Void> init() {
     state = AllocState.WAIT_ROUTE_TABLE;
 
+    // Mediate 模式：不从 Store 加载旧路由表，等待 Mediate 分配真实路由再激活
+    // 避免加载残留旧路由 → 后续 syncLease 发现路由变更 → sections 取消/重加 → 5s pending 窗口服务不可用
+    if (waitForRouter) {
+      LOG.info("Mediate mode: waiting for router assignment (not loading stale store router), nodeId={}", nodeId);
+      return Future.succeededFuture();
+    }
+
     return store.loadRouteTable()
       .compose(loaded -> {
         if (loaded.getNodeList().isEmpty()) {
-          if (waitForRouter) {
-            // Mediate 模式：等待路由表（register 后 applyRouter 触发 maxSeq 加载）
-            LOG.info("no router yet, waiting for Mediate to assign sections: nodeId={}", nodeId);
-            return Future.<Void>succeededFuture();
-          }
           // 无路由表：开发模式单节点自举
           this.router = new Router(0, Collections.singletonList(cacheMyNode));
         } else {
@@ -145,9 +147,7 @@ public class AllocManager {
         });
       })
       .onFailure(err -> {
-        if (!waitForRouter) {
-          state = AllocState.ERROR;
-        }
+        state = AllocState.ERROR;
         LOG.error("AllocManager init failed: nodeId={}", nodeId, err);
       });
   }
