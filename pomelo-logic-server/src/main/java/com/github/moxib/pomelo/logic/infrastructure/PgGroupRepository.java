@@ -24,24 +24,24 @@ public class PgGroupRepository implements GroupRepository {
 
   private static final String FIND_GROUP_SQL = """
     SELECT id, group_id, name, avatar, description, owner_id,
-           (SELECT COUNT(*) FROM im_group_member WHERE group_id = g.group_id) AS member_count,
+           (SELECT COUNT(*) FROM im_group_member WHERE group_id = g.id) AS member_count,
            max_members, created_at, updated_at
     FROM im_group g WHERE id = $1
     """;
 
   private static final String FIND_BY_GROUP_ID_SQL = """
     SELECT id, group_id, name, avatar, description, owner_id,
-           (SELECT COUNT(*) FROM im_group_member WHERE group_id = g.group_id) AS member_count,
+           (SELECT COUNT(*) FROM im_group_member WHERE group_id = g.id) AS member_count,
            max_members, created_at, updated_at
     FROM im_group g WHERE group_id = $1
     """;
 
   private static final String FIND_GROUPS_BY_USER_SQL = """
     SELECT g.id, g.group_id, g.name, g.avatar, g.description, g.owner_id,
-           (SELECT COUNT(*) FROM im_group_member WHERE group_id = g.group_id) AS member_count,
+           (SELECT COUNT(*) FROM im_group_member WHERE group_id = g.id) AS member_count,
            g.max_members, g.created_at, g.updated_at
     FROM im_group g
-    JOIN im_group_member gm ON g.group_id = gm.group_id
+    JOIN im_group_member gm ON gm.group_id = g.id
     WHERE gm.user_id = $1
     ORDER BY g.updated_at DESC
     """;
@@ -92,13 +92,17 @@ public class PgGroupRepository implements GroupRepository {
     """;
 
   private static final String PULL_MSG_BACKWARD_SQL = """
-    SELECT id, sender_id, group_id, msg_type, content, seq, created_at
-    FROM im_message_group WHERE group_id = $1 AND seq < $2 ORDER BY seq DESC LIMIT $3
+    SELECT msg.id, msg.sender_id, g.group_id, msg.msg_type, msg.content, msg.seq, msg.created_at
+    FROM im_message_group msg
+    JOIN im_group g ON msg.group_id = g.id
+    WHERE msg.group_id = $1 AND msg.seq < $2 ORDER BY msg.seq DESC LIMIT $3
     """;
 
   private static final String PULL_MSG_FORWARD_SQL = """
-    SELECT id, sender_id, group_id, msg_type, content, seq, created_at
-    FROM im_message_group WHERE group_id = $1 AND seq > $2 ORDER BY seq LIMIT $3
+    SELECT msg.id, msg.sender_id, g.group_id, msg.msg_type, msg.content, msg.seq, msg.created_at
+    FROM im_message_group msg
+    JOIN im_group g ON msg.group_id = g.id
+    WHERE msg.group_id = $1 AND msg.seq > $2 ORDER BY msg.seq LIMIT $3
     """;
 
   private final Pool pool;
@@ -144,14 +148,14 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<List<GroupMemberRecord>> findMembers(String groupId) {
+  public Future<List<GroupMemberRecord>> findMembers(long groupId) {
     return pool.preparedQuery(FIND_MEMBERS_SQL)
       .execute(Tuple.of(groupId))
       .map(rows -> {
         List<GroupMemberRecord> list = new ArrayList<>();
         for (Row row : rows) {
           list.add(GroupMemberRecord.builder()
-            .groupId(row.getString("group_id"))
+            .groupId(row.getLong("group_id"))
             .userId(row.getLong("user_id"))
             .nanoId(row.getString("nano_id"))
             .userName(row.getString("user_name"))
@@ -166,7 +170,7 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<Void> addMember(long id, String groupId, long userId, int role, long now) {
+  public Future<Void> addMember(long id, long groupId, long userId, int role, long now) {
     return pool.preparedQuery(ADD_MEMBER_SQL)
       .execute(Tuple.of(id, groupId, userId, role, now))
       .onSuccess(r -> LOG.debug("成员加入: groupId={} userId={}", groupId, userId))
@@ -175,7 +179,7 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<Void> removeMember(String groupId, long userId) {
+  public Future<Void> removeMember(long groupId, long userId) {
     return pool.preparedQuery(REMOVE_MEMBER_SQL)
       .execute(Tuple.of(groupId, userId))
       .onSuccess(r -> LOG.debug("成员移除: groupId={} userId={}", groupId, userId))
@@ -184,7 +188,7 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<Boolean> isMember(String groupId, long userId) {
+  public Future<Boolean> isMember(long groupId, long userId) {
     return pool.preparedQuery(IS_MEMBER_SQL)
       .execute(Tuple.of(groupId, userId))
       .map(rows -> rows.size() > 0);
@@ -198,14 +202,14 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<Void> updateLastReadSeq(String groupId, long userId, long seq) {
+  public Future<Void> updateLastReadSeq(long groupId, long userId, long seq) {
     return pool.preparedQuery(UPDATE_LAST_READ_SQL)
       .execute(Tuple.of(seq, groupId, userId))
       .mapEmpty();
   }
 
   @Override
-  public Future<Boolean> saveMessage(long id, String groupId, long senderNumericId,
+  public Future<Boolean> saveMessage(long id, long groupId, long senderNumericId,
                                      int msgType, String content, long seq, long createdAt) {
     return pool.preparedQuery(SAVE_MSG_SQL)
       .execute(Tuple.of(id, senderNumericId, groupId, msgType, content, seq, createdAt))
@@ -220,7 +224,7 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<List<GroupMsgReader>> findMsgReaders(String groupId, long seq) {
+  public Future<List<GroupMsgReader>> findMsgReaders(long groupId, long seq) {
     return pool.preparedQuery(FIND_MSG_READERS_SQL)
       .execute(Tuple.of(groupId, seq))
       .map(rows -> {
@@ -236,7 +240,7 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<List<GroupMsgWithSender>> pullMessages(String groupId, long cursor, int limit, boolean backward) {
+  public Future<List<GroupMsgWithSender>> pullMessages(long groupId, long cursor, int limit, boolean backward) {
     String sql = backward ? PULL_MSG_BACKWARD_SQL : PULL_MSG_FORWARD_SQL;
     return pool.preparedQuery(sql)
       .execute(Tuple.of(groupId, cursor, limit))

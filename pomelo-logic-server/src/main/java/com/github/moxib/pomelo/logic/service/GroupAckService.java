@@ -53,12 +53,18 @@ public class GroupAckService extends ServiceBase {
             ErrorCode.UNAUTHORIZED, "用户不存在"));
         }
         LOG.debug("群 ACK: userId={} groupId={} lastReadSeq={}", userId, groupId, lastReadSeq);
-      return groupRepo.isMember(groupId, numericId).compose(isMember -> {
+      return groupRepo.findByGroupId(groupId).compose(group -> {
+        if (group == null) {
+          return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
+            ErrorCode.NOT_FOUND, "群不存在"));
+        }
+        long internalGroupId = group.getId();
+        return groupRepo.isMember(internalGroupId, numericId).compose(isMember -> {
           if (!isMember) {
             return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
               ErrorCode.UNAUTHORIZED, "你不是该群成员"));
           }
-          return groupRepo.updateLastReadSeq(groupId, numericId, lastReadSeq)
+          return groupRepo.updateLastReadSeq(internalGroupId, numericId, lastReadSeq)
             .map(v -> {
               byte codecId = message.getCodecId();
               Object respBody;
@@ -71,6 +77,7 @@ public class GroupAckService extends ServiceBase {
               return buildResponse(message, CMD_GROUP_ACK_RESP_VALUE, respBody);
             });
         });
+      });
       });
     } catch (Exception e) {
       LOG.error("群 ACK 处理失败", e);
