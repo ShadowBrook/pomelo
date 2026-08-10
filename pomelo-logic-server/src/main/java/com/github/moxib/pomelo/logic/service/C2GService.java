@@ -115,6 +115,7 @@ public class C2GService extends ServiceBase {
             GroupMsgContext ctx = GroupMsgContext.builder()
               .messageId(fClientMsgId)
               .groupId(fGroupId)
+              .groupName(group.getName())
               .senderUserId(fSenderUserId)
               .senderUserName(fSenderUserName)
               .senderNickname(fSenderNickname)
@@ -186,6 +187,7 @@ public class C2GService extends ServiceBase {
               JsonObject json = new JsonObject();
               json.put("senderId", ctx.getSenderUserId());
               json.put("groupId", ctx.getGroupId());
+              if (ctx.getGroupName() != null) json.put("name", ctx.getGroupName());
               if (ctx.getSenderUserName() != null) json.put("senderUserName", ctx.getSenderUserName());
               if (ctx.getSenderNickname() != null) json.put("senderNickname", ctx.getSenderNickname());
               JsonObject jsonMsg = new JsonObject();
