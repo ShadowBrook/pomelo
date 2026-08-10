@@ -62,6 +62,12 @@ public class GroupPullService extends ServiceBase {
       int limit = body.getInteger("limit", DEFAULT_LIMIT);
       boolean backward = body.getBoolean("isBackward", false);
 
+      // backward=true 且 cursor<=0：从最新一页开始拉（seq < Long.MAX_VALUE），
+      // 避免 seq < 0 永远查不到（群 seq 从 1 起）
+      if (backward && cursor <= 0) {
+        cursor = Long.MAX_VALUE;
+      }
+
       LOG.info("拉取群消息: userId={} groupId={} cursor={} limit={} backward={}",
         userId, groupId, cursor, limit, backward);
 
