@@ -255,7 +255,7 @@ public class ProtobufCodecTest {
     void testPullReqEncodeDecode() {
         PullProto.PullReq original = PullProto.PullReq.newBuilder()
             .setLimit(50)
-            .setLastMsgId(100L)
+            .setSeq(100L)
             .build();
 
         ProtobufCodec<PullProto.PullReq> codec = ProtobufCodec.getCodec((byte) CommonProto.Cmd.CMD_PULL_REQ_VALUE);
@@ -264,7 +264,7 @@ public class ProtobufCodecTest {
         PullProto.PullReq decoded = codec.decode(encoded);
 
         assertEquals(original.getLimit(), decoded.getLimit());
-        assertEquals(original.getLastMsgId(), decoded.getLastMsgId());
+        assertEquals(original.getSeq(), decoded.getSeq());
     }
 
     @Test
