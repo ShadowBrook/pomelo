@@ -58,21 +58,25 @@ public class GroupPullService extends ServiceBase {
         return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_PULL_MSG_RESP_VALUE,
           ErrorCode.BAD_REQUEST, "groupId 不能为空"));
       }
-      long cursor = body.getLong("cursor", 0L);
       int limit = body.getInteger("limit", DEFAULT_LIMIT);
       boolean backward = body.getBoolean("isBackward", false);
+      long rawCursor = body.getLong("cursor", 0L);
 
       // backward=true 且 cursor<=0：从最新一页开始拉（seq < Long.MAX_VALUE），
       // 避免 seq < 0 永远查不到（群 seq 从 1 起）
-      if (backward && cursor <= 0) {
-        cursor = Long.MAX_VALUE;
-      }
+      long cursor = backward && rawCursor <= 0 ? Long.MAX_VALUE : rawCursor;
 
       LOG.info("拉取群消息: userId={} groupId={} cursor={} limit={} backward={}",
         userId, groupId, cursor, limit, backward);
 
-      return groupRepo.pullMessages(groupId, cursor, limit, backward)
-        .compose(msgs -> buildPullResp(message, codecId, msgs, limit));
+      return groupRepo.findByGroupId(groupId).compose(group -> {
+        if (group == null) {
+          return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_PULL_MSG_RESP_VALUE,
+            ErrorCode.NOT_FOUND, "群不存在"));
+        }
+        return groupRepo.pullMessages(group.getId(), cursor, limit, backward)
+          .compose(msgs -> buildPullResp(message, codecId, msgs, limit));
+      });
     } catch (Exception e) {
       LOG.error("群消息拉取失败", e);
       return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_PULL_MSG_RESP_VALUE,

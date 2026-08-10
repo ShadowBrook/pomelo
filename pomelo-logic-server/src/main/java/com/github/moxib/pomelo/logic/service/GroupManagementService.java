@@ -92,7 +92,7 @@ public class GroupManagementService extends ServiceBase {
         .build();
 
       return groupRepo.createGroup(group)
-        .compose(v -> groupRepo.addMember(snowflake.nextId(), groupId, ownerNumericId, 2, now))
+        .compose(v -> groupRepo.addMember(snowflake.nextId(), id, ownerNumericId, 2, now))
         .map(v -> {
           byte codecId = message.getCodecId();
           Object respBody;
@@ -135,29 +135,36 @@ public class GroupManagementService extends ServiceBase {
           return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
             ErrorCode.NOT_FOUND, "用户不存在"));
         }
-        return groupRepo.isFriend(operatorNumericId, inviteeNumericId).compose(isFriend -> {
-          if (!isFriend) {
+        return groupRepo.findByGroupId(groupId).compose(group -> {
+          if (group == null) {
             return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
-              ErrorCode.UNAUTHORIZED, "只能邀请好友入群"));
+              ErrorCode.NOT_FOUND, "群不存在"));
           }
-          return groupRepo.isMember(groupId, inviteeNumericId).compose(alreadyMember -> {
-            if (alreadyMember) {
+          long internalGroupId = group.getId();
+          return groupRepo.isFriend(operatorNumericId, inviteeNumericId).compose(isFriend -> {
+            if (!isFriend) {
               return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
-                ErrorCode.CONFLICT, "用户已在群中"));
+                ErrorCode.UNAUTHORIZED, "只能邀请好友入群"));
             }
-            long now = System.currentTimeMillis();
-          return groupRepo.addMember(snowflake.nextId(), groupId, inviteeNumericId, 0, now)
-            .map(v -> {
-              byte codecId = message.getCodecId();
-              Object respBody;
-              if (codecId == ProtobufCodec.CODEC_ID) {
-                respBody = GroupMgmtProto.InviteToGroupResp.newBuilder()
-                  .setCode(0).setMessage("success").build();
-              } else {
-                respBody = jsonBody().put("code", 0).put("message", "success");
+            return groupRepo.isMember(internalGroupId, inviteeNumericId).compose(alreadyMember -> {
+              if (alreadyMember) {
+                return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
+                  ErrorCode.CONFLICT, "用户已在群中"));
               }
-              LOG.info("成员已邀请: groupId={} invitee={}", groupId, inviteeId);
-              return buildResponse(message, CMD_GROUP_INVITE_RESP_VALUE, respBody);
+              long now = System.currentTimeMillis();
+              return groupRepo.addMember(snowflake.nextId(), internalGroupId, inviteeNumericId, 0, now)
+                .map(v -> {
+                  byte codecId = message.getCodecId();
+                  Object respBody;
+                  if (codecId == ProtobufCodec.CODEC_ID) {
+                    respBody = GroupMgmtProto.InviteToGroupResp.newBuilder()
+                      .setCode(0).setMessage("success").build();
+                  } else {
+                    respBody = jsonBody().put("code", 0).put("message", "success");
+                  }
+                  LOG.info("成员已邀请: groupId={} invitee={}", groupId, inviteeId);
+                  return buildResponse(message, CMD_GROUP_INVITE_RESP_VALUE, respBody);
+                });
             });
           });
         });
@@ -201,8 +208,13 @@ public class GroupManagementService extends ServiceBase {
     JsonObject body = new JsonObject(bodyStr);
     String groupId = body.getString("groupId");
 
-    return groupRepo.findMembers(groupId)
-      .compose(members -> {
+    return groupRepo.findByGroupId(groupId).compose(group -> {
+      if (group == null) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_GET_MEMBERS_RESP_VALUE,
+          ErrorCode.NOT_FOUND, "群不存在"));
+      }
+      return groupRepo.findMembers(group.getId())
+        .compose(members -> {
         byte codecId = message.getCodecId();
         Object respBody;
         if (codecId == ProtobufCodec.CODEC_ID) {
@@ -234,6 +246,7 @@ public class GroupManagementService extends ServiceBase {
           respBody = json;
         }
         return Future.succeededFuture(buildResponse(message, CMD_GROUP_GET_MEMBERS_RESP_VALUE, respBody));
+      });
       });
   }
 
@@ -284,8 +297,13 @@ public class GroupManagementService extends ServiceBase {
         ErrorCode.BAD_REQUEST, "groupId 和 seq 不能为空"));
     }
 
-    return groupRepo.findMsgReaders(groupId, seq)
-      .map(readers -> {
+    return groupRepo.findByGroupId(groupId).compose(group -> {
+      if (group == null) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_MSG_READ_RESP_VALUE,
+          ErrorCode.NOT_FOUND, "群不存在"));
+      }
+      return groupRepo.findMsgReaders(group.getId(), seq)
+        .map(readers -> {
         byte codecId = message.getCodecId();
         Object respBody;
         if (codecId == ProtobufCodec.CODEC_ID) {
@@ -310,6 +328,7 @@ public class GroupManagementService extends ServiceBase {
           respBody = json;
         }
         return buildResponse(message, CMD_GROUP_MSG_READ_RESP_VALUE, respBody);
+      });
       });
   }
 

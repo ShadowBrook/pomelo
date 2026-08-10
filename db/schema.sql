@@ -98,11 +98,11 @@ CREATE INDEX idx_c2c_created_at_brin ON im_message_c2c USING BRIN (created_at);
 
 
 -- 4. 群聊消息表
---    group_id: im_group.group_id (NanoID)，对外标识
+--    group_id: im_group.id (雪花ID，内部主键)
 CREATE TABLE IF NOT EXISTS im_message_group (
     id         BIGINT       NOT NULL,             -- 雪花ID (客户端生成)
     sender_id  BIGINT       NOT NULL,             -- 发送者 im_user.id
-    group_id   VARCHAR(64)  NOT NULL,             -- im_group.group_id (NanoID)
+    group_id   BIGINT       NOT NULL,             -- im_group.id (雪花ID 内部主键)
     msg_type   SMALLINT     NOT NULL,             -- 1=text, 2=image, 3=voice, 4=video, 5=file, 6=emoji, 7=system
     content    TEXT,                              -- 文本内容或资源链接
     seq        BIGINT       NOT NULL,             -- 群同步版本号
@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS im_message_group (
 COMMENT ON TABLE  im_message_group             IS '群聊消息表 (HASH分区)';
 COMMENT ON COLUMN im_message_group.id          IS '雪花ID (客户端生成)';
 COMMENT ON COLUMN im_message_group.sender_id   IS '发送者ID';
-COMMENT ON COLUMN im_message_group.group_id    IS '群组ID';
+COMMENT ON COLUMN im_message_group.group_id    IS 'im_group.id (雪花ID 内部主键)';
 COMMENT ON COLUMN im_message_group.msg_type    IS '1=text, 2=image, 3=voice, 4=video, 5=file, 6=emoji, 7=system';
 COMMENT ON COLUMN im_message_group.content     IS '文本内容或资源链接 (文本直接存, 图片/视频/文件存URL)';
 COMMENT ON COLUMN im_message_group.seq         IS '群同步版本号（设计保留，群消息暂未接入；群内排序建议按 created_at）';
@@ -131,11 +131,11 @@ CREATE INDEX idx_group_seq ON im_message_group (seq);
 
 -- 5. 群组成员表
 --    id: 雪花ID，成员关系主键
---    group_id: im_group.group_id (NanoID)，对外标识
+--    group_id: im_group.id (雪花ID，内部主键)
 --    user_id: im_user.id (雪花ID)，内部引用
 CREATE TABLE IF NOT EXISTS im_group_member (
     id            BIGINT       NOT NULL,                -- 雪花ID (服务端生成)
-    group_id      VARCHAR(64)  NOT NULL,                -- im_group.group_id (NanoID)
+    group_id      BIGINT       NOT NULL,                -- im_group.id (雪花ID 内部主键)
     user_id       BIGINT       NOT NULL,                -- im_user.id (雪花ID)
     role          SMALLINT     NOT NULL DEFAULT 0,      -- 0=成员, 1=管理员, 2=群主
     last_read_seq BIGINT       NOT NULL DEFAULT 0,      -- 已读游标
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS im_group_member (
 
 COMMENT ON TABLE  im_group_member              IS '群组成员表';
 COMMENT ON COLUMN im_group_member.id            IS '雪花ID (服务端生成)';
-COMMENT ON COLUMN im_group_member.group_id      IS 'im_group.group_id (NanoID)';
+COMMENT ON COLUMN im_group_member.group_id      IS 'im_group.id (雪花ID 内部主键)';
 COMMENT ON COLUMN im_group_member.user_id       IS 'im_user.id (雪花ID)';
 COMMENT ON COLUMN im_group_member.role          IS '0=成员, 1=管理员, 2=群主';
 COMMENT ON COLUMN im_group_member.last_read_seq IS '已读游标 — 该成员在此群读到的最后一条消息 seq';

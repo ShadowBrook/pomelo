@@ -2,7 +2,7 @@ package com.github.moxib.pomelo.logic.model;
 
 public class GroupMemberRecord {
 
-  private final String groupId;
+  private final long groupId;  // im_group.id（BIGINT 内部主键）
   private final long userId;
   private final String nanoId;
   private final String userName;
@@ -24,7 +24,7 @@ public class GroupMemberRecord {
 
   public static Builder builder() { return new Builder(); }
 
-  public String getGroupId() { return groupId; }
+  public long getGroupId() { return groupId; }
   public long getUserId() { return userId; }
   public String getNanoId() { return nanoId; }
   public String getUserName() { return userName; }
@@ -34,7 +34,7 @@ public class GroupMemberRecord {
   public long getJoinedAt() { return joinedAt; }
 
   public static class Builder {
-    private String groupId;
+    private long groupId;
     private long userId;
     private String nanoId;
     private String userName;
@@ -43,7 +43,7 @@ public class GroupMemberRecord {
     private int role;
     private long joinedAt;
 
-    public Builder groupId(String groupId) { this.groupId = groupId; return this; }
+    public Builder groupId(long groupId) { this.groupId = groupId; return this; }
     public Builder userId(long userId) { this.userId = userId; return this; }
     public Builder nanoId(String nanoId) { this.nanoId = nanoId; return this; }
     public Builder userName(String userName) { this.userName = userName; return this; }

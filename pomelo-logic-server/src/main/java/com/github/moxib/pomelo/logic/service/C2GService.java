@@ -106,7 +106,7 @@ public class C2GService extends ServiceBase {
           }
           long internalGroupId = group.getId();
 
-          return groupRepo.isMember(fGroupId, senderNumericId).compose(isMember -> {
+          return groupRepo.isMember(internalGroupId, senderNumericId).compose(isMember -> {
             if (!isMember) {
               return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
                 ErrorCode.UNAUTHORIZED, "你不是该群成员"));
@@ -142,19 +142,19 @@ public class C2GService extends ServiceBase {
       .compose(seq -> {
         long now = System.currentTimeMillis();
 
-        return groupRepo.saveMessage(snowflakeId, ctx.getGroupId(), senderNumericId,
+        return groupRepo.saveMessage(snowflakeId, internalGroupId, senderNumericId,
             ctx.getMsgType(), ctx.getContent(), seq, now)
           .map(inserted -> {
             if (inserted) {
-              pushToGroupMembers(ctx, seq, snowflakeId, senderNumericId);
+              pushToGroupMembers(ctx, internalGroupId, seq, snowflakeId, senderNumericId);
             }
             return new C2GRespResult(0, "success", snowflakeId, ctx.getGroupId(), seq, now);
           });
       });
   }
 
-  private void pushToGroupMembers(GroupMsgContext ctx, long seq, long snowflakeId, long senderNumericId) {
-    groupRepo.findMembers(ctx.getGroupId()).onSuccess(members -> {
+  private void pushToGroupMembers(GroupMsgContext ctx, long internalGroupId, long seq, long snowflakeId, long senderNumericId) {
+    groupRepo.findMembers(internalGroupId).onSuccess(members -> {
       int pushCount = 0;
       for (GroupMemberRecord member : members) {
         if (member.getUserId() == senderNumericId) {
