@@ -1,24 +1,18 @@
 package com.github.moxib.pomelo.logic.infrastructure;
 
 import com.github.moxib.pomelo.config.ConfigHolder;
+import com.github.moxib.pomelo.config.JwtTokenParser;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
-import io.vertx.ext.auth.JWTOptions;
-import io.vertx.ext.auth.PubSecKeyOptions;
-import io.vertx.ext.auth.authentication.TokenCredentials;
-import io.vertx.ext.auth.jwt.JWTAuth;
-import io.vertx.ext.auth.jwt.JWTAuthOptions;
 import io.vertx.redis.client.Command;
 import io.vertx.redis.client.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
-
 /**
- * JWT Token 服务（基于 Vert.x vertx-auth-jwt）。
+ * JWT Token 服务 — 复用 {@link JwtTokenParser} 做验签/解析/签发，本类只负责黑名单（Redis）。
  * - 签发：HTTP 登录成功后生成 token
  * - 验证：WebSocket/TCP AUTH_REQ 时校验 token，提取 userId
  * - 撤销：登出时将 jti 加入 Redis 黑名单
@@ -29,21 +23,14 @@ public class TokenService {
 
   private static volatile TokenService instance;
 
-  private final JWTAuth jwtAuth;
+  private final JwtTokenParser parser;
   private final Vertx vertx;
-  private final int tokenTtlSeconds;
   private final String blacklistPrefix;
 
   private TokenService(Vertx vertx) {
     this.vertx = vertx;
-    this.tokenTtlSeconds = ConfigHolder.getInt("jwt.ttlSeconds", 86400);
+    this.parser = new JwtTokenParser(vertx);
     this.blacklistPrefix = ConfigHolder.getString("jwt.blacklistPrefix", "jwt:blacklist:");
-    String secret = ConfigHolder.getString("jwt.secret", "pomelo-dev-secret-change-in-production");
-    PubSecKeyOptions keyOptions = new PubSecKeyOptions()
-      .setAlgorithm("HS256")
-      .setBuffer(secret);
-    JWTAuthOptions config = new JWTAuthOptions().addPubSecKey(keyOptions);
-    this.jwtAuth = JWTAuth.create(vertx, config);
   }
 
   /** 获取单例 */
@@ -60,61 +47,27 @@ public class TokenService {
 
   /** 签发 token（仅 userId，用于注册场景） */
   public String generate(String userId) {
-    return generate(userId, 0, null, null);
+    return parser.generate(userId, 0, null, null, null);
   }
 
   /** 签发 token（含身份信息，用于登录场景，避免 LoginHandler 二次查 DB） */
-  public String generate(String userId, long id, String userName, String nickname) {
-    JsonObject claims = new JsonObject()
-      .put("sub", userId)
-      .put("jti", UUID.randomUUID().toString().replace("-", ""));
-    if (id != 0) claims.put("id", id);
-    if (userName != null) claims.put("userName", userName);
-    if (nickname != null) claims.put("nickname", nickname);
-    JWTOptions options = new JWTOptions()
-      .setAlgorithm("HS256")
-      .setExpiresInSeconds(tokenTtlSeconds);
-    return jwtAuth.generateToken(claims, options);
+  public String generate(String userId, long id, String userName, String nickname, String platform) {
+    return parser.generate(userId, id, userName, nickname, platform);
   }
 
   /** 验证并解析 token，成功返回完整 claims（JsonObject） */
   public Future<JsonObject> validate(String token) {
-    Promise<JsonObject> promise = Promise.promise();
-    jwtAuth.authenticate(new TokenCredentials(token))
-      .onSuccess(user -> {
-        LOG.debug("Token 验证成功: sub={}", user.principal().getString("sub"));
-        promise.complete(user.principal());
-      })
-      .onFailure(e -> {
-        LOG.debug("Token 验证失败: {}", e.getMessage());
-        promise.complete(null);
-      });
-    return promise.future();
+    return parser.validate(token);
   }
 
   /** 解析 token 中的 jti（用于黑名单，同步解析 payload） */
   public String getJti(String token) {
-    try {
-      String[] parts = token.split("\\.");
-      if (parts.length < 2) return null;
-      String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
-      JsonObject json = new JsonObject(payload);
-      return json.getString("jti");
-    } catch (Exception e) {
-      return null;
-    }
+    return parser.getJti(token);
   }
 
   /** 解析 token 中的 exp（秒级 Unix 时间戳） */
   public long getExpiration(String token) {
-    try {
-      String[] parts = token.split("\\.");
-      if (parts.length < 2) return 0;
-      String payload = new String(java.util.Base64.getUrlDecoder().decode(parts[1]));
-      return new JsonObject(payload).getLong("exp", 0L);
-    } catch (Exception e) {
-      return 0;
-    }
+    return parser.getExpiration(token);
   }
 
   /** 将 token 加入 Redis 黑名单 */

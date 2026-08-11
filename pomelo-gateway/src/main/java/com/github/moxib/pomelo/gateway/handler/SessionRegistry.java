@@ -4,6 +4,7 @@ import io.vertx.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -11,6 +12,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * 用户会话注册表。
  * 以 userId (NanoID) 为主键，id (BIGINT) 作为辅助字段存储在 Session 中。
+ * 用户资料（id/userName/nickname）在登录时由 logic 通过 EventBus reply headers 提供。
  */
 public class SessionRegistry {
 
@@ -114,6 +116,11 @@ public class SessionRegistry {
   /** 在线用户数 */
   public int size() {
     return sessions.size();
+  }
+
+  /** 本节点所有在线 userId（供节点下线清理 session 路由使用） */
+  public Set<String> getOnlineUserIds() {
+    return sessions.keySet();
   }
 
   // ---- 心跳超时 ----

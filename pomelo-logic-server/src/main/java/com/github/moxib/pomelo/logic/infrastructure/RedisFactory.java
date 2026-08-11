@@ -12,7 +12,6 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Redis 连接工厂（单例）。
- * 单一职责：仅管理 Redis 连接生命周期。在线状态操作请使用 {@link RedisOnlineStatus}。
  */
 public final class RedisFactory {
 

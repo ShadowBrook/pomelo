@@ -41,7 +41,10 @@ public class WsGatewayVerticle extends VerticleBase {
 
   @Override
   public Future<?> stop() throws Exception {
-    return wsServer != null ? wsServer.close() : Future.succeededFuture();
+    return Future.all(
+      wsServer != null ? wsServer.close() : Future.succeededFuture(),
+      dispatcher != null ? dispatcher.stop() : Future.succeededFuture()
+    );
   }
 
   private Handler<ServerWebSocket> getServerHandler() {

@@ -26,6 +26,11 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-web</artifactId>
     </dependency>
+    <!-- AUTH_REQ token 验签解析（gateway 从 JWT 提取 userId/id/userName/nickname 注册 session） -->
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-auth-jwt</artifactId>
+    </dependency>
     <dependency>
       <groupId>io.github.shadowbrook</groupId>
       <artifactId>vertx-redis-clustermanager</artifactId>

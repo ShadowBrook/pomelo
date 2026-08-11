@@ -3,7 +3,6 @@ package com.github.moxib.pomelo.logic.service;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
-import com.github.moxib.pomelo.logic.infrastructure.RedisOnlineStatus;
 import com.github.moxib.pomelo.logic.infrastructure.TokenService;
 import com.github.moxib.pomelo.logic.model.requests.LoginRequest;
 import com.github.moxib.pomelo.proto.auth.AuthProto;
@@ -12,6 +11,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Map;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
@@ -62,7 +63,6 @@ public class AuthService extends ServiceBase {
         byte codecId = message.getCodecId();
 
         LOG.info("登录成功: userId={} userName={} codec={}", userId, userName, codecId == 0 ? "PB" : "JSON");
-        RedisOnlineStatus.get(vertx).setOnline(userId);
 
         Object respBody;
         if (codecId == ProtobufCodec.CODEC_ID) {
@@ -75,16 +75,9 @@ public class AuthService extends ServiceBase {
             .put("nickname", nickname != null ? nickname : "");
         }
 
-        ImMessage response = buildResponse(message, CMD_AUTH_RESP_VALUE, respBody);
-        // 将用户身份信息放入 varHeaders，Gateway 在 dispatch 回调中提取并注册到 SessionRegistry
-        response.getVarHeaders().put("loginUserId", userId);
-        response.getVarHeaders().put("loginId", String.valueOf(id));
-        response.getVarHeaders().put("loginUserName", userName != null ? userName : "");
-        response.getVarHeaders().put("loginNickname", nickname != null ? nickname : "");
-        response.getVarHeaders().put("loginCodecId", String.valueOf(codecId));
-        response.getVarHeaders().put("loginToken", token);
-        response.getVarHeaders().put("loginPlatform", req.platform() != null ? req.platform() : "");
-        return Future.succeededFuture(response);
+        // 用户身份信息由 gateway 从 AUTH_REQ 请求的 token 自行解析（JWT claims），
+        // 此处不再通过 varHeaders 回传
+        return Future.succeededFuture(buildResponse(message, CMD_AUTH_RESP_VALUE, respBody));
       });
     });
   }
@@ -95,13 +88,9 @@ public class AuthService extends ServiceBase {
     LOG.info("登出请求: userId={}", userId);
 
     byte codecId = message.getCodecId();
-    if (userId != null && !userId.isEmpty()) {
-      RedisOnlineStatus.get(vertx).setOffline(userId);
-    }
-
     // Token 黑名单：token 从 varHeaders 传入
     String token = null;
-    java.util.Map<String, String> headers = message.getVarHeaders();
+    Map<String, String> headers = message.getVarHeaders();
     if (headers != null) token = headers.get("token");
     if (token != null && !token.isEmpty() && !"test-token".equals(token)) {
       TokenService.get(vertx).blacklist(token);
@@ -111,9 +100,6 @@ public class AuthService extends ServiceBase {
       ? AuthProto.LogoutResp.newBuilder().setCode(0).setMessage("登出成功").build()
       : new JsonObject().put("code", 0).put("message", "登出成功");
 
-    ImMessage response = buildResponse(message, CMD_LOGOUT_RESP_VALUE, respBody);
-    response.getVarHeaders().put("status", "success");
-    response.getVarHeaders().put("logoutUserId", userId != null ? userId : "");
-    return Future.succeededFuture(response);
+    return Future.succeededFuture(buildResponse(message, CMD_LOGOUT_RESP_VALUE, respBody));
   }
 }

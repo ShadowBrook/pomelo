@@ -47,6 +47,11 @@
       <groupId>io.vertx</groupId>
       <artifactId>vertx-config-yaml</artifactId>
     </dependency>
+    <!-- JWT 验签/解析（gateway 与 logic 共用，见 JwtTokenParser） -->
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-auth-jwt</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.junit.jupiter</groupId>

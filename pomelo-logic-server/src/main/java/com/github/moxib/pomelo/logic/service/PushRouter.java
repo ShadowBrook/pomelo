@@ -3,6 +3,7 @@ package com.github.moxib.pomelo.logic.service;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.model.PushCodec;
 import com.github.moxib.pomelo.model.PushEnvelope;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,21 +26,29 @@ public class PushRouter {
   }
 
   /**
-   * 推送消息。优先精确路由，失败则广播兜底。
+   * 推送消息。优先精确路由到存活节点，节点已死/查不到时广播兜底。
    */
   public void push(PushEnvelope env) {
     String targetUserId = env.getTargetUserId();
     routeTable.resolve(targetUserId)
-      .onSuccess(nodeId -> {
+      .compose(nodeId -> {
+        // 路由指向的节点已死（gateway 崩溃）时不发精确路由，降级广播
         if (nodeId != null && !nodeId.isEmpty()) {
-          // 精确路由到目标 Gateway 节点
+          return routeTable.isNodeAlive(nodeId).map(alive -> alive ? nodeId : null);
+        }
+        return Future.succeededFuture(null);
+      })
+      .onSuccess(nodeId -> {
+        if (nodeId != null) {
+          // 精确路由到存活的 Gateway 节点
           String addr = "gateway.push." + nodeId;
           vertx.eventBus().send(addr, PushCodec.encode(env));
           LOG.debug("Push sent directly: target={} node={} cmd={}", targetUserId, nodeId, env.getCmd());
         } else {
-          // 查不到路由，广播兜底
+          // 路由指向死节点：惰性清理残留路由，再广播兜底
+          routeTable.unregister(targetUserId);
           vertx.eventBus().publish("gateway.push", PushCodec.encode(env));
-          LOG.debug("Push broadcast (fallback): target={} cmd={}", targetUserId, env.getCmd());
+          LOG.debug("Push broadcast (dead node): target={} cmd={}", targetUserId, env.getCmd());
         }
       })
       .onFailure(e -> {
