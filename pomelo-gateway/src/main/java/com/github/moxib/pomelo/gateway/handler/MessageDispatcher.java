@@ -1,17 +1,23 @@
 package com.github.moxib.pomelo.gateway.handler;
 
+import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.config.ConfigHolder;
+import com.github.moxib.pomelo.config.JwtTokenParser;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.model.PushCodec;
 import com.github.moxib.pomelo.model.PushEnvelope;
+import com.github.moxib.pomelo.proto.auth.AuthProto;
 import com.github.moxib.pomelo.proto.common.CommonProto;
+import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
@@ -26,19 +32,70 @@ public class MessageDispatcher {
   private final Vertx vertx;
   private final SessionRegistry sessionRegistry;
   private final SessionRouteTable routeTable;
+  private final JwtTokenParser jwtParser;
   private final long heartbeatTimeoutMs;
+  private final long nodeTtlMs;
+  private long heartbeatTimerId = -1;
 
   public MessageDispatcher(Vertx vertx, SessionRegistry sessionRegistry, long heartbeatTimeoutMs) {
     this.vertx = vertx;
     this.sessionRegistry = sessionRegistry;
     this.routeTable = new SessionRouteTable(vertx);
     this.heartbeatTimeoutMs = heartbeatTimeoutMs;
+    this.nodeTtlMs = ConfigHolder.getLong("gateway.cluster.nodeTtlMs", 60000L);
+    // AUTH_REQ token 验签解析（与 logic TokenService 复用同一 JwtTokenParser）
+    this.jwtParser = new JwtTokenParser(vertx);
     String nodeId = routeTable.getNodeId();
     // 精确路由订阅（logic-server 通过 send 直接投递）
     vertx.eventBus().consumer("gateway.push." + nodeId, msg -> deliverPush(msg.body()));
     // 兜底广播订阅（logic-server 查不到路由时 fallback）
     vertx.eventBus().consumer("gateway.push", msg -> deliverPush(msg.body()));
     LOG.info("Push consumers registered: gateway.push.{} + gateway.push (fallback)", nodeId);
+    // 注册节点存活心跳 + 定期续期在线用户 session 路由
+    startNodeHeartbeat();
+  }
+
+  /**
+   * 注册本节点存活标记，并启动节点心跳定时器。
+   * 每 nodeTtl/2 续期一次节点存活标记；节点崩溃后标记在 TTL 内自动过期。
+   * 用户 session 路由不在此续期——用户在线由客户端心跳驱动，见 {@link #touchHeartbeat}。
+   */
+  private void startNodeHeartbeat() {
+    if (!vertx.isClustered()) {
+      return;
+    }
+    routeTable.registerNode(nodeTtlMs)
+      .onSuccess(v -> {
+        heartbeatTimerId = vertx.setPeriodic(nodeTtlMs / 2, id -> routeTable.renewNode(nodeTtlMs));
+        LOG.info("节点心跳已启动: nodeId={} ttl={}ms interval={}ms", routeTable.getNodeId(), nodeTtlMs, nodeTtlMs / 2);
+      })
+      .onFailure(e -> LOG.warn("节点心跳注册失败，精确路由将不可靠: {}", e.getMessage()));
+  }
+
+  /**
+   * 节点下线：取消心跳，清理本节点注册的 session 路由和存活标记。
+   * 用户连接随节点关闭断开，重连到其他节点后由新节点重新注册。
+   */
+  public Future<Void> stop() {
+    if (heartbeatTimerId >= 0) {
+      vertx.cancelTimer(heartbeatTimerId);
+      heartbeatTimerId = -1;
+    }
+    for (String userId : sessionRegistry.getOnlineUserIds()) {
+      routeTable.unregister(userId);
+    }
+    return routeTable.unregisterNode();
+  }
+
+  /** 构造 PONG 响应（心跳由 gateway 本地应答） */
+  private ImMessage buildPong(ImMessage request) {
+    return ImMessage.builder()
+      .magic(ImMessage.MAGIC_NUMBER)
+      .version(ImMessage.WIRE_PROTOCOL_VERSION)
+      .codecId(request.getCodecId())
+      .cmd(CMD_PONG_VALUE)
+      .messageId(request.getMessageId())
+      .build();
   }
 
   /** 解析 push 并投递给本地连接的用户 */
@@ -77,6 +134,12 @@ public class MessageDispatcher {
     // 任何客户端消息都证明用户在线，重置心跳定时器
     touchHeartbeat(message);
 
+    // 心跳由 gateway 本地应答
+    if (message.getCmd() == CMD_PING_VALUE) {
+      connection.write(buildPong(message).encodeToWire());
+      return;
+    }
+
     String address = cmdToAddress(message.getCmd());
     if (address == null) {
       handleUnknownCmd(connection, message);
@@ -89,9 +152,7 @@ public class MessageDispatcher {
         Buffer respBuf = replyMsg.body();
         ImMessage response = new ImMessage();
         response.readFromWire(respBuf.getBuffer(4, respBuf.length()));
-        if (isSessionCmd(response.getCmd())) {
-          handleSessionUpdates(connection, response);
-        }
+        handleSessionUpdates(connection, message, response);
         connection.write(respBuf);
       })
       .onFailure(cause -> {
@@ -101,7 +162,8 @@ public class MessageDispatcher {
   }
 
   /**
-   * 任何客户端消息都证明用户在线，重置心跳超时定时器。
+   * 任何客户端消息（含 PING）都证明用户在线，重置连接心跳超时定时器。
+   * 仅本地 Vert.x timer，无 Redis 写——session 路由无需续期（节点存活由节点心跳管理）。
    */
   private void touchHeartbeat(ImMessage message) {
     Map<String, String> headers = message.getVarHeaders();
@@ -113,37 +175,102 @@ public class MessageDispatcher {
   }
 
   /**
-   * 只有 auth/logout 响应才需要处理 session 变更。
+   * 处理 auth/logout 响应对应的 session 变更。
+   * 登录成功时从 AUTH_REQ 请求的 token 验签解析用户资料（JWT claims 含 userId/id/userName/nickname），
+   * 无需 logic 回传任何字段。
    */
-  private static boolean isSessionCmd(int cmd) {
-    return cmd == CMD_AUTH_RESP_VALUE || cmd == CMD_LOGOUT_RESP_VALUE;
+  private void handleSessionUpdates(Connection connection, ImMessage request, ImMessage response) {
+    if (response.getCmd() == CMD_AUTH_RESP_VALUE) {
+      if (isAuthSuccess(response)) {
+        registerSessionFromToken(connection, request);
+      }
+      return;
+    }
+    if (response.getCmd() == CMD_LOGOUT_RESP_VALUE) {
+      String userId = getUserIdFromRequest(request);
+      if (userId != null && !userId.isEmpty()) {
+        sessionRegistry.unregisterByUserId(vertx, userId);
+        routeTable.unregister(userId);
+        LOG.info("Session 已注销: userId={}", userId);
+      }
+    }
   }
 
-  private void handleSessionUpdates(Connection connection, ImMessage response) {
-    Map<String, String> headers = response.getVarHeaders();
-    if (headers == null) return;
-
-    String loginUserId = headers.get("loginUserId");
-    if (loginUserId != null && !loginUserId.isEmpty()) {
-      long id = Long.parseLong(headers.getOrDefault("loginId", "0"));
-      String userName = headers.getOrDefault("loginUserName", "");
-      String nickname = headers.getOrDefault("loginNickname", "");
-      byte codecId = Byte.parseByte(headers.getOrDefault("loginCodecId", "0"));
-      String token = headers.getOrDefault("loginToken", "");
-      String platform = headers.getOrDefault("loginPlatform", "");
-      sessionRegistry.register(loginUserId, id, connection, codecId, userName, nickname, token);
-      routeTable.register(loginUserId);
-      routeTable.setCodec(loginUserId, platform, codecId);
-      sessionRegistry.startHeartbeatTimer(vertx, loginUserId, heartbeatTimeoutMs);
-      LOG.info("Session 已注册: userId={} id={}", loginUserId, id);
+  /** AUTH_REQ 的 token 验签 + 注册 session */
+  private void registerSessionFromToken(Connection connection, ImMessage request) {
+    String token = extractToken(request);
+    if (token == null || token.isEmpty()) {
+      return;
     }
+    jwtParser.validate(token)
+      .onSuccess(claims -> {
+        if (claims == null) {
+          LOG.warn("Token 无效，无法注册 session");
+          return;
+        }
+        String userId = claims.getString("sub");
+        if (userId == null || userId.isEmpty()) {
+          return;
+        }
+        long id = claims.getLong("id", 0L);
+        String userName = claims.getString("userName", "");
+        String nickname = claims.getString("nickname", "");
+        String platform = claims.getString("platform", "");
+        byte codecId = request.getCodecId();
+        sessionRegistry.register(userId, id, connection, codecId, userName, nickname, null);
+        routeTable.register(userId);
+        routeTable.setCodec(userId, platform, codecId);
+        sessionRegistry.startHeartbeatTimer(vertx, userId, heartbeatTimeoutMs);
+        LOG.info("Session 已注册: userId={} id={}", userId, id);
+      })
+      .onFailure(e -> LOG.warn("Token 解析失败，无法注册 session: {}", e.getMessage()));
+  }
 
-    String logoutUserId = headers.get("logoutUserId");
-    if (logoutUserId != null && !logoutUserId.isEmpty()) {
-      sessionRegistry.unregisterByUserId(vertx, logoutUserId);
-      routeTable.unregister(logoutUserId);
-      LOG.info("Session 已注销: userId={}", logoutUserId);
+  /** 判断 AUTH_RESP 是否成功（code == 0） */
+  private boolean isAuthSuccess(ImMessage response) {
+    byte[] body = response.getBody();
+    if (body == null || body.length == 0) {
+      return false;
     }
+    try {
+      if (response.getCodecId() == ProtobufCodec.CODEC_ID) {
+        return ((AuthProto.AuthResp) ProtobufCodec.getCodec(CMD_AUTH_RESP_VALUE).decode(body)).getCode() == 0;
+      }
+      return new JsonObject(new String(body, StandardCharsets.UTF_8)).getInteger("code", -1) == 0;
+    } catch (Exception e) {
+      LOG.warn("AUTH_RESP 解析失败: {}", e.getMessage());
+      return false;
+    }
+  }
+
+  /** 从 AUTH_REQ 请求提取 token（PB/JSON 双 codec） */
+  private String extractToken(ImMessage request) {
+    byte[] body = request.getBody();
+    if (body == null || body.length == 0) {
+      return null;
+    }
+    try {
+      if (request.getCodecId() == ProtobufCodec.CODEC_ID) {
+        return ((AuthProto.AuthReq) ProtobufCodec.getCodec(CMD_AUTH_REQ_VALUE).decode(body)).getToken();
+      }
+      return new JsonObject(new String(body, StandardCharsets.UTF_8)).getString("token");
+    } catch (Exception e) {
+      LOG.warn("AUTH_REQ token 提取失败: {}", e.getMessage());
+      return null;
+    }
+  }
+
+  /** 从请求 varHeaders 或 body 取 userId（LOGOUT_REQ 用） */
+  private String getUserIdFromRequest(ImMessage request) {
+    Map<String, String> headers = request.getVarHeaders();
+    if (headers != null && headers.get("userId") != null && !headers.get("userId").isEmpty()) {
+      return headers.get("userId");
+    }
+    byte[] body = request.getBody();
+    if (body != null && body.length > 0) {
+      return new String(body, StandardCharsets.UTF_8).trim();
+    }
+    return null;
   }
 
   private void enrichWithSenderInfo(ImMessage message) {
@@ -173,7 +300,6 @@ public class MessageDispatcher {
     if (cmd == CMD_CTRL_REQ_VALUE)         return "logic.ctrl";
     if (cmd == CMD_ACK_REQ_VALUE)          return "logic.ack";
     if (cmd == CMD_PULL_REQ_VALUE)         return "logic.pull";
-    if (cmd == CMD_PING_VALUE)             return "logic.ping";
     if (cmd == CMD_FRIEND_SEARCH_REQ_VALUE) return "logic.friend";
     if (cmd == CMD_FRIEND_ADD_REQ_VALUE)    return "logic.friend";
     if (cmd == CMD_FRIEND_ACCEPT_REQ_VALUE) return "logic.friend";

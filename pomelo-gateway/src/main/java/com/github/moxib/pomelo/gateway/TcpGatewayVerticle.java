@@ -48,7 +48,10 @@ public class TcpGatewayVerticle extends VerticleBase {
   @Override
   public Future<?> stop() {
     LOG.info("停止 TCP Gateway");
-    return tcpServer != null ? tcpServer.close() : Future.succeededFuture();
+    return Future.all(
+      tcpServer != null ? tcpServer.close() : Future.succeededFuture(),
+      dispatcher != null ? dispatcher.stop() : Future.succeededFuture()
+    );
   }
 
   private Handler<NetSocket> getTcpHandler() {

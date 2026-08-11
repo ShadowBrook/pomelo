@@ -2,9 +2,9 @@ package com.github.moxib.pomelo.logic;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.github.moxib.pomelo.config.ConfigHolder;
+import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
-import com.github.moxib.pomelo.logic.infrastructure.RedisOnlineStatus;
 import com.github.moxib.pomelo.logic.infrastructure.TokenService;
 import com.github.moxib.pomelo.logic.id.NanoIdGenerator;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
@@ -66,6 +66,7 @@ public class ApiVerticle extends VerticleBase {
 
   private HttpServer server;
   private Pool pgPool;
+  private SessionRouteTable routeTable;
 
   @Override
   public Future<?> start() {
@@ -74,6 +75,8 @@ public class ApiVerticle extends VerticleBase {
     this.snowflake = new SnowflakeIdGenerator(
       ConfigHolder.getInt("snowflake.workerId", 1));
     pgPool = PgPoolFactory.get(vertx);
+    // 在线状态统一从 session 路由派生（gateway 维护），路由表供 HTTP 查询在线
+    routeTable = new SessionRouteTable(vertx);
 
     return RedisFactory.get(vertx).connect()
       .compose(v -> {
@@ -148,8 +151,9 @@ public class ApiVerticle extends VerticleBase {
           return;
         }
         String userId = r.getString("user_id");
+        String platform = body.getString("platform", "");
         String token = TokenService.get(vertx).generate(userId, r.getLong("id"),
-          r.getString("user_name"), r.getString("nickname"));
+          r.getString("user_name"), r.getString("nickname"), platform);
         ok(ctx, 200, new JsonObject()
           .put("userId", userId)
           .put("userName", r.getString("user_name"))
@@ -213,7 +217,7 @@ public class ApiVerticle extends VerticleBase {
       return Future.succeededFuture(new JsonArray());
     }
 
-    return RedisOnlineStatus.get(vertx).batchIsOnline(userIds)
+    return batchIsOnline(userIds)
       .map(onlineFlags -> {
         JsonArray arr = new JsonArray();
         for (int i = 0; i < rowList.size(); i++) {
@@ -229,6 +233,38 @@ public class ApiVerticle extends VerticleBase {
         }
         return arr;
       });
+  }
+
+  /**
+   * 批量查询在线状态。在线 = 有 session 路由 且 指向的节点存活，
+   * 与推送路由(PushRouter)判断一致，崩溃残留路由不会误报在线。
+   */
+  private Future<List<Boolean>> batchIsOnline(List<String> userIds) {
+    if (userIds == null || userIds.isEmpty()) {
+      return Future.succeededFuture(List.of());
+    }
+    List<Future<Boolean>> futures = new ArrayList<>(userIds.size());
+    for (String uid : userIds) {
+      futures.add(isOnline(uid));
+    }
+    return Future.all(futures).map(cf -> {
+      List<Boolean> result = new ArrayList<>(futures.size());
+      for (int i = 0; i < futures.size(); i++) {
+        result.add(cf.<Boolean>resultAt(i));
+      }
+      return result;
+    });
+  }
+
+  private Future<Boolean> isOnline(String userId) {
+    return routeTable.resolve(userId)
+      .compose(nodeId -> {
+        if (nodeId == null || nodeId.isEmpty()) {
+          return Future.succeededFuture(false);
+        }
+        return routeTable.isNodeAlive(nodeId);
+      })
+      .recover(e -> Future.succeededFuture(false));
   }
 
   private void ok(RoutingContext ctx, int status, JsonObject data) {

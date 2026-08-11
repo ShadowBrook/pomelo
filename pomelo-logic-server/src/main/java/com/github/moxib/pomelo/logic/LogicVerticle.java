@@ -31,7 +31,6 @@ public class LogicVerticle extends VerticleBase {
   private AckService ackService;
   private AuthService authService;
   private PullService pullService;
-  private HeartbeatService heartbeatService;
   private CtrlService ctrlService;
   private C2GService c2gService;
   private FriendService friendService;
@@ -55,7 +54,6 @@ public class LogicVerticle extends VerticleBase {
         ackService = new AckService(pushRouter, messageRepo, routeTable);
         authService = new AuthService(vertx);
         pullService = new PullService(messageRepo);
-        heartbeatService = new HeartbeatService();
         ctrlService = new CtrlService();
         var groupRepo = new PgGroupRepository(vertx);
         c2gService = new C2GService(pushRouter, groupRepo, messageRepo, seqClient, snowflake, routeTable);
@@ -69,7 +67,6 @@ public class LogicVerticle extends VerticleBase {
         bus.consumer("logic.ack",     (Message<Buffer> msg) -> dispatch(msg, ackService::process));
         bus.consumer("logic.auth",    (Message<Buffer> msg) -> dispatch(msg, authService::process));
         bus.consumer("logic.pull",    (Message<Buffer> msg) -> dispatch(msg, pullService::process));
-        bus.consumer("logic.ping",    (Message<Buffer> msg) -> dispatch(msg, heartbeatService::process));
         bus.consumer("logic.ctrl",    (Message<Buffer> msg) -> dispatch(msg, ctrlService::process));
         bus.consumer("logic.c2g",     (Message<Buffer> msg) -> dispatch(msg, c2gService::process));
         bus.consumer("logic.group",   (Message<Buffer> msg) -> dispatch(msg, groupService::process));
@@ -84,6 +81,7 @@ public class LogicVerticle extends VerticleBase {
 
   /**
    * 通用分发：Buffer → ImMessage → Service → Buffer reply。
+   * 用户身份由 gateway 从 AUTH_REQ token 自行解析，logic 响应不再携带内部字段。
    */
   private void dispatch(Message<Buffer> msg, Function<ImMessage, Future<ImMessage>> processor) {
     try {
