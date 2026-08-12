@@ -26,7 +26,7 @@ message PullResp {
 // 群消息拉取（请求字段与 PullReq 不同，响应复用 PullResp）
 // ============================================================================
 message PullGroupMsgReq {
-    string group_id   = 1;  // 群 ID
+    int64 group_id    = 1;  // 群 ID (Snowflake)
     int64 cursor      = 2;  // 游标（seq 或时间戳，取决于 is_backward）
     int32 limit       = 3;  // 拉取数量限制
     bool is_backward  = 4;  // true=拉更早的历史，false=拉增量

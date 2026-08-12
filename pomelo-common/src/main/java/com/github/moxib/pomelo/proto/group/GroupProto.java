@@ -21,43 +21,23 @@ public final class GroupProto {
 
     /**
      * <pre>
-     * 发送者用户 ID
+     * 发送者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string sender_id = 1;</code>
+     * <code>int64 sender_id = 1;</code>
      * @return The senderId.
      */
-    java.lang.String getSenderId();
-    /**
-     * <pre>
-     * 发送者用户 ID
-     * </pre>
-     *
-     * <code>string sender_id = 1;</code>
-     * @return The bytes for senderId.
-     */
-    com.google.protobuf.ByteString
-        getSenderIdBytes();
+    long getSenderId();
 
     /**
      * <pre>
-     * 接受群 ID
+     * 接受群 ID (Snowflake)
      * </pre>
      *
-     * <code>string group_id = 2;</code>
+     * <code>int64 group_id = 2;</code>
      * @return The groupId.
      */
-    java.lang.String getGroupId();
-    /**
-     * <pre>
-     * 接受群 ID
-     * </pre>
-     *
-     * <code>string group_id = 2;</code>
-     * @return The bytes for groupId.
-     */
-    com.google.protobuf.ByteString
-        getGroupIdBytes();
+    long getGroupId();
 
     /**
      * <pre>
@@ -115,8 +95,6 @@ public final class GroupProto {
       super(builder);
     }
     private C2GReq() {
-      senderId_ = "";
-      groupId_ = "";
     }
 
     @java.lang.Override
@@ -141,97 +119,33 @@ public final class GroupProto {
 
     private int bitField0_;
     public static final int SENDER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object senderId_ = "";
+    private long senderId_ = 0L;
     /**
      * <pre>
-     * 发送者用户 ID
+     * 发送者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string sender_id = 1;</code>
+     * <code>int64 sender_id = 1;</code>
      * @return The senderId.
      */
     @java.lang.Override
-    public java.lang.String getSenderId() {
-      java.lang.Object ref = senderId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        senderId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 发送者用户 ID
-     * </pre>
-     *
-     * <code>string sender_id = 1;</code>
-     * @return The bytes for senderId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getSenderIdBytes() {
-      java.lang.Object ref = senderId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        senderId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getSenderId() {
+      return senderId_;
     }
 
     public static final int GROUP_ID_FIELD_NUMBER = 2;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object groupId_ = "";
+    private long groupId_ = 0L;
     /**
      * <pre>
-     * 接受群 ID
+     * 接受群 ID (Snowflake)
      * </pre>
      *
-     * <code>string group_id = 2;</code>
+     * <code>int64 group_id = 2;</code>
      * @return The groupId.
      */
     @java.lang.Override
-    public java.lang.String getGroupId() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        groupId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 接受群 ID
-     * </pre>
-     *
-     * <code>string group_id = 2;</code>
-     * @return The bytes for groupId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getGroupIdBytes() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        groupId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getGroupId() {
+      return groupId_;
     }
 
     public static final int MESSAGE_ID_FIELD_NUMBER = 3;
@@ -301,11 +215,11 @@ public final class GroupProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(senderId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, senderId_);
+      if (senderId_ != 0L) {
+        output.writeInt64(1, senderId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, groupId_);
+      if (groupId_ != 0L) {
+        output.writeInt64(2, groupId_);
       }
       if (messageId_ != 0L) {
         output.writeInt64(3, messageId_);
@@ -322,11 +236,13 @@ public final class GroupProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(senderId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, senderId_);
+      if (senderId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, senderId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, groupId_);
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, groupId_);
       }
       if (messageId_ != 0L) {
         size += com.google.protobuf.CodedOutputStream
@@ -351,10 +267,10 @@ public final class GroupProto {
       }
       com.github.moxib.pomelo.proto.group.GroupProto.C2GReq other = (com.github.moxib.pomelo.proto.group.GroupProto.C2GReq) obj;
 
-      if (!getSenderId()
-          .equals(other.getSenderId())) return false;
-      if (!getGroupId()
-          .equals(other.getGroupId())) return false;
+      if (getSenderId()
+          != other.getSenderId()) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
       if (getMessageId()
           != other.getMessageId()) return false;
       if (hasMessage() != other.hasMessage()) return false;
@@ -374,9 +290,11 @@ public final class GroupProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + SENDER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getSenderId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getSenderId());
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       hash = (37 * hash) + MESSAGE_ID_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getMessageId());
@@ -527,8 +445,8 @@ public final class GroupProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        senderId_ = "";
-        groupId_ = "";
+        senderId_ = 0L;
+        groupId_ = 0L;
         messageId_ = 0L;
         message_ = null;
         if (messageBuilder_ != null) {
@@ -631,15 +549,11 @@ public final class GroupProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupProto.C2GReq other) {
         if (other == com.github.moxib.pomelo.proto.group.GroupProto.C2GReq.getDefaultInstance()) return this;
-        if (!other.getSenderId().isEmpty()) {
-          senderId_ = other.senderId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getSenderId() != 0L) {
+          setSenderId(other.getSenderId());
         }
-        if (!other.getGroupId().isEmpty()) {
-          groupId_ = other.groupId_;
-          bitField0_ |= 0x00000002;
-          onChanged();
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
         }
         if (other.getMessageId() != 0L) {
           setMessageId(other.getMessageId());
@@ -673,16 +587,16 @@ public final class GroupProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                senderId_ = input.readStringRequireUtf8();
+              case 8: {
+                senderId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
-              case 18: {
-                groupId_ = input.readStringRequireUtf8();
+              } // case 8
+              case 16: {
+                groupId_ = input.readInt64();
                 bitField0_ |= 0x00000002;
                 break;
-              } // case 18
+              } // case 16
               case 24: {
                 messageId_ = input.readInt64();
                 bitField0_ |= 0x00000004;
@@ -712,60 +626,30 @@ public final class GroupProto {
       }
       private int bitField0_;
 
-      private java.lang.Object senderId_ = "";
+      private long senderId_ ;
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @return The senderId.
        */
-      public java.lang.String getSenderId() {
-        java.lang.Object ref = senderId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          senderId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getSenderId() {
+        return senderId_;
       }
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
-       * @return The bytes for senderId.
-       */
-      public com.google.protobuf.ByteString
-          getSenderIdBytes() {
-        java.lang.Object ref = senderId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          senderId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 发送者用户 ID
-       * </pre>
-       *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @param value The senderId to set.
        * @return This builder for chaining.
        */
-      public Builder setSenderId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setSenderId(long value) {
+
         senderId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
@@ -773,91 +657,43 @@ public final class GroupProto {
       }
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearSenderId() {
-        senderId_ = getDefaultInstance().getSenderId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 发送者用户 ID
-       * </pre>
-       *
-       * <code>string sender_id = 1;</code>
-       * @param value The bytes for senderId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setSenderIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        senderId_ = value;
-        bitField0_ |= 0x00000001;
+        senderId_ = 0L;
         onChanged();
         return this;
       }
 
-      private java.lang.Object groupId_ = "";
+      private long groupId_ ;
       /**
        * <pre>
-       * 接受群 ID
+       * 接受群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 2;</code>
+       * <code>int64 group_id = 2;</code>
        * @return The groupId.
        */
-      public java.lang.String getGroupId() {
-        java.lang.Object ref = groupId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          groupId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
       }
       /**
        * <pre>
-       * 接受群 ID
+       * 接受群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 2;</code>
-       * @return The bytes for groupId.
-       */
-      public com.google.protobuf.ByteString
-          getGroupIdBytes() {
-        java.lang.Object ref = groupId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          groupId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 接受群 ID
-       * </pre>
-       *
-       * <code>string group_id = 2;</code>
+       * <code>int64 group_id = 2;</code>
        * @param value The groupId to set.
        * @return This builder for chaining.
        */
-      public Builder setGroupId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setGroupId(long value) {
+
         groupId_ = value;
         bitField0_ |= 0x00000002;
         onChanged();
@@ -865,33 +701,15 @@ public final class GroupProto {
       }
       /**
        * <pre>
-       * 接受群 ID
+       * 接受群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 2;</code>
+       * <code>int64 group_id = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearGroupId() {
-        groupId_ = getDefaultInstance().getGroupId();
         bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 接受群 ID
-       * </pre>
-       *
-       * <code>string group_id = 2;</code>
-       * @param value The bytes for groupId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setGroupIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        groupId_ = value;
-        bitField0_ |= 0x00000002;
+        groupId_ = 0L;
         onChanged();
         return this;
       }
@@ -1206,23 +1024,13 @@ public final class GroupProto {
 
     /**
      * <pre>
-     * 群 ID
+     * 群 ID (Snowflake)
      * </pre>
      *
-     * <code>string group_id = 4;</code>
+     * <code>int64 group_id = 4;</code>
      * @return The groupId.
      */
-    java.lang.String getGroupId();
-    /**
-     * <pre>
-     * 群 ID
-     * </pre>
-     *
-     * <code>string group_id = 4;</code>
-     * @return The bytes for groupId.
-     */
-    com.google.protobuf.ByteString
-        getGroupIdBytes();
+    long getGroupId();
 
     /**
      * <pre>
@@ -1267,7 +1075,6 @@ public final class GroupProto {
     }
     private C2GResp() {
       message_ = "";
-      groupId_ = "";
     }
 
     @java.lang.Override
@@ -1369,50 +1176,18 @@ public final class GroupProto {
     }
 
     public static final int GROUP_ID_FIELD_NUMBER = 4;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object groupId_ = "";
+    private long groupId_ = 0L;
     /**
      * <pre>
-     * 群 ID
+     * 群 ID (Snowflake)
      * </pre>
      *
-     * <code>string group_id = 4;</code>
+     * <code>int64 group_id = 4;</code>
      * @return The groupId.
      */
     @java.lang.Override
-    public java.lang.String getGroupId() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        groupId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 群 ID
-     * </pre>
-     *
-     * <code>string group_id = 4;</code>
-     * @return The bytes for groupId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getGroupIdBytes() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        groupId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getGroupId() {
+      return groupId_;
     }
 
     public static final int SERVER_TIME_FIELD_NUMBER = 5;
@@ -1480,8 +1255,8 @@ public final class GroupProto {
       if (messageId_ != 0L) {
         output.writeInt64(3, messageId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 4, groupId_);
+      if (groupId_ != 0L) {
+        output.writeInt64(4, groupId_);
       }
       if (serverTime_ != 0L) {
         output.writeInt64(5, serverTime_);
@@ -1509,8 +1284,9 @@ public final class GroupProto {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(3, messageId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, groupId_);
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(4, groupId_);
       }
       if (serverTime_ != 0L) {
         size += com.google.protobuf.CodedOutputStream
@@ -1541,8 +1317,8 @@ public final class GroupProto {
           .equals(other.getMessage())) return false;
       if (getMessageId()
           != other.getMessageId()) return false;
-      if (!getGroupId()
-          .equals(other.getGroupId())) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
       if (getServerTime()
           != other.getServerTime()) return false;
       if (hasSeq() != other.hasSeq()) return false;
@@ -1569,7 +1345,8 @@ public final class GroupProto {
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getMessageId());
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       hash = (37 * hash) + SERVER_TIME_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getServerTime());
@@ -1712,7 +1489,7 @@ public final class GroupProto {
         code_ = 0;
         message_ = "";
         messageId_ = 0L;
-        groupId_ = "";
+        groupId_ = 0L;
         serverTime_ = 0L;
         seq_ = 0L;
         return this;
@@ -1826,10 +1603,8 @@ public final class GroupProto {
         if (other.getMessageId() != 0L) {
           setMessageId(other.getMessageId());
         }
-        if (!other.getGroupId().isEmpty()) {
-          groupId_ = other.groupId_;
-          bitField0_ |= 0x00000008;
-          onChanged();
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
         }
         if (other.getServerTime() != 0L) {
           setServerTime(other.getServerTime());
@@ -1878,11 +1653,11 @@ public final class GroupProto {
                 bitField0_ |= 0x00000004;
                 break;
               } // case 24
-              case 34: {
-                groupId_ = input.readStringRequireUtf8();
+              case 32: {
+                groupId_ = input.readInt64();
                 bitField0_ |= 0x00000008;
                 break;
-              } // case 34
+              } // case 32
               case 40: {
                 serverTime_ = input.readInt64();
                 bitField0_ |= 0x00000010;
@@ -2090,60 +1865,30 @@ public final class GroupProto {
         return this;
       }
 
-      private java.lang.Object groupId_ = "";
+      private long groupId_ ;
       /**
        * <pre>
-       * 群 ID
+       * 群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 4;</code>
+       * <code>int64 group_id = 4;</code>
        * @return The groupId.
        */
-      public java.lang.String getGroupId() {
-        java.lang.Object ref = groupId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          groupId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
       }
       /**
        * <pre>
-       * 群 ID
+       * 群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 4;</code>
-       * @return The bytes for groupId.
-       */
-      public com.google.protobuf.ByteString
-          getGroupIdBytes() {
-        java.lang.Object ref = groupId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          groupId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 群 ID
-       * </pre>
-       *
-       * <code>string group_id = 4;</code>
+       * <code>int64 group_id = 4;</code>
        * @param value The groupId to set.
        * @return This builder for chaining.
        */
-      public Builder setGroupId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setGroupId(long value) {
+
         groupId_ = value;
         bitField0_ |= 0x00000008;
         onChanged();
@@ -2151,33 +1896,15 @@ public final class GroupProto {
       }
       /**
        * <pre>
-       * 群 ID
+       * 群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 4;</code>
+       * <code>int64 group_id = 4;</code>
        * @return This builder for chaining.
        */
       public Builder clearGroupId() {
-        groupId_ = getDefaultInstance().getGroupId();
         bitField0_ = (bitField0_ & ~0x00000008);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 群 ID
-       * </pre>
-       *
-       * <code>string group_id = 4;</code>
-       * @param value The bytes for groupId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setGroupIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        groupId_ = value;
-        bitField0_ |= 0x00000008;
+        groupId_ = 0L;
         onChanged();
         return this;
       }
@@ -2351,43 +2078,23 @@ public final class GroupProto {
 
     /**
      * <pre>
-     * 发送者用户 ID
+     * 发送者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string sender_id = 1;</code>
+     * <code>int64 sender_id = 1;</code>
      * @return The senderId.
      */
-    java.lang.String getSenderId();
-    /**
-     * <pre>
-     * 发送者用户 ID
-     * </pre>
-     *
-     * <code>string sender_id = 1;</code>
-     * @return The bytes for senderId.
-     */
-    com.google.protobuf.ByteString
-        getSenderIdBytes();
+    long getSenderId();
 
     /**
      * <pre>
-     * 接受群 ID
+     * 接受群 ID (Snowflake)
      * </pre>
      *
-     * <code>string group_id = 2;</code>
+     * <code>int64 group_id = 2;</code>
      * @return The groupId.
      */
-    java.lang.String getGroupId();
-    /**
-     * <pre>
-     * 接受群 ID
-     * </pre>
-     *
-     * <code>string group_id = 2;</code>
-     * @return The bytes for groupId.
-     */
-    com.google.protobuf.ByteString
-        getGroupIdBytes();
+    long getGroupId();
 
     /**
      * <pre>
@@ -2448,8 +2155,6 @@ public final class GroupProto {
       super(builder);
     }
     private C2GNotify() {
-      senderId_ = "";
-      groupId_ = "";
     }
 
     @java.lang.Override
@@ -2474,97 +2179,33 @@ public final class GroupProto {
 
     private int bitField0_;
     public static final int SENDER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object senderId_ = "";
+    private long senderId_ = 0L;
     /**
      * <pre>
-     * 发送者用户 ID
+     * 发送者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string sender_id = 1;</code>
+     * <code>int64 sender_id = 1;</code>
      * @return The senderId.
      */
     @java.lang.Override
-    public java.lang.String getSenderId() {
-      java.lang.Object ref = senderId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        senderId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 发送者用户 ID
-     * </pre>
-     *
-     * <code>string sender_id = 1;</code>
-     * @return The bytes for senderId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getSenderIdBytes() {
-      java.lang.Object ref = senderId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        senderId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getSenderId() {
+      return senderId_;
     }
 
     public static final int GROUP_ID_FIELD_NUMBER = 2;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object groupId_ = "";
+    private long groupId_ = 0L;
     /**
      * <pre>
-     * 接受群 ID
+     * 接受群 ID (Snowflake)
      * </pre>
      *
-     * <code>string group_id = 2;</code>
+     * <code>int64 group_id = 2;</code>
      * @return The groupId.
      */
     @java.lang.Override
-    public java.lang.String getGroupId() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        groupId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 接受群 ID
-     * </pre>
-     *
-     * <code>string group_id = 2;</code>
-     * @return The bytes for groupId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getGroupIdBytes() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        groupId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getGroupId() {
+      return groupId_;
     }
 
     public static final int MESSAGE_FIELD_NUMBER = 3;
@@ -2646,11 +2287,11 @@ public final class GroupProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(senderId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, senderId_);
+      if (senderId_ != 0L) {
+        output.writeInt64(1, senderId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, groupId_);
+      if (groupId_ != 0L) {
+        output.writeInt64(2, groupId_);
       }
       if (((bitField0_ & 0x00000001) != 0)) {
         output.writeMessage(3, getMessage());
@@ -2667,11 +2308,13 @@ public final class GroupProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(senderId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, senderId_);
+      if (senderId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, senderId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, groupId_);
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, groupId_);
       }
       if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
@@ -2696,10 +2339,10 @@ public final class GroupProto {
       }
       com.github.moxib.pomelo.proto.group.GroupProto.C2GNotify other = (com.github.moxib.pomelo.proto.group.GroupProto.C2GNotify) obj;
 
-      if (!getSenderId()
-          .equals(other.getSenderId())) return false;
-      if (!getGroupId()
-          .equals(other.getGroupId())) return false;
+      if (getSenderId()
+          != other.getSenderId()) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
       if (hasMessage() != other.hasMessage()) return false;
       if (hasMessage()) {
         if (!getMessage()
@@ -2722,9 +2365,11 @@ public final class GroupProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + SENDER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getSenderId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getSenderId());
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       if (hasMessage()) {
         hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
         hash = (53 * hash) + getMessage().hashCode();
@@ -2871,8 +2516,8 @@ public final class GroupProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        senderId_ = "";
-        groupId_ = "";
+        senderId_ = 0L;
+        groupId_ = 0L;
         message_ = null;
         if (messageBuilder_ != null) {
           messageBuilder_.dispose();
@@ -2976,15 +2621,11 @@ public final class GroupProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupProto.C2GNotify other) {
         if (other == com.github.moxib.pomelo.proto.group.GroupProto.C2GNotify.getDefaultInstance()) return this;
-        if (!other.getSenderId().isEmpty()) {
-          senderId_ = other.senderId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getSenderId() != 0L) {
+          setSenderId(other.getSenderId());
         }
-        if (!other.getGroupId().isEmpty()) {
-          groupId_ = other.groupId_;
-          bitField0_ |= 0x00000002;
-          onChanged();
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
         }
         if (other.hasMessage()) {
           mergeMessage(other.getMessage());
@@ -3018,16 +2659,16 @@ public final class GroupProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                senderId_ = input.readStringRequireUtf8();
+              case 8: {
+                senderId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
-              case 18: {
-                groupId_ = input.readStringRequireUtf8();
+              } // case 8
+              case 16: {
+                groupId_ = input.readInt64();
                 bitField0_ |= 0x00000002;
                 break;
-              } // case 18
+              } // case 16
               case 26: {
                 input.readMessage(
                     getMessageFieldBuilder().getBuilder(),
@@ -3057,60 +2698,30 @@ public final class GroupProto {
       }
       private int bitField0_;
 
-      private java.lang.Object senderId_ = "";
+      private long senderId_ ;
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @return The senderId.
        */
-      public java.lang.String getSenderId() {
-        java.lang.Object ref = senderId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          senderId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getSenderId() {
+        return senderId_;
       }
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
-       * @return The bytes for senderId.
-       */
-      public com.google.protobuf.ByteString
-          getSenderIdBytes() {
-        java.lang.Object ref = senderId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          senderId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 发送者用户 ID
-       * </pre>
-       *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @param value The senderId to set.
        * @return This builder for chaining.
        */
-      public Builder setSenderId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setSenderId(long value) {
+
         senderId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
@@ -3118,91 +2729,43 @@ public final class GroupProto {
       }
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearSenderId() {
-        senderId_ = getDefaultInstance().getSenderId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 发送者用户 ID
-       * </pre>
-       *
-       * <code>string sender_id = 1;</code>
-       * @param value The bytes for senderId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setSenderIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        senderId_ = value;
-        bitField0_ |= 0x00000001;
+        senderId_ = 0L;
         onChanged();
         return this;
       }
 
-      private java.lang.Object groupId_ = "";
+      private long groupId_ ;
       /**
        * <pre>
-       * 接受群 ID
+       * 接受群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 2;</code>
+       * <code>int64 group_id = 2;</code>
        * @return The groupId.
        */
-      public java.lang.String getGroupId() {
-        java.lang.Object ref = groupId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          groupId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
       }
       /**
        * <pre>
-       * 接受群 ID
+       * 接受群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 2;</code>
-       * @return The bytes for groupId.
-       */
-      public com.google.protobuf.ByteString
-          getGroupIdBytes() {
-        java.lang.Object ref = groupId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          groupId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 接受群 ID
-       * </pre>
-       *
-       * <code>string group_id = 2;</code>
+       * <code>int64 group_id = 2;</code>
        * @param value The groupId to set.
        * @return This builder for chaining.
        */
-      public Builder setGroupId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setGroupId(long value) {
+
         groupId_ = value;
         bitField0_ |= 0x00000002;
         onChanged();
@@ -3210,33 +2773,15 @@ public final class GroupProto {
       }
       /**
        * <pre>
-       * 接受群 ID
+       * 接受群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 2;</code>
+       * <code>int64 group_id = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearGroupId() {
-        groupId_ = getDefaultInstance().getGroupId();
         bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 接受群 ID
-       * </pre>
-       *
-       * <code>string group_id = 2;</code>
-       * @param value The bytes for groupId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setGroupIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        groupId_ = value;
-        bitField0_ |= 0x00000002;
+        groupId_ = 0L;
         onChanged();
         return this;
       }
@@ -3542,14 +3087,14 @@ public final class GroupProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\021group/group.proto\022\010im.group\032\023common/co" +
-      "mmon.proto\"m\n\006C2GReq\022\021\n\tsender_id\030\001 \001(\t\022" +
-      "\020\n\010group_id\030\002 \001(\t\022\022\n\nmessage_id\030\003 \001(\003\022*\n" +
+      "mmon.proto\"m\n\006C2GReq\022\021\n\tsender_id\030\001 \001(\003\022" +
+      "\020\n\010group_id\030\002 \001(\003\022\022\n\nmessage_id\030\003 \001(\003\022*\n" +
       "\007message\030\004 \001(\0132\031.im.common.MessageConten" +
       "t\"}\n\007C2GResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 " +
       "\001(\t\022\022\n\nmessage_id\030\003 \001(\003\022\020\n\010group_id\030\004 \001(" +
-      "\t\022\023\n\013server_time\030\005 \001(\003\022\020\n\003seq\030\006 \001(\003H\000\210\001\001" +
-      "B\006\n\004_seq\"v\n\tC2GNotify\022\021\n\tsender_id\030\001 \001(\t" +
-      "\022\020\n\010group_id\030\002 \001(\t\022*\n\007message\030\003 \001(\0132\031.im" +
+      "\003\022\023\n\013server_time\030\005 \001(\003\022\020\n\003seq\030\006 \001(\003H\000\210\001\001" +
+      "B\006\n\004_seq\"v\n\tC2GNotify\022\021\n\tsender_id\030\001 \001(\003" +
+      "\022\020\n\010group_id\030\002 \001(\003\022*\n\007message\030\003 \001(\0132\031.im" +
       ".common.MessageContent\022\020\n\003seq\030\005 \001(\003H\000\210\001\001" +
       "B\006\n\004_seqB1\n#com.github.moxib.pomelo.prot" +
       "o.groupB\nGroupProtob\006proto3"

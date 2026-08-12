@@ -1203,23 +1203,13 @@ public final class AuthProto {
 
     /**
      * <pre>
-     * 用户 ID
+     * 用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string user_id = 3;</code>
+     * <code>int64 user_id = 3;</code>
      * @return The userId.
      */
-    java.lang.String getUserId();
-    /**
-     * <pre>
-     * 用户 ID
-     * </pre>
-     *
-     * <code>string user_id = 3;</code>
-     * @return The bytes for userId.
-     */
-    com.google.protobuf.ByteString
-        getUserIdBytes();
+    long getUserId();
 
     /**
      * <pre>
@@ -1245,7 +1235,6 @@ public final class AuthProto {
     }
     private AuthResp() {
       message_ = "";
-      userId_ = "";
     }
 
     @java.lang.Override
@@ -1331,50 +1320,18 @@ public final class AuthProto {
     }
 
     public static final int USER_ID_FIELD_NUMBER = 3;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object userId_ = "";
+    private long userId_ = 0L;
     /**
      * <pre>
-     * 用户 ID
+     * 用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string user_id = 3;</code>
+     * <code>int64 user_id = 3;</code>
      * @return The userId.
      */
     @java.lang.Override
-    public java.lang.String getUserId() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        userId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 用户 ID
-     * </pre>
-     *
-     * <code>string user_id = 3;</code>
-     * @return The bytes for userId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUserIdBytes() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        userId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getUserId() {
+      return userId_;
     }
 
     public static final int EXPIRE_AT_FIELD_NUMBER = 4;
@@ -1412,8 +1369,8 @@ public final class AuthProto {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, message_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, userId_);
+      if (userId_ != 0L) {
+        output.writeInt64(3, userId_);
       }
       if (expireAt_ != 0L) {
         output.writeInt64(4, expireAt_);
@@ -1434,8 +1391,9 @@ public final class AuthProto {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(message_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, message_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, userId_);
+      if (userId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(3, userId_);
       }
       if (expireAt_ != 0L) {
         size += com.google.protobuf.CodedOutputStream
@@ -1460,8 +1418,8 @@ public final class AuthProto {
           != other.getCode()) return false;
       if (!getMessage()
           .equals(other.getMessage())) return false;
-      if (!getUserId()
-          .equals(other.getUserId())) return false;
+      if (getUserId()
+          != other.getUserId()) return false;
       if (getExpireAt()
           != other.getExpireAt()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
@@ -1480,7 +1438,8 @@ public final class AuthProto {
       hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
       hash = (53 * hash) + getMessage().hashCode();
       hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getUserId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getUserId());
       hash = (37 * hash) + EXPIRE_AT_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getExpireAt());
@@ -1617,7 +1576,7 @@ public final class AuthProto {
         bitField0_ = 0;
         code_ = 0;
         message_ = "";
-        userId_ = "";
+        userId_ = 0L;
         expireAt_ = 0L;
         return this;
       }
@@ -1718,10 +1677,8 @@ public final class AuthProto {
           bitField0_ |= 0x00000002;
           onChanged();
         }
-        if (!other.getUserId().isEmpty()) {
-          userId_ = other.userId_;
-          bitField0_ |= 0x00000004;
-          onChanged();
+        if (other.getUserId() != 0L) {
+          setUserId(other.getUserId());
         }
         if (other.getExpireAt() != 0L) {
           setExpireAt(other.getExpireAt());
@@ -1762,11 +1719,11 @@ public final class AuthProto {
                 bitField0_ |= 0x00000002;
                 break;
               } // case 18
-              case 26: {
-                userId_ = input.readStringRequireUtf8();
+              case 24: {
+                userId_ = input.readInt64();
                 bitField0_ |= 0x00000004;
                 break;
-              } // case 26
+              } // case 24
               case 32: {
                 expireAt_ = input.readInt64();
                 bitField0_ |= 0x00000008;
@@ -1925,60 +1882,30 @@ public final class AuthProto {
         return this;
       }
 
-      private java.lang.Object userId_ = "";
+      private long userId_ ;
       /**
        * <pre>
-       * 用户 ID
+       * 用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string user_id = 3;</code>
+       * <code>int64 user_id = 3;</code>
        * @return The userId.
        */
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getUserId() {
+        return userId_;
       }
       /**
        * <pre>
-       * 用户 ID
+       * 用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string user_id = 3;</code>
-       * @return The bytes for userId.
-       */
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 用户 ID
-       * </pre>
-       *
-       * <code>string user_id = 3;</code>
+       * <code>int64 user_id = 3;</code>
        * @param value The userId to set.
        * @return This builder for chaining.
        */
-      public Builder setUserId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setUserId(long value) {
+
         userId_ = value;
         bitField0_ |= 0x00000004;
         onChanged();
@@ -1986,33 +1913,15 @@ public final class AuthProto {
       }
       /**
        * <pre>
-       * 用户 ID
+       * 用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string user_id = 3;</code>
+       * <code>int64 user_id = 3;</code>
        * @return This builder for chaining.
        */
       public Builder clearUserId() {
-        userId_ = getDefaultInstance().getUserId();
         bitField0_ = (bitField0_ & ~0x00000004);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 用户 ID
-       * </pre>
-       *
-       * <code>string user_id = 3;</code>
-       * @param value The bytes for userId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setUserIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        userId_ = value;
-        bitField0_ |= 0x00000004;
+        userId_ = 0L;
         onChanged();
         return this;
       }
@@ -3437,7 +3346,7 @@ public final class AuthProto {
       "\005token\030\001 \001(\t\022\021\n\tdevice_id\030\002 \001(\t\022\020\n\010platf" +
       "orm\030\003 \001(\t\022\023\n\013app_version\030\004 \001(\t\"M\n\010AuthRe" +
       "sp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022\017\n\007use" +
-      "r_id\030\003 \001(\t\022\021\n\texpire_at\030\004 \001(\003\"\033\n\tLogoutR" +
+      "r_id\030\003 \001(\003\022\021\n\texpire_at\030\004 \001(\003\"\033\n\tLogoutR" +
       "eq\022\016\n\006reason\030\001 \001(\t\"+\n\nLogoutResp\022\014\n\004code" +
       "\030\001 \001(\005\022\017\n\007message\030\002 \001(\tB/\n\"com.github.mo" +
       "xib.pomelo.proto.authB\tAuthProtob\006proto3"

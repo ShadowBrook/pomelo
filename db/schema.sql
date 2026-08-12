@@ -4,9 +4,9 @@
 -- ============================================================================
 
 -- 1. 用户表
+--    id: Snowflake 全局唯一 ID（同时也是对外标识，替代原 NanoID user_id）
 CREATE TABLE IF NOT EXISTS im_user (
-    id         BIGINT       PRIMARY KEY,           -- Snowflake 全局唯一 ID
-    user_id    VARCHAR(64)  UNIQUE NOT NULL,       -- NanoID 系统生成（对外唯一标识）
+    id         BIGINT       PRIMARY KEY,           -- Snowflake 全局唯一 ID（对外标识）
     user_name  VARCHAR(64)  UNIQUE NOT NULL,       -- 用户名（登录凭证）
     nickname   VARCHAR(128) NOT NULL,
     avatar     VARCHAR(512),                      -- 头像URL
@@ -17,8 +17,7 @@ CREATE TABLE IF NOT EXISTS im_user (
 );
 
 COMMENT ON TABLE  im_user              IS '用户表';
-COMMENT ON COLUMN im_user.id           IS 'Snowflake 全局唯一 ID';
-COMMENT ON COLUMN im_user.user_id      IS 'NanoID 系统生成（对外唯一标识）';
+COMMENT ON COLUMN im_user.id           IS 'Snowflake 全局唯一 ID（对外标识）';
 COMMENT ON COLUMN im_user.user_name    IS '用户名（登录凭证）';
 COMMENT ON COLUMN im_user.nickname     IS '昵称';
 COMMENT ON COLUMN im_user.avatar       IS '头像URL';
@@ -31,26 +30,24 @@ CREATE INDEX idx_user_status ON im_user(status);
 
 
 -- 2. 群组元数据表
---    id: 雪花ID，内部主键；group_id: NanoID，对外唯一标识
+--    id: Snowflake 全局唯一 ID（同时也是对外标识，替代原 NanoID group_id）
 CREATE TABLE IF NOT EXISTS im_group (
-    id           BIGINT       PRIMARY KEY,              -- 雪花ID (内部主键)
-    group_id     VARCHAR(64)  UNIQUE NOT NULL,           -- NanoID (对外唯一标识)
+    id           BIGINT       PRIMARY KEY,              -- Snowflake 全局唯一 ID（对外标识）
     name         VARCHAR(128) NOT NULL,                 -- 群名
     avatar       VARCHAR(512),                         -- 群头像 URL
     description  TEXT,                                  -- 群公告/简介
-    owner_id     VARCHAR(64) NOT NULL,                  -- 群主 userId (NanoID)
+    owner_id     BIGINT       NOT NULL,                  -- 群主 im_user.id (Snowflake)
     max_members  INT         NOT NULL DEFAULT 200,      -- 群成员上限
     created_at   BIGINT      NOT NULL,                  -- 创建时间 (Unix毫秒)
     updated_at   BIGINT      NOT NULL                   -- 更新时间 (Unix毫秒)
 );
 
 COMMENT ON TABLE  im_group                IS '群组元数据表';
-COMMENT ON COLUMN im_group.id             IS '雪花ID (内部主键)';
-COMMENT ON COLUMN im_group.group_id       IS 'NanoID (对外唯一标识)';
+COMMENT ON COLUMN im_group.id             IS 'Snowflake 全局唯一 ID（对外标识）';
 COMMENT ON COLUMN im_group.name         IS '群名';
 COMMENT ON COLUMN im_group.avatar       IS '群头像URL';
 COMMENT ON COLUMN im_group.description  IS '群公告/简介';
-COMMENT ON COLUMN im_group.owner_id     IS '群主 userId (NanoID)';
+COMMENT ON COLUMN im_group.owner_id     IS '群主 im_user.id (Snowflake)';
 COMMENT ON COLUMN im_group.max_members  IS '群成员上限';
 COMMENT ON COLUMN im_group.created_at   IS '创建时间 (Unix毫秒)';
 COMMENT ON COLUMN im_group.updated_at   IS '更新时间 (Unix毫秒)';
@@ -98,7 +95,7 @@ CREATE INDEX idx_c2c_created_at_brin ON im_message_c2c USING BRIN (created_at);
 
 
 -- 4. 群聊消息表
---    group_id: im_group.id (雪花ID，内部主键)
+--    group_id: im_group.id (Snowflake)
 CREATE TABLE IF NOT EXISTS im_message_group (
     id         BIGINT       NOT NULL,             -- 雪花ID (客户端生成)
     sender_id  BIGINT       NOT NULL,             -- 发送者 im_user.id
@@ -131,7 +128,7 @@ CREATE INDEX idx_group_seq ON im_message_group (seq);
 
 -- 5. 群组成员表
 --    id: 雪花ID，成员关系主键
---    group_id: im_group.id (雪花ID，内部主键)
+--    group_id: im_group.id (Snowflake)
 --    user_id: im_user.id (雪花ID)，内部引用
 CREATE TABLE IF NOT EXISTS im_group_member (
     id            BIGINT       NOT NULL,                -- 雪花ID (服务端生成)

@@ -3,11 +3,10 @@ package com.github.moxib.pomelo.logic.model;
 public class GroupInfo {
 
   private final long id;
-  private final String groupId;
   private final String name;
   private final String avatar;
   private final String description;
-  private final String ownerId;
+  private final long ownerId;
   private final int memberCount;
   private final int maxMembers;
   private final long createdAt;
@@ -15,7 +14,6 @@ public class GroupInfo {
 
   private GroupInfo(Builder builder) {
     this.id = builder.id;
-    this.groupId = builder.groupId;
     this.name = builder.name;
     this.avatar = builder.avatar;
     this.description = builder.description;
@@ -29,11 +27,10 @@ public class GroupInfo {
   public static Builder builder() { return new Builder(); }
 
   public long getId() { return id; }
-  public String getGroupId() { return groupId; }
   public String getName() { return name; }
   public String getAvatar() { return avatar; }
   public String getDescription() { return description; }
-  public String getOwnerId() { return ownerId; }
+  public long getOwnerId() { return ownerId; }
   public int getMemberCount() { return memberCount; }
   public int getMaxMembers() { return maxMembers; }
   public long getCreatedAt() { return createdAt; }
@@ -41,22 +38,20 @@ public class GroupInfo {
 
   public static class Builder {
     private long id;
-    private String groupId;
     private String name;
     private String avatar;
     private String description;
-    private String ownerId;
+    private long ownerId;
     private int memberCount;
     private int maxMembers;
     private long createdAt;
     private long updatedAt;
 
     public Builder id(long id) { this.id = id; return this; }
-    public Builder groupId(String groupId) { this.groupId = groupId; return this; }
     public Builder name(String name) { this.name = name; return this; }
     public Builder avatar(String avatar) { this.avatar = avatar; return this; }
     public Builder description(String description) { this.description = description; return this; }
-    public Builder ownerId(String ownerId) { this.ownerId = ownerId; return this; }
+    public Builder ownerId(long ownerId) { this.ownerId = ownerId; return this; }
     public Builder memberCount(int memberCount) { this.memberCount = memberCount; return this; }
     public Builder maxMembers(int maxMembers) { this.maxMembers = maxMembers; return this; }
     public Builder createdAt(long createdAt) { this.createdAt = createdAt; return this; }

@@ -11,8 +11,8 @@ import "common/common.proto";
 // 群聊相关消息体
 // ============================================================================
 message C2GReq {
-    string sender_id                 = 1;  // 发送者用户 ID
-    string group_id                  = 2;  // 接受群 ID
+    int64 sender_id                  = 1;  // 发送者用户 ID (Snowflake)
+    int64 group_id                   = 2;  // 接受群 ID (Snowflake)
     int64 message_id                 = 3;  // 消息 ID
     im.common.MessageContent message = 4;  // 消息内容
 }
@@ -21,14 +21,14 @@ message C2GResp {
     int32 code         = 1;  // 响应码
     string message     = 2;  // 响应消息
     int64 message_id   = 3;  // 消息 ID
-    string group_id    = 4;  // 群 ID
+    int64 group_id     = 4;  // 群 ID (Snowflake)
     int64 server_time  = 5;  // 服务器时间
     optional int64 seq = 6;  // 序列号
 }
 
 message C2GNotify {
-    string sender_id                 = 1;  // 发送者用户 ID
-    string group_id                  = 2;  // 接受群 ID
+    int64 sender_id                  = 1;  // 发送者用户 ID (Snowflake)
+    int64 group_id                   = 2;  // 接受群 ID (Snowflake)
     im.common.MessageContent message = 3;  // 推送的消息内容
     optional int64 seq               = 5;  // 序列号
 }

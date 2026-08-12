@@ -18,26 +18,19 @@ public class PgGroupRepository implements GroupRepository {
   private static final Logger LOG = LoggerFactory.getLogger(PgGroupRepository.class);
 
   private static final String CREATE_GROUP_SQL = """
-    INSERT INTO im_group (id, group_id, name, avatar, description, owner_id, max_members, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    INSERT INTO im_group (id, name, avatar, description, owner_id, max_members, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
     """;
 
   private static final String FIND_GROUP_SQL = """
-    SELECT id, group_id, name, avatar, description, owner_id,
+    SELECT id, name, avatar, description, owner_id,
            (SELECT COUNT(*) FROM im_group_member WHERE group_id = g.id) AS member_count,
            max_members, created_at, updated_at
     FROM im_group g WHERE id = $1
     """;
 
-  private static final String FIND_BY_GROUP_ID_SQL = """
-    SELECT id, group_id, name, avatar, description, owner_id,
-           (SELECT COUNT(*) FROM im_group_member WHERE group_id = g.id) AS member_count,
-           max_members, created_at, updated_at
-    FROM im_group g WHERE group_id = $1
-    """;
-
   private static final String FIND_GROUPS_BY_USER_SQL = """
-    SELECT g.id, g.group_id, g.name, g.avatar, g.description, g.owner_id,
+    SELECT g.id, g.name, g.avatar, g.description, g.owner_id,
            (SELECT COUNT(*) FROM im_group_member WHERE group_id = g.id) AS member_count,
            g.max_members, g.created_at, g.updated_at
     FROM im_group g
@@ -47,7 +40,7 @@ public class PgGroupRepository implements GroupRepository {
     """;
 
   private static final String FIND_MEMBERS_SQL = """
-    SELECT gm.group_id, gm.user_id, u.user_id AS nano_id, u.user_name, u.nickname, u.avatar, gm.role, gm.joined_at
+    SELECT gm.group_id, gm.user_id, u.user_name, u.nickname, u.avatar, gm.role, gm.joined_at
     FROM im_group_member gm
     JOIN im_user u ON gm.user_id = u.id
     WHERE gm.group_id = $1
@@ -84,7 +77,7 @@ public class PgGroupRepository implements GroupRepository {
     """;
 
   private static final String FIND_MSG_READERS_SQL = """
-    SELECT u.user_id, u.nickname, u.avatar
+    SELECT u.id, u.nickname, u.avatar
     FROM im_group_member gm
     JOIN im_user u ON gm.user_id = u.id
     WHERE gm.group_id = $1 AND gm.last_read_seq >= $2
@@ -92,16 +85,14 @@ public class PgGroupRepository implements GroupRepository {
     """;
 
   private static final String PULL_MSG_BACKWARD_SQL = """
-    SELECT msg.id, msg.sender_id, g.group_id, msg.msg_type, msg.content, msg.seq, msg.created_at
+    SELECT msg.id, msg.sender_id, msg.group_id, msg.msg_type, msg.content, msg.seq, msg.created_at
     FROM im_message_group msg
-    JOIN im_group g ON msg.group_id = g.id
     WHERE msg.group_id = $1 AND msg.seq < $2 ORDER BY msg.seq DESC LIMIT $3
     """;
 
   private static final String PULL_MSG_FORWARD_SQL = """
-    SELECT msg.id, msg.sender_id, g.group_id, msg.msg_type, msg.content, msg.seq, msg.created_at
+    SELECT msg.id, msg.sender_id, msg.group_id, msg.msg_type, msg.content, msg.seq, msg.created_at
     FROM im_message_group msg
-    JOIN im_group g ON msg.group_id = g.id
     WHERE msg.group_id = $1 AND msg.seq > $2 ORDER BY msg.seq LIMIT $3
     """;
 
@@ -114,10 +105,10 @@ public class PgGroupRepository implements GroupRepository {
   @Override
   public Future<Void> createGroup(GroupInfo group) {
     return pool.preparedQuery(CREATE_GROUP_SQL)
-      .execute(Tuple.of(group.getId(), group.getGroupId(), group.getName(), group.getAvatar(),
+      .execute(Tuple.of(group.getId(), group.getName(), group.getAvatar(),
         group.getDescription(), group.getOwnerId(), group.getMaxMembers(),
         group.getCreatedAt(), group.getUpdatedAt()))
-      .onSuccess(r -> LOG.info("群创建成功: id={} groupId={} name={}", group.getId(), group.getGroupId(), group.getName()))
+      .onSuccess(r -> LOG.info("群创建成功: id={} name={}", group.getId(), group.getName()))
       .onFailure(e -> LOG.error("群创建失败 id={}: {}", group.getId(), e.getMessage()))
       .mapEmpty();
   }
@@ -126,13 +117,6 @@ public class PgGroupRepository implements GroupRepository {
   public Future<GroupInfo> findById(long id) {
     return pool.preparedQuery(FIND_GROUP_SQL)
       .execute(Tuple.of(id))
-      .map(rows -> rows.size() == 0 ? null : rowToGroupInfo(rows.iterator().next()));
-  }
-
-  @Override
-  public Future<GroupInfo> findByGroupId(String groupId) {
-    return pool.preparedQuery(FIND_BY_GROUP_ID_SQL)
-      .execute(Tuple.of(groupId))
       .map(rows -> rows.size() == 0 ? null : rowToGroupInfo(rows.iterator().next()));
   }
 
@@ -157,7 +141,6 @@ public class PgGroupRepository implements GroupRepository {
           list.add(GroupMemberRecord.builder()
             .groupId(row.getLong("group_id"))
             .userId(row.getLong("user_id"))
-            .nanoId(row.getString("nano_id"))
             .userName(row.getString("user_name"))
             .nickname(row.getString("nickname"))
             .avatar(row.getString("avatar"))
@@ -231,7 +214,7 @@ public class PgGroupRepository implements GroupRepository {
         List<GroupMsgReader> list = new ArrayList<>();
         for (Row row : rows) {
           list.add(new GroupMsgReader(
-            row.getString("user_id"),
+            row.getLong("id"),
             row.getString("nickname"),
             row.getString("avatar")));
         }
@@ -248,7 +231,7 @@ public class PgGroupRepository implements GroupRepository {
         List<GroupMsgWithSender> list = new ArrayList<>();
         for (Row row : rows) {
           list.add(new GroupMsgWithSender(
-            row.getLong("id"), row.getLong("sender_id"), row.getString("group_id"),
+            row.getLong("id"), row.getLong("sender_id"), row.getLong("group_id"),
             row.getInteger("msg_type"), row.getString("content"),
             row.getLong("seq"), row.getLong("created_at")));
         }
@@ -259,11 +242,10 @@ public class PgGroupRepository implements GroupRepository {
   private GroupInfo rowToGroupInfo(Row row) {
     return GroupInfo.builder()
       .id(row.getLong("id"))
-      .groupId(row.getString("group_id"))
       .name(row.getString("name"))
       .avatar(row.getString("avatar"))
       .description(row.getString("description"))
-      .ownerId(row.getString("owner_id"))
+      .ownerId(row.getLong("owner_id"))
       .memberCount(row.getInteger("member_count"))
       .maxMembers(row.getInteger("max_members"))
       .createdAt(row.getLong("created_at"))

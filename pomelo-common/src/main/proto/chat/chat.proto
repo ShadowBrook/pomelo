@@ -11,8 +11,8 @@ import "common/common.proto";
 // 单聊相关消息体
 // ============================================================================
 message C2CReq {
-    string sender_id                 = 1;  // 发送者用户 ID
-    string recipient_id              = 2;  // 接收者用户 ID
+    int64 sender_id                  = 1;  // 发送者用户 ID (Snowflake)
+    int64 recipient_id               = 2;  // 接收者用户 ID (Snowflake)
     int64 message_id                 = 3;
     im.common.MessageContent message = 4;  // 消息内容
 }
@@ -26,8 +26,8 @@ message C2CResp {
 }
 
 message C2CNotify {
-    string sender_id                 = 1;  // 发送者用户 ID
-    string recipient_id              = 2;  // 接收者用户 ID
+    int64 sender_id                  = 1;  // 发送者用户 ID (Snowflake)
+    int64 recipient_id               = 2;  // 接收者用户 ID (Snowflake)
     im.common.MessageContent message = 3;  // 推送的消息内容
     optional int64 seq               = 4;  // 序列号
     optional int64 message_id        = 5;  // 消息 ID (客户端用此 ID 发送 ACK)

@@ -9,7 +9,7 @@ import java.util.Map;
 
 /**
  * 消息持久化仓库接口（数据层）。
- * 所有用户标识均使用 im_user.id (BIGINT)。
+ * 所有用户标识均使用 im_user.id (BIGINT Snowflake)。
  */
 public interface MessageRepository {
 
@@ -34,9 +34,6 @@ public interface MessageRepository {
   /** 拉取会话历史消息（双向，按 conversation_id + created_at 倒序分页） */
   Future<List<MessageRecord>> pullConversation(String conversationId, long beforeTime, int limit);
 
-  /** 按 userId (NanoID) 查询 im_user.id */
-  Future<Long> findUserId(String userId);
-
-  /** 按 im_user.id 列表批量查询用户信息，返回 id → UserIdInfo 映射 */
+  /** 按 im_user.id 列表批量查询用户信息，返回 id → UserIdInfo 映射（userId 为 Snowflake 字符串） */
   Future<Map<Long, UserIdInfo>> findUserIdsByIds(List<Long> ids);
 }

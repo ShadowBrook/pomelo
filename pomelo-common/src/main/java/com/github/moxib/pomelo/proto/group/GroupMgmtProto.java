@@ -1564,16 +1564,10 @@ public final class GroupMgmtProto {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
-    java.lang.String getGroupId();
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    com.google.protobuf.ByteString
-        getGroupIdBytes();
+    long getGroupId();
 
     /**
      * <code>string name = 2;</code>
@@ -1612,16 +1606,10 @@ public final class GroupMgmtProto {
         getDescriptionBytes();
 
     /**
-     * <code>string owner_id = 5;</code>
+     * <code>int64 owner_id = 5;</code>
      * @return The ownerId.
      */
-    java.lang.String getOwnerId();
-    /**
-     * <code>string owner_id = 5;</code>
-     * @return The bytes for ownerId.
-     */
-    com.google.protobuf.ByteString
-        getOwnerIdBytes();
+    long getOwnerId();
 
     /**
      * <code>int32 member_count = 6;</code>
@@ -1660,11 +1648,9 @@ public final class GroupMgmtProto {
       super(builder);
     }
     private GroupInfo() {
-      groupId_ = "";
       name_ = "";
       avatar_ = "";
       description_ = "";
-      ownerId_ = "";
     }
 
     @java.lang.Override
@@ -1688,42 +1674,14 @@ public final class GroupMgmtProto {
     }
 
     public static final int GROUP_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object groupId_ = "";
+    private long groupId_ = 0L;
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
     @java.lang.Override
-    public java.lang.String getGroupId() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        groupId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getGroupIdBytes() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        groupId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getGroupId() {
+      return groupId_;
     }
 
     public static final int NAME_FIELD_NUMBER = 2;
@@ -1844,42 +1802,14 @@ public final class GroupMgmtProto {
     }
 
     public static final int OWNER_ID_FIELD_NUMBER = 5;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object ownerId_ = "";
+    private long ownerId_ = 0L;
     /**
-     * <code>string owner_id = 5;</code>
+     * <code>int64 owner_id = 5;</code>
      * @return The ownerId.
      */
     @java.lang.Override
-    public java.lang.String getOwnerId() {
-      java.lang.Object ref = ownerId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        ownerId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string owner_id = 5;</code>
-     * @return The bytes for ownerId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getOwnerIdBytes() {
-      java.lang.Object ref = ownerId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        ownerId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getOwnerId() {
+      return ownerId_;
     }
 
     public static final int MEMBER_COUNT_FIELD_NUMBER = 6;
@@ -1929,8 +1859,8 @@ public final class GroupMgmtProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, groupId_);
+      if (groupId_ != 0L) {
+        output.writeInt64(1, groupId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(name_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, name_);
@@ -1941,8 +1871,8 @@ public final class GroupMgmtProto {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(description_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 4, description_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(ownerId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 5, ownerId_);
+      if (ownerId_ != 0L) {
+        output.writeInt64(5, ownerId_);
       }
       if (memberCount_ != 0) {
         output.writeInt32(6, memberCount_);
@@ -1962,8 +1892,9 @@ public final class GroupMgmtProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, groupId_);
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, groupId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(name_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, name_);
@@ -1974,8 +1905,9 @@ public final class GroupMgmtProto {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(description_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, description_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(ownerId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, ownerId_);
+      if (ownerId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(5, ownerId_);
       }
       if (memberCount_ != 0) {
         size += com.google.protobuf.CodedOutputStream
@@ -2004,16 +1936,16 @@ public final class GroupMgmtProto {
       }
       com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupInfo other = (com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupInfo) obj;
 
-      if (!getGroupId()
-          .equals(other.getGroupId())) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
       if (!getName()
           .equals(other.getName())) return false;
       if (!getAvatar()
           .equals(other.getAvatar())) return false;
       if (!getDescription()
           .equals(other.getDescription())) return false;
-      if (!getOwnerId()
-          .equals(other.getOwnerId())) return false;
+      if (getOwnerId()
+          != other.getOwnerId()) return false;
       if (getMemberCount()
           != other.getMemberCount()) return false;
       if (getMaxMembers()
@@ -2032,7 +1964,8 @@ public final class GroupMgmtProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       hash = (37 * hash) + NAME_FIELD_NUMBER;
       hash = (53 * hash) + getName().hashCode();
       hash = (37 * hash) + AVATAR_FIELD_NUMBER;
@@ -2040,7 +1973,8 @@ public final class GroupMgmtProto {
       hash = (37 * hash) + DESCRIPTION_FIELD_NUMBER;
       hash = (53 * hash) + getDescription().hashCode();
       hash = (37 * hash) + OWNER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getOwnerId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getOwnerId());
       hash = (37 * hash) + MEMBER_COUNT_FIELD_NUMBER;
       hash = (53 * hash) + getMemberCount();
       hash = (37 * hash) + MAX_MEMBERS_FIELD_NUMBER;
@@ -2185,11 +2119,11 @@ public final class GroupMgmtProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        groupId_ = "";
+        groupId_ = 0L;
         name_ = "";
         avatar_ = "";
         description_ = "";
-        ownerId_ = "";
+        ownerId_ = 0L;
         memberCount_ = 0;
         maxMembers_ = 0;
         createdAt_ = 0L;
@@ -2296,10 +2230,8 @@ public final class GroupMgmtProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupInfo other) {
         if (other == com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupInfo.getDefaultInstance()) return this;
-        if (!other.getGroupId().isEmpty()) {
-          groupId_ = other.groupId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
         }
         if (!other.getName().isEmpty()) {
           name_ = other.name_;
@@ -2316,10 +2248,8 @@ public final class GroupMgmtProto {
           bitField0_ |= 0x00000008;
           onChanged();
         }
-        if (!other.getOwnerId().isEmpty()) {
-          ownerId_ = other.ownerId_;
-          bitField0_ |= 0x00000010;
-          onChanged();
+        if (other.getOwnerId() != 0L) {
+          setOwnerId(other.getOwnerId());
         }
         if (other.getMemberCount() != 0) {
           setMemberCount(other.getMemberCount());
@@ -2356,11 +2286,11 @@ public final class GroupMgmtProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                groupId_ = input.readStringRequireUtf8();
+              case 8: {
+                groupId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               case 18: {
                 name_ = input.readStringRequireUtf8();
                 bitField0_ |= 0x00000002;
@@ -2376,11 +2306,11 @@ public final class GroupMgmtProto {
                 bitField0_ |= 0x00000008;
                 break;
               } // case 34
-              case 42: {
-                ownerId_ = input.readStringRequireUtf8();
+              case 40: {
+                ownerId_ = input.readInt64();
                 bitField0_ |= 0x00000010;
                 break;
-              } // case 42
+              } // case 40
               case 48: {
                 memberCount_ = input.readInt32();
                 bitField0_ |= 0x00000020;
@@ -2413,74 +2343,34 @@ public final class GroupMgmtProto {
       }
       private int bitField0_;
 
-      private java.lang.Object groupId_ = "";
+      private long groupId_ ;
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return The groupId.
        */
-      public java.lang.String getGroupId() {
-        java.lang.Object ref = groupId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          groupId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
       }
       /**
-       * <code>string group_id = 1;</code>
-       * @return The bytes for groupId.
-       */
-      public com.google.protobuf.ByteString
-          getGroupIdBytes() {
-        java.lang.Object ref = groupId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          groupId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @param value The groupId to set.
        * @return This builder for chaining.
        */
-      public Builder setGroupId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setGroupId(long value) {
+
         groupId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearGroupId() {
-        groupId_ = getDefaultInstance().getGroupId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string group_id = 1;</code>
-       * @param value The bytes for groupId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setGroupIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        groupId_ = value;
-        bitField0_ |= 0x00000001;
+        groupId_ = 0L;
         onChanged();
         return this;
       }
@@ -2701,74 +2591,34 @@ public final class GroupMgmtProto {
         return this;
       }
 
-      private java.lang.Object ownerId_ = "";
+      private long ownerId_ ;
       /**
-       * <code>string owner_id = 5;</code>
+       * <code>int64 owner_id = 5;</code>
        * @return The ownerId.
        */
-      public java.lang.String getOwnerId() {
-        java.lang.Object ref = ownerId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          ownerId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getOwnerId() {
+        return ownerId_;
       }
       /**
-       * <code>string owner_id = 5;</code>
-       * @return The bytes for ownerId.
-       */
-      public com.google.protobuf.ByteString
-          getOwnerIdBytes() {
-        java.lang.Object ref = ownerId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          ownerId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string owner_id = 5;</code>
+       * <code>int64 owner_id = 5;</code>
        * @param value The ownerId to set.
        * @return This builder for chaining.
        */
-      public Builder setOwnerId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setOwnerId(long value) {
+
         ownerId_ = value;
         bitField0_ |= 0x00000010;
         onChanged();
         return this;
       }
       /**
-       * <code>string owner_id = 5;</code>
+       * <code>int64 owner_id = 5;</code>
        * @return This builder for chaining.
        */
       public Builder clearOwnerId() {
-        ownerId_ = getDefaultInstance().getOwnerId();
         bitField0_ = (bitField0_ & ~0x00000010);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string owner_id = 5;</code>
-       * @param value The bytes for ownerId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setOwnerIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        ownerId_ = value;
-        bitField0_ |= 0x00000010;
+        ownerId_ = 0L;
         onChanged();
         return this;
       }
@@ -2937,36 +2787,20 @@ public final class GroupMgmtProto {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
-    java.lang.String getGroupId();
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    com.google.protobuf.ByteString
-        getGroupIdBytes();
+    long getGroupId();
 
     /**
      * <pre>
-     * 被邀请者 userId (NanoID)
+     * 被邀请者 userId (Snowflake)
      * </pre>
      *
-     * <code>string user_id = 2;</code>
+     * <code>int64 user_id = 2;</code>
      * @return The userId.
      */
-    java.lang.String getUserId();
-    /**
-     * <pre>
-     * 被邀请者 userId (NanoID)
-     * </pre>
-     *
-     * <code>string user_id = 2;</code>
-     * @return The bytes for userId.
-     */
-    com.google.protobuf.ByteString
-        getUserIdBytes();
+    long getUserId();
   }
   /**
    * <pre>
@@ -2987,8 +2821,6 @@ public final class GroupMgmtProto {
       super(builder);
     }
     private InviteToGroupReq() {
-      groupId_ = "";
-      userId_ = "";
     }
 
     @java.lang.Override
@@ -3012,89 +2844,29 @@ public final class GroupMgmtProto {
     }
 
     public static final int GROUP_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object groupId_ = "";
+    private long groupId_ = 0L;
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
     @java.lang.Override
-    public java.lang.String getGroupId() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        groupId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getGroupIdBytes() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        groupId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getGroupId() {
+      return groupId_;
     }
 
     public static final int USER_ID_FIELD_NUMBER = 2;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object userId_ = "";
+    private long userId_ = 0L;
     /**
      * <pre>
-     * 被邀请者 userId (NanoID)
+     * 被邀请者 userId (Snowflake)
      * </pre>
      *
-     * <code>string user_id = 2;</code>
+     * <code>int64 user_id = 2;</code>
      * @return The userId.
      */
     @java.lang.Override
-    public java.lang.String getUserId() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        userId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 被邀请者 userId (NanoID)
-     * </pre>
-     *
-     * <code>string user_id = 2;</code>
-     * @return The bytes for userId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUserIdBytes() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        userId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getUserId() {
+      return userId_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -3111,11 +2883,11 @@ public final class GroupMgmtProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, groupId_);
+      if (groupId_ != 0L) {
+        output.writeInt64(1, groupId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, userId_);
+      if (userId_ != 0L) {
+        output.writeInt64(2, userId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -3126,11 +2898,13 @@ public final class GroupMgmtProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, groupId_);
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, groupId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, userId_);
+      if (userId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, userId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -3147,10 +2921,10 @@ public final class GroupMgmtProto {
       }
       com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq other = (com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq) obj;
 
-      if (!getGroupId()
-          .equals(other.getGroupId())) return false;
-      if (!getUserId()
-          .equals(other.getUserId())) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
+      if (getUserId()
+          != other.getUserId()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -3163,9 +2937,11 @@ public final class GroupMgmtProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getUserId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getUserId());
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -3303,8 +3079,8 @@ public final class GroupMgmtProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        groupId_ = "";
-        userId_ = "";
+        groupId_ = 0L;
+        userId_ = 0L;
         return this;
       }
 
@@ -3390,15 +3166,11 @@ public final class GroupMgmtProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq other) {
         if (other == com.github.moxib.pomelo.proto.group.GroupMgmtProto.InviteToGroupReq.getDefaultInstance()) return this;
-        if (!other.getGroupId().isEmpty()) {
-          groupId_ = other.groupId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
         }
-        if (!other.getUserId().isEmpty()) {
-          userId_ = other.userId_;
-          bitField0_ |= 0x00000002;
-          onChanged();
+        if (other.getUserId() != 0L) {
+          setUserId(other.getUserId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
@@ -3426,16 +3198,16 @@ public final class GroupMgmtProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                groupId_ = input.readStringRequireUtf8();
+              case 8: {
+                groupId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
-              case 18: {
-                userId_ = input.readStringRequireUtf8();
+              } // case 8
+              case 16: {
+                userId_ = input.readInt64();
                 bitField0_ |= 0x00000002;
                 break;
-              } // case 18
+              } // case 16
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -3453,132 +3225,62 @@ public final class GroupMgmtProto {
       }
       private int bitField0_;
 
-      private java.lang.Object groupId_ = "";
+      private long groupId_ ;
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return The groupId.
        */
-      public java.lang.String getGroupId() {
-        java.lang.Object ref = groupId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          groupId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
       }
       /**
-       * <code>string group_id = 1;</code>
-       * @return The bytes for groupId.
-       */
-      public com.google.protobuf.ByteString
-          getGroupIdBytes() {
-        java.lang.Object ref = groupId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          groupId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @param value The groupId to set.
        * @return This builder for chaining.
        */
-      public Builder setGroupId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setGroupId(long value) {
+
         groupId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearGroupId() {
-        groupId_ = getDefaultInstance().getGroupId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string group_id = 1;</code>
-       * @param value The bytes for groupId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setGroupIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        groupId_ = value;
-        bitField0_ |= 0x00000001;
+        groupId_ = 0L;
         onChanged();
         return this;
       }
 
-      private java.lang.Object userId_ = "";
+      private long userId_ ;
       /**
        * <pre>
-       * 被邀请者 userId (NanoID)
+       * 被邀请者 userId (Snowflake)
        * </pre>
        *
-       * <code>string user_id = 2;</code>
+       * <code>int64 user_id = 2;</code>
        * @return The userId.
        */
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getUserId() {
+        return userId_;
       }
       /**
        * <pre>
-       * 被邀请者 userId (NanoID)
+       * 被邀请者 userId (Snowflake)
        * </pre>
        *
-       * <code>string user_id = 2;</code>
-       * @return The bytes for userId.
-       */
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 被邀请者 userId (NanoID)
-       * </pre>
-       *
-       * <code>string user_id = 2;</code>
+       * <code>int64 user_id = 2;</code>
        * @param value The userId to set.
        * @return This builder for chaining.
        */
-      public Builder setUserId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setUserId(long value) {
+
         userId_ = value;
         bitField0_ |= 0x00000002;
         onChanged();
@@ -3586,33 +3288,15 @@ public final class GroupMgmtProto {
       }
       /**
        * <pre>
-       * 被邀请者 userId (NanoID)
+       * 被邀请者 userId (Snowflake)
        * </pre>
        *
-       * <code>string user_id = 2;</code>
+       * <code>int64 user_id = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearUserId() {
-        userId_ = getDefaultInstance().getUserId();
         bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 被邀请者 userId (NanoID)
-       * </pre>
-       *
-       * <code>string user_id = 2;</code>
-       * @param value The bytes for userId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setUserIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        userId_ = value;
-        bitField0_ |= 0x00000002;
+        userId_ = 0L;
         onChanged();
         return this;
       }
@@ -4309,16 +3993,10 @@ public final class GroupMgmtProto {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
-    java.lang.String getGroupId();
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    com.google.protobuf.ByteString
-        getGroupIdBytes();
+    long getGroupId();
   }
   /**
    * <pre>
@@ -4339,7 +4017,6 @@ public final class GroupMgmtProto {
       super(builder);
     }
     private GetGroupInfoReq() {
-      groupId_ = "";
     }
 
     @java.lang.Override
@@ -4363,42 +4040,14 @@ public final class GroupMgmtProto {
     }
 
     public static final int GROUP_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object groupId_ = "";
+    private long groupId_ = 0L;
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
     @java.lang.Override
-    public java.lang.String getGroupId() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        groupId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getGroupIdBytes() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        groupId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getGroupId() {
+      return groupId_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -4415,8 +4064,8 @@ public final class GroupMgmtProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, groupId_);
+      if (groupId_ != 0L) {
+        output.writeInt64(1, groupId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -4427,8 +4076,9 @@ public final class GroupMgmtProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, groupId_);
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, groupId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -4445,8 +4095,8 @@ public final class GroupMgmtProto {
       }
       com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupInfoReq other = (com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupInfoReq) obj;
 
-      if (!getGroupId()
-          .equals(other.getGroupId())) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -4459,7 +4109,8 @@ public final class GroupMgmtProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -4597,7 +4248,7 @@ public final class GroupMgmtProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        groupId_ = "";
+        groupId_ = 0L;
         return this;
       }
 
@@ -4680,10 +4331,8 @@ public final class GroupMgmtProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupInfoReq other) {
         if (other == com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupInfoReq.getDefaultInstance()) return this;
-        if (!other.getGroupId().isEmpty()) {
-          groupId_ = other.groupId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
@@ -4711,11 +4360,11 @@ public final class GroupMgmtProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                groupId_ = input.readStringRequireUtf8();
+              case 8: {
+                groupId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -4733,74 +4382,34 @@ public final class GroupMgmtProto {
       }
       private int bitField0_;
 
-      private java.lang.Object groupId_ = "";
+      private long groupId_ ;
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return The groupId.
        */
-      public java.lang.String getGroupId() {
-        java.lang.Object ref = groupId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          groupId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
       }
       /**
-       * <code>string group_id = 1;</code>
-       * @return The bytes for groupId.
-       */
-      public com.google.protobuf.ByteString
-          getGroupIdBytes() {
-        java.lang.Object ref = groupId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          groupId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @param value The groupId to set.
        * @return This builder for chaining.
        */
-      public Builder setGroupId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setGroupId(long value) {
+
         groupId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearGroupId() {
-        groupId_ = getDefaultInstance().getGroupId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string group_id = 1;</code>
-       * @param value The bytes for groupId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setGroupIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        groupId_ = value;
-        bitField0_ |= 0x00000001;
+        groupId_ = 0L;
         onChanged();
         return this;
       }
@@ -5705,16 +5314,10 @@ public final class GroupMgmtProto {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
-    java.lang.String getGroupId();
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    com.google.protobuf.ByteString
-        getGroupIdBytes();
+    long getGroupId();
   }
   /**
    * <pre>
@@ -5735,7 +5338,6 @@ public final class GroupMgmtProto {
       super(builder);
     }
     private GetGroupMembersReq() {
-      groupId_ = "";
     }
 
     @java.lang.Override
@@ -5759,42 +5361,14 @@ public final class GroupMgmtProto {
     }
 
     public static final int GROUP_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object groupId_ = "";
+    private long groupId_ = 0L;
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
     @java.lang.Override
-    public java.lang.String getGroupId() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        groupId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getGroupIdBytes() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        groupId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getGroupId() {
+      return groupId_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -5811,8 +5385,8 @@ public final class GroupMgmtProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, groupId_);
+      if (groupId_ != 0L) {
+        output.writeInt64(1, groupId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -5823,8 +5397,9 @@ public final class GroupMgmtProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, groupId_);
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, groupId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -5841,8 +5416,8 @@ public final class GroupMgmtProto {
       }
       com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupMembersReq other = (com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupMembersReq) obj;
 
-      if (!getGroupId()
-          .equals(other.getGroupId())) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -5855,7 +5430,8 @@ public final class GroupMgmtProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -5993,7 +5569,7 @@ public final class GroupMgmtProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        groupId_ = "";
+        groupId_ = 0L;
         return this;
       }
 
@@ -6076,10 +5652,8 @@ public final class GroupMgmtProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupMembersReq other) {
         if (other == com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupMembersReq.getDefaultInstance()) return this;
-        if (!other.getGroupId().isEmpty()) {
-          groupId_ = other.groupId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
@@ -6107,11 +5681,11 @@ public final class GroupMgmtProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                groupId_ = input.readStringRequireUtf8();
+              case 8: {
+                groupId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -6129,74 +5703,34 @@ public final class GroupMgmtProto {
       }
       private int bitField0_;
 
-      private java.lang.Object groupId_ = "";
+      private long groupId_ ;
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return The groupId.
        */
-      public java.lang.String getGroupId() {
-        java.lang.Object ref = groupId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          groupId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
       }
       /**
-       * <code>string group_id = 1;</code>
-       * @return The bytes for groupId.
-       */
-      public com.google.protobuf.ByteString
-          getGroupIdBytes() {
-        java.lang.Object ref = groupId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          groupId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @param value The groupId to set.
        * @return This builder for chaining.
        */
-      public Builder setGroupId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setGroupId(long value) {
+
         groupId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearGroupId() {
-        groupId_ = getDefaultInstance().getGroupId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string group_id = 1;</code>
-       * @param value The bytes for groupId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setGroupIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        groupId_ = value;
-        bitField0_ |= 0x00000001;
+        groupId_ = 0L;
         onChanged();
         return this;
       }
@@ -6269,16 +5803,10 @@ public final class GroupMgmtProto {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
-    java.lang.String getUserId();
-    /**
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    com.google.protobuf.ByteString
-        getUserIdBytes();
+    long getUserId();
 
     /**
      * <code>string user_name = 2;</code>
@@ -6341,7 +5869,6 @@ public final class GroupMgmtProto {
       super(builder);
     }
     private GroupMember() {
-      userId_ = "";
       userName_ = "";
       nickname_ = "";
       avatar_ = "";
@@ -6368,42 +5895,14 @@ public final class GroupMgmtProto {
     }
 
     public static final int USER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object userId_ = "";
+    private long userId_ = 0L;
     /**
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
     @java.lang.Override
-    public java.lang.String getUserId() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        userId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUserIdBytes() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        userId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getUserId() {
+      return userId_;
     }
 
     public static final int USER_NAME_FIELD_NUMBER = 2;
@@ -6559,8 +6058,8 @@ public final class GroupMgmtProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, userId_);
+      if (userId_ != 0L) {
+        output.writeInt64(1, userId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userName_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, userName_);
@@ -6586,8 +6085,9 @@ public final class GroupMgmtProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, userId_);
+      if (userId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, userId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userName_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, userName_);
@@ -6621,8 +6121,8 @@ public final class GroupMgmtProto {
       }
       com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMember other = (com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMember) obj;
 
-      if (!getUserId()
-          .equals(other.getUserId())) return false;
+      if (getUserId()
+          != other.getUserId()) return false;
       if (!getUserName()
           .equals(other.getUserName())) return false;
       if (!getNickname()
@@ -6645,7 +6145,8 @@ public final class GroupMgmtProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getUserId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getUserId());
       hash = (37 * hash) + USER_NAME_FIELD_NUMBER;
       hash = (53 * hash) + getUserName().hashCode();
       hash = (37 * hash) + NICKNAME_FIELD_NUMBER;
@@ -6788,7 +6289,7 @@ public final class GroupMgmtProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        userId_ = "";
+        userId_ = 0L;
         userName_ = "";
         nickname_ = "";
         avatar_ = "";
@@ -6891,10 +6392,8 @@ public final class GroupMgmtProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMember other) {
         if (other == com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMember.getDefaultInstance()) return this;
-        if (!other.getUserId().isEmpty()) {
-          userId_ = other.userId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getUserId() != 0L) {
+          setUserId(other.getUserId());
         }
         if (!other.getUserName().isEmpty()) {
           userName_ = other.userName_;
@@ -6943,11 +6442,11 @@ public final class GroupMgmtProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                userId_ = input.readStringRequireUtf8();
+              case 8: {
+                userId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               case 18: {
                 userName_ = input.readStringRequireUtf8();
                 bitField0_ |= 0x00000002;
@@ -6990,74 +6489,34 @@ public final class GroupMgmtProto {
       }
       private int bitField0_;
 
-      private java.lang.Object userId_ = "";
+      private long userId_ ;
       /**
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return The userId.
        */
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getUserId() {
+        return userId_;
       }
       /**
-       * <code>string user_id = 1;</code>
-       * @return The bytes for userId.
-       */
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @param value The userId to set.
        * @return This builder for chaining.
        */
-      public Builder setUserId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setUserId(long value) {
+
         userId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearUserId() {
-        userId_ = getDefaultInstance().getUserId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string user_id = 1;</code>
-       * @param value The bytes for userId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setUserIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        userId_ = value;
-        bitField0_ |= 0x00000001;
+        userId_ = 0L;
         onChanged();
         return this;
       }
@@ -9823,16 +9282,10 @@ public final class GroupMgmtProto {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
-    java.lang.String getGroupId();
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    com.google.protobuf.ByteString
-        getGroupIdBytes();
+    long getGroupId();
 
     /**
      * <code>.im.group.GroupMemberChangeNotify.ChangeType type = 2;</code>
@@ -9846,28 +9299,16 @@ public final class GroupMgmtProto {
     com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMemberChangeNotify.ChangeType getType();
 
     /**
-     * <code>string user_id = 3;</code>
+     * <code>int64 user_id = 3;</code>
      * @return The userId.
      */
-    java.lang.String getUserId();
-    /**
-     * <code>string user_id = 3;</code>
-     * @return The bytes for userId.
-     */
-    com.google.protobuf.ByteString
-        getUserIdBytes();
+    long getUserId();
 
     /**
-     * <code>string operator_id = 4;</code>
+     * <code>int64 operator_id = 4;</code>
      * @return The operatorId.
      */
-    java.lang.String getOperatorId();
-    /**
-     * <code>string operator_id = 4;</code>
-     * @return The bytes for operatorId.
-     */
-    com.google.protobuf.ByteString
-        getOperatorIdBytes();
+    long getOperatorId();
 
     /**
      * <code>string user_name = 5;</code>
@@ -9912,10 +9353,7 @@ public final class GroupMgmtProto {
       super(builder);
     }
     private GroupMemberChangeNotify() {
-      groupId_ = "";
       type_ = 0;
-      userId_ = "";
-      operatorId_ = "";
       userName_ = "";
       nickname_ = "";
     }
@@ -10085,42 +9523,14 @@ public final class GroupMgmtProto {
     }
 
     public static final int GROUP_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object groupId_ = "";
+    private long groupId_ = 0L;
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
     @java.lang.Override
-    public java.lang.String getGroupId() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        groupId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getGroupIdBytes() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        groupId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getGroupId() {
+      return groupId_;
     }
 
     public static final int TYPE_FIELD_NUMBER = 2;
@@ -10142,81 +9552,25 @@ public final class GroupMgmtProto {
     }
 
     public static final int USER_ID_FIELD_NUMBER = 3;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object userId_ = "";
+    private long userId_ = 0L;
     /**
-     * <code>string user_id = 3;</code>
+     * <code>int64 user_id = 3;</code>
      * @return The userId.
      */
     @java.lang.Override
-    public java.lang.String getUserId() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        userId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string user_id = 3;</code>
-     * @return The bytes for userId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUserIdBytes() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        userId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getUserId() {
+      return userId_;
     }
 
     public static final int OPERATOR_ID_FIELD_NUMBER = 4;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object operatorId_ = "";
+    private long operatorId_ = 0L;
     /**
-     * <code>string operator_id = 4;</code>
+     * <code>int64 operator_id = 4;</code>
      * @return The operatorId.
      */
     @java.lang.Override
-    public java.lang.String getOperatorId() {
-      java.lang.Object ref = operatorId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        operatorId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string operator_id = 4;</code>
-     * @return The bytes for operatorId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getOperatorIdBytes() {
-      java.lang.Object ref = operatorId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        operatorId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getOperatorId() {
+      return operatorId_;
     }
 
     public static final int USER_NAME_FIELD_NUMBER = 5;
@@ -10311,17 +9665,17 @@ public final class GroupMgmtProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, groupId_);
+      if (groupId_ != 0L) {
+        output.writeInt64(1, groupId_);
       }
       if (type_ != com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMemberChangeNotify.ChangeType.INVITED.getNumber()) {
         output.writeEnum(2, type_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, userId_);
+      if (userId_ != 0L) {
+        output.writeInt64(3, userId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(operatorId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 4, operatorId_);
+      if (operatorId_ != 0L) {
+        output.writeInt64(4, operatorId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userName_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 5, userName_);
@@ -10338,18 +9692,21 @@ public final class GroupMgmtProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, groupId_);
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, groupId_);
       }
       if (type_ != com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMemberChangeNotify.ChangeType.INVITED.getNumber()) {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(2, type_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, userId_);
+      if (userId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(3, userId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(operatorId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, operatorId_);
+      if (operatorId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(4, operatorId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userName_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(5, userName_);
@@ -10372,13 +9729,13 @@ public final class GroupMgmtProto {
       }
       com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMemberChangeNotify other = (com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMemberChangeNotify) obj;
 
-      if (!getGroupId()
-          .equals(other.getGroupId())) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
       if (type_ != other.type_) return false;
-      if (!getUserId()
-          .equals(other.getUserId())) return false;
-      if (!getOperatorId()
-          .equals(other.getOperatorId())) return false;
+      if (getUserId()
+          != other.getUserId()) return false;
+      if (getOperatorId()
+          != other.getOperatorId()) return false;
       if (!getUserName()
           .equals(other.getUserName())) return false;
       if (!getNickname()
@@ -10395,13 +9752,16 @@ public final class GroupMgmtProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       hash = (37 * hash) + TYPE_FIELD_NUMBER;
       hash = (53 * hash) + type_;
       hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getUserId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getUserId());
       hash = (37 * hash) + OPERATOR_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getOperatorId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getOperatorId());
       hash = (37 * hash) + USER_NAME_FIELD_NUMBER;
       hash = (53 * hash) + getUserName().hashCode();
       hash = (37 * hash) + NICKNAME_FIELD_NUMBER;
@@ -10543,10 +9903,10 @@ public final class GroupMgmtProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        groupId_ = "";
+        groupId_ = 0L;
         type_ = 0;
-        userId_ = "";
-        operatorId_ = "";
+        userId_ = 0L;
+        operatorId_ = 0L;
         userName_ = "";
         nickname_ = "";
         return this;
@@ -10646,23 +10006,17 @@ public final class GroupMgmtProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMemberChangeNotify other) {
         if (other == com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMemberChangeNotify.getDefaultInstance()) return this;
-        if (!other.getGroupId().isEmpty()) {
-          groupId_ = other.groupId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
         }
         if (other.type_ != 0) {
           setTypeValue(other.getTypeValue());
         }
-        if (!other.getUserId().isEmpty()) {
-          userId_ = other.userId_;
-          bitField0_ |= 0x00000004;
-          onChanged();
+        if (other.getUserId() != 0L) {
+          setUserId(other.getUserId());
         }
-        if (!other.getOperatorId().isEmpty()) {
-          operatorId_ = other.operatorId_;
-          bitField0_ |= 0x00000008;
-          onChanged();
+        if (other.getOperatorId() != 0L) {
+          setOperatorId(other.getOperatorId());
         }
         if (!other.getUserName().isEmpty()) {
           userName_ = other.userName_;
@@ -10700,26 +10054,26 @@ public final class GroupMgmtProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                groupId_ = input.readStringRequireUtf8();
+              case 8: {
+                groupId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               case 16: {
                 type_ = input.readEnum();
                 bitField0_ |= 0x00000002;
                 break;
               } // case 16
-              case 26: {
-                userId_ = input.readStringRequireUtf8();
+              case 24: {
+                userId_ = input.readInt64();
                 bitField0_ |= 0x00000004;
                 break;
-              } // case 26
-              case 34: {
-                operatorId_ = input.readStringRequireUtf8();
+              } // case 24
+              case 32: {
+                operatorId_ = input.readInt64();
                 bitField0_ |= 0x00000008;
                 break;
-              } // case 34
+              } // case 32
               case 42: {
                 userName_ = input.readStringRequireUtf8();
                 bitField0_ |= 0x00000010;
@@ -10747,74 +10101,34 @@ public final class GroupMgmtProto {
       }
       private int bitField0_;
 
-      private java.lang.Object groupId_ = "";
+      private long groupId_ ;
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return The groupId.
        */
-      public java.lang.String getGroupId() {
-        java.lang.Object ref = groupId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          groupId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
       }
       /**
-       * <code>string group_id = 1;</code>
-       * @return The bytes for groupId.
-       */
-      public com.google.protobuf.ByteString
-          getGroupIdBytes() {
-        java.lang.Object ref = groupId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          groupId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @param value The groupId to set.
        * @return This builder for chaining.
        */
-      public Builder setGroupId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setGroupId(long value) {
+
         groupId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearGroupId() {
-        groupId_ = getDefaultInstance().getGroupId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string group_id = 1;</code>
-       * @param value The bytes for groupId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setGroupIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        groupId_ = value;
-        bitField0_ |= 0x00000001;
+        groupId_ = 0L;
         onChanged();
         return this;
       }
@@ -10872,146 +10186,66 @@ public final class GroupMgmtProto {
         return this;
       }
 
-      private java.lang.Object userId_ = "";
+      private long userId_ ;
       /**
-       * <code>string user_id = 3;</code>
+       * <code>int64 user_id = 3;</code>
        * @return The userId.
        */
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getUserId() {
+        return userId_;
       }
       /**
-       * <code>string user_id = 3;</code>
-       * @return The bytes for userId.
-       */
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string user_id = 3;</code>
+       * <code>int64 user_id = 3;</code>
        * @param value The userId to set.
        * @return This builder for chaining.
        */
-      public Builder setUserId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setUserId(long value) {
+
         userId_ = value;
         bitField0_ |= 0x00000004;
         onChanged();
         return this;
       }
       /**
-       * <code>string user_id = 3;</code>
+       * <code>int64 user_id = 3;</code>
        * @return This builder for chaining.
        */
       public Builder clearUserId() {
-        userId_ = getDefaultInstance().getUserId();
         bitField0_ = (bitField0_ & ~0x00000004);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string user_id = 3;</code>
-       * @param value The bytes for userId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setUserIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        userId_ = value;
-        bitField0_ |= 0x00000004;
+        userId_ = 0L;
         onChanged();
         return this;
       }
 
-      private java.lang.Object operatorId_ = "";
+      private long operatorId_ ;
       /**
-       * <code>string operator_id = 4;</code>
+       * <code>int64 operator_id = 4;</code>
        * @return The operatorId.
        */
-      public java.lang.String getOperatorId() {
-        java.lang.Object ref = operatorId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          operatorId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getOperatorId() {
+        return operatorId_;
       }
       /**
-       * <code>string operator_id = 4;</code>
-       * @return The bytes for operatorId.
-       */
-      public com.google.protobuf.ByteString
-          getOperatorIdBytes() {
-        java.lang.Object ref = operatorId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          operatorId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string operator_id = 4;</code>
+       * <code>int64 operator_id = 4;</code>
        * @param value The operatorId to set.
        * @return This builder for chaining.
        */
-      public Builder setOperatorId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setOperatorId(long value) {
+
         operatorId_ = value;
         bitField0_ |= 0x00000008;
         onChanged();
         return this;
       }
       /**
-       * <code>string operator_id = 4;</code>
+       * <code>int64 operator_id = 4;</code>
        * @return This builder for chaining.
        */
       public Builder clearOperatorId() {
-        operatorId_ = getDefaultInstance().getOperatorId();
         bitField0_ = (bitField0_ & ~0x00000008);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string operator_id = 4;</code>
-       * @param value The bytes for operatorId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setOperatorIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        operatorId_ = value;
-        bitField0_ |= 0x00000008;
+        operatorId_ = 0L;
         onChanged();
         return this;
       }
@@ -11228,16 +10462,10 @@ public final class GroupMgmtProto {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
-    java.lang.String getGroupId();
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    com.google.protobuf.ByteString
-        getGroupIdBytes();
+    long getGroupId();
 
     /**
      * <code>int64 last_read_seq = 2;</code>
@@ -11264,7 +10492,6 @@ public final class GroupMgmtProto {
       super(builder);
     }
     private GroupAckReq() {
-      groupId_ = "";
     }
 
     @java.lang.Override
@@ -11288,42 +10515,14 @@ public final class GroupMgmtProto {
     }
 
     public static final int GROUP_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object groupId_ = "";
+    private long groupId_ = 0L;
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
     @java.lang.Override
-    public java.lang.String getGroupId() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        groupId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getGroupIdBytes() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        groupId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getGroupId() {
+      return groupId_;
     }
 
     public static final int LAST_READ_SEQ_FIELD_NUMBER = 2;
@@ -11351,8 +10550,8 @@ public final class GroupMgmtProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, groupId_);
+      if (groupId_ != 0L) {
+        output.writeInt64(1, groupId_);
       }
       if (lastReadSeq_ != 0L) {
         output.writeInt64(2, lastReadSeq_);
@@ -11366,8 +10565,9 @@ public final class GroupMgmtProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, groupId_);
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, groupId_);
       }
       if (lastReadSeq_ != 0L) {
         size += com.google.protobuf.CodedOutputStream
@@ -11388,8 +10588,8 @@ public final class GroupMgmtProto {
       }
       com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupAckReq other = (com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupAckReq) obj;
 
-      if (!getGroupId()
-          .equals(other.getGroupId())) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
       if (getLastReadSeq()
           != other.getLastReadSeq()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
@@ -11404,7 +10604,8 @@ public final class GroupMgmtProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       hash = (37 * hash) + LAST_READ_SEQ_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getLastReadSeq());
@@ -11545,7 +10746,7 @@ public final class GroupMgmtProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        groupId_ = "";
+        groupId_ = 0L;
         lastReadSeq_ = 0L;
         return this;
       }
@@ -11632,10 +10833,8 @@ public final class GroupMgmtProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupAckReq other) {
         if (other == com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupAckReq.getDefaultInstance()) return this;
-        if (!other.getGroupId().isEmpty()) {
-          groupId_ = other.groupId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
         }
         if (other.getLastReadSeq() != 0L) {
           setLastReadSeq(other.getLastReadSeq());
@@ -11666,11 +10865,11 @@ public final class GroupMgmtProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                groupId_ = input.readStringRequireUtf8();
+              case 8: {
+                groupId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               case 16: {
                 lastReadSeq_ = input.readInt64();
                 bitField0_ |= 0x00000002;
@@ -11693,74 +10892,34 @@ public final class GroupMgmtProto {
       }
       private int bitField0_;
 
-      private java.lang.Object groupId_ = "";
+      private long groupId_ ;
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return The groupId.
        */
-      public java.lang.String getGroupId() {
-        java.lang.Object ref = groupId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          groupId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
       }
       /**
-       * <code>string group_id = 1;</code>
-       * @return The bytes for groupId.
-       */
-      public com.google.protobuf.ByteString
-          getGroupIdBytes() {
-        java.lang.Object ref = groupId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          groupId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @param value The groupId to set.
        * @return This builder for chaining.
        */
-      public Builder setGroupId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setGroupId(long value) {
+
         groupId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearGroupId() {
-        groupId_ = getDefaultInstance().getGroupId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string group_id = 1;</code>
-       * @param value The bytes for groupId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setGroupIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        groupId_ = value;
-        bitField0_ |= 0x00000001;
+        groupId_ = 0L;
         onChanged();
         return this;
       }
@@ -12489,16 +11648,10 @@ public final class GroupMgmtProto {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
-    java.lang.String getGroupId();
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    com.google.protobuf.ByteString
-        getGroupIdBytes();
+    long getGroupId();
 
     /**
      * <code>string message_id = 2;</code>
@@ -12541,7 +11694,6 @@ public final class GroupMgmtProto {
       super(builder);
     }
     private GetGroupMsgReadStatusReq() {
-      groupId_ = "";
       messageId_ = "";
     }
 
@@ -12566,42 +11718,14 @@ public final class GroupMgmtProto {
     }
 
     public static final int GROUP_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object groupId_ = "";
+    private long groupId_ = 0L;
     /**
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
     @java.lang.Override
-    public java.lang.String getGroupId() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        groupId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getGroupIdBytes() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        groupId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getGroupId() {
+      return groupId_;
     }
 
     public static final int MESSAGE_ID_FIELD_NUMBER = 2;
@@ -12672,8 +11796,8 @@ public final class GroupMgmtProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, groupId_);
+      if (groupId_ != 0L) {
+        output.writeInt64(1, groupId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(messageId_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, messageId_);
@@ -12690,8 +11814,9 @@ public final class GroupMgmtProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, groupId_);
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, groupId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(messageId_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, messageId_);
@@ -12715,8 +11840,8 @@ public final class GroupMgmtProto {
       }
       com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupMsgReadStatusReq other = (com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupMsgReadStatusReq) obj;
 
-      if (!getGroupId()
-          .equals(other.getGroupId())) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
       if (!getMessageId()
           .equals(other.getMessageId())) return false;
       if (getSeq()
@@ -12733,7 +11858,8 @@ public final class GroupMgmtProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       hash = (37 * hash) + MESSAGE_ID_FIELD_NUMBER;
       hash = (53 * hash) + getMessageId().hashCode();
       hash = (37 * hash) + SEQ_FIELD_NUMBER;
@@ -12876,7 +12002,7 @@ public final class GroupMgmtProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        groupId_ = "";
+        groupId_ = 0L;
         messageId_ = "";
         seq_ = 0L;
         return this;
@@ -12967,10 +12093,8 @@ public final class GroupMgmtProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupMsgReadStatusReq other) {
         if (other == com.github.moxib.pomelo.proto.group.GroupMgmtProto.GetGroupMsgReadStatusReq.getDefaultInstance()) return this;
-        if (!other.getGroupId().isEmpty()) {
-          groupId_ = other.groupId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
         }
         if (!other.getMessageId().isEmpty()) {
           messageId_ = other.messageId_;
@@ -13006,11 +12130,11 @@ public final class GroupMgmtProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                groupId_ = input.readStringRequireUtf8();
+              case 8: {
+                groupId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               case 18: {
                 messageId_ = input.readStringRequireUtf8();
                 bitField0_ |= 0x00000002;
@@ -13038,74 +12162,34 @@ public final class GroupMgmtProto {
       }
       private int bitField0_;
 
-      private java.lang.Object groupId_ = "";
+      private long groupId_ ;
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return The groupId.
        */
-      public java.lang.String getGroupId() {
-        java.lang.Object ref = groupId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          groupId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
       }
       /**
-       * <code>string group_id = 1;</code>
-       * @return The bytes for groupId.
-       */
-      public com.google.protobuf.ByteString
-          getGroupIdBytes() {
-        java.lang.Object ref = groupId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          groupId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @param value The groupId to set.
        * @return This builder for chaining.
        */
-      public Builder setGroupId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setGroupId(long value) {
+
         groupId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearGroupId() {
-        groupId_ = getDefaultInstance().getGroupId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string group_id = 1;</code>
-       * @param value The bytes for groupId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setGroupIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        groupId_ = value;
-        bitField0_ |= 0x00000001;
+        groupId_ = 0L;
         onChanged();
         return this;
       }
@@ -13294,16 +12378,10 @@ public final class GroupMgmtProto {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
-    java.lang.String getUserId();
-    /**
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    com.google.protobuf.ByteString
-        getUserIdBytes();
+    long getUserId();
 
     /**
      * <code>string nickname = 2;</code>
@@ -13342,7 +12420,6 @@ public final class GroupMgmtProto {
       super(builder);
     }
     private GroupMsgReader() {
-      userId_ = "";
       nickname_ = "";
       avatar_ = "";
     }
@@ -13368,42 +12445,14 @@ public final class GroupMgmtProto {
     }
 
     public static final int USER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object userId_ = "";
+    private long userId_ = 0L;
     /**
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
     @java.lang.Override
-    public java.lang.String getUserId() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        userId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUserIdBytes() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        userId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getUserId() {
+      return userId_;
     }
 
     public static final int NICKNAME_FIELD_NUMBER = 2;
@@ -13498,8 +12547,8 @@ public final class GroupMgmtProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, userId_);
+      if (userId_ != 0L) {
+        output.writeInt64(1, userId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(nickname_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, nickname_);
@@ -13516,8 +12565,9 @@ public final class GroupMgmtProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, userId_);
+      if (userId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, userId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(nickname_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, nickname_);
@@ -13540,8 +12590,8 @@ public final class GroupMgmtProto {
       }
       com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMsgReader other = (com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMsgReader) obj;
 
-      if (!getUserId()
-          .equals(other.getUserId())) return false;
+      if (getUserId()
+          != other.getUserId()) return false;
       if (!getNickname()
           .equals(other.getNickname())) return false;
       if (!getAvatar()
@@ -13558,7 +12608,8 @@ public final class GroupMgmtProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getUserId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getUserId());
       hash = (37 * hash) + NICKNAME_FIELD_NUMBER;
       hash = (53 * hash) + getNickname().hashCode();
       hash = (37 * hash) + AVATAR_FIELD_NUMBER;
@@ -13694,7 +12745,7 @@ public final class GroupMgmtProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        userId_ = "";
+        userId_ = 0L;
         nickname_ = "";
         avatar_ = "";
         return this;
@@ -13785,10 +12836,8 @@ public final class GroupMgmtProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMsgReader other) {
         if (other == com.github.moxib.pomelo.proto.group.GroupMgmtProto.GroupMsgReader.getDefaultInstance()) return this;
-        if (!other.getUserId().isEmpty()) {
-          userId_ = other.userId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getUserId() != 0L) {
+          setUserId(other.getUserId());
         }
         if (!other.getNickname().isEmpty()) {
           nickname_ = other.nickname_;
@@ -13826,11 +12875,11 @@ public final class GroupMgmtProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                userId_ = input.readStringRequireUtf8();
+              case 8: {
+                userId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               case 18: {
                 nickname_ = input.readStringRequireUtf8();
                 bitField0_ |= 0x00000002;
@@ -13858,74 +12907,34 @@ public final class GroupMgmtProto {
       }
       private int bitField0_;
 
-      private java.lang.Object userId_ = "";
+      private long userId_ ;
       /**
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return The userId.
        */
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getUserId() {
+        return userId_;
       }
       /**
-       * <code>string user_id = 1;</code>
-       * @return The bytes for userId.
-       */
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @param value The userId to set.
        * @return This builder for chaining.
        */
-      public Builder setUserId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setUserId(long value) {
+
         userId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearUserId() {
-        userId_ = getDefaultInstance().getUserId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string user_id = 1;</code>
-       * @param value The bytes for userId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setUserIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        userId_ = value;
-        bitField0_ |= 0x00000001;
+        userId_ = 0L;
         onChanged();
         return this;
       }
@@ -15243,18 +14252,18 @@ public final class GroupMgmtProto {
       "e\030\001 \001(\t\022\016\n\006avatar\030\002 \001(\t\"T\n\017CreateGroupRe" +
       "sp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022\"\n\005gro" +
       "up\030\003 \001(\0132\023.im.group.GroupInfo\"\241\001\n\tGroupI" +
-      "nfo\022\020\n\010group_id\030\001 \001(\t\022\014\n\004name\030\002 \001(\t\022\016\n\006a" +
+      "nfo\022\020\n\010group_id\030\001 \001(\003\022\014\n\004name\030\002 \001(\t\022\016\n\006a" +
       "vatar\030\003 \001(\t\022\023\n\013description\030\004 \001(\t\022\020\n\010owne" +
-      "r_id\030\005 \001(\t\022\024\n\014member_count\030\006 \001(\005\022\023\n\013max_" +
+      "r_id\030\005 \001(\003\022\024\n\014member_count\030\006 \001(\005\022\023\n\013max_" +
       "members\030\007 \001(\005\022\022\n\ncreated_at\030\010 \001(\003\"5\n\020Inv" +
-      "iteToGroupReq\022\020\n\010group_id\030\001 \001(\t\022\017\n\007user_" +
-      "id\030\002 \001(\t\"2\n\021InviteToGroupResp\022\014\n\004code\030\001 " +
+      "iteToGroupReq\022\020\n\010group_id\030\001 \001(\003\022\017\n\007user_" +
+      "id\030\002 \001(\003\"2\n\021InviteToGroupResp\022\014\n\004code\030\001 " +
       "\001(\005\022\017\n\007message\030\002 \001(\t\"#\n\017GetGroupInfoReq\022" +
-      "\020\n\010group_id\030\001 \001(\t\"U\n\020GetGroupInfoResp\022\014\n" +
+      "\020\n\010group_id\030\001 \001(\003\"U\n\020GetGroupInfoResp\022\014\n" +
       "\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022\"\n\005group\030\003 " +
       "\001(\0132\023.im.group.GroupInfo\"&\n\022GetGroupMemb" +
-      "ersReq\022\020\n\010group_id\030\001 \001(\t\"t\n\013GroupMember\022" +
-      "\017\n\007user_id\030\001 \001(\t\022\021\n\tuser_name\030\002 \001(\t\022\020\n\010n" +
+      "ersReq\022\020\n\010group_id\030\001 \001(\003\"t\n\013GroupMember\022" +
+      "\017\n\007user_id\030\001 \001(\003\022\021\n\tuser_name\030\002 \001(\t\022\020\n\010n" +
       "ickname\030\003 \001(\t\022\016\n\006avatar\030\004 \001(\t\022\014\n\004role\030\005 " +
       "\001(\005\022\021\n\tjoined_at\030\006 \001(\003\"\\\n\023GetGroupMember" +
       "sResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022&\n\007" +
@@ -15262,18 +14271,18 @@ public final class GroupMgmtProto {
       "GetMyGroupsReq\"U\n\017GetMyGroupsResp\022\014\n\004cod" +
       "e\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022#\n\006groups\030\003 \003(\013" +
       "2\023.im.group.GroupInfo\"\225\002\n\027GroupMemberCha" +
-      "ngeNotify\022\020\n\010group_id\030\001 \001(\t\022:\n\004type\030\002 \001(" +
+      "ngeNotify\022\020\n\010group_id\030\001 \001(\003\022:\n\004type\030\002 \001(" +
       "\0162,.im.group.GroupMemberChangeNotify.Cha" +
-      "ngeType\022\017\n\007user_id\030\003 \001(\t\022\023\n\013operator_id\030" +
-      "\004 \001(\t\022\021\n\tuser_name\030\005 \001(\t\022\020\n\010nickname\030\006 \001" +
+      "ngeType\022\017\n\007user_id\030\003 \001(\003\022\023\n\013operator_id\030" +
+      "\004 \001(\003\022\021\n\tuser_name\030\005 \001(\t\022\020\n\010nickname\030\006 \001" +
       "(\t\"a\n\nChangeType\022\013\n\007INVITED\020\000\022\n\n\006JOINED\020" +
       "\001\022\010\n\004LEFT\020\002\022\n\n\006KICKED\020\003\022\r\n\tADMIN_SET\020\004\022\025" +
       "\n\021OWNER_TRANSFERRED\020\005\"6\n\013GroupAckReq\022\020\n\010" +
-      "group_id\030\001 \001(\t\022\025\n\rlast_read_seq\030\002 \001(\003\"-\n" +
+      "group_id\030\001 \001(\003\022\025\n\rlast_read_seq\030\002 \001(\003\"-\n" +
       "\014GroupAckResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002" +
       " \001(\t\"M\n\030GetGroupMsgReadStatusReq\022\020\n\010grou" +
-      "p_id\030\001 \001(\t\022\022\n\nmessage_id\030\002 \001(\t\022\013\n\003seq\030\003 " +
-      "\001(\003\"C\n\016GroupMsgReader\022\017\n\007user_id\030\001 \001(\t\022\020" +
+      "p_id\030\001 \001(\003\022\022\n\nmessage_id\030\002 \001(\t\022\013\n\003seq\030\003 " +
+      "\001(\003\"C\n\016GroupMsgReader\022\017\n\007user_id\030\001 \001(\003\022\020" +
       "\n\010nickname\030\002 \001(\t\022\016\n\006avatar\030\003 \001(\t\"e\n\031GetG" +
       "roupMsgReadStatusResp\022\014\n\004code\030\001 \001(\005\022\017\n\007m" +
       "essage\030\002 \001(\t\022)\n\007readers\030\003 \003(\0132\030.im.group" +

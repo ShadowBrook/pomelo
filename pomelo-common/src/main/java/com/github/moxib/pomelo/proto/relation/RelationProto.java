@@ -703,16 +703,10 @@ public final class RelationProto {
         com.google.protobuf.MessageOrBuilder {
 
       /**
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return The userId.
        */
-      java.lang.String getUserId();
-      /**
-       * <code>string user_id = 1;</code>
-       * @return The bytes for userId.
-       */
-      com.google.protobuf.ByteString
-          getUserIdBytes();
+      long getUserId();
 
       /**
        * <code>string user_name = 2;</code>
@@ -763,7 +757,6 @@ public final class RelationProto {
         super(builder);
       }
       private UserInfo() {
-        userId_ = "";
         userName_ = "";
         nickname_ = "";
         avatar_ = "";
@@ -790,42 +783,14 @@ public final class RelationProto {
       }
 
       public static final int USER_ID_FIELD_NUMBER = 1;
-      @SuppressWarnings("serial")
-      private volatile java.lang.Object userId_ = "";
+      private long userId_ = 0L;
       /**
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return The userId.
        */
       @java.lang.Override
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof java.lang.String) {
-          return (java.lang.String) ref;
-        } else {
-          com.google.protobuf.ByteString bs = 
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        }
-      }
-      /**
-       * <code>string user_id = 1;</code>
-       * @return The bytes for userId.
-       */
-      @java.lang.Override
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof java.lang.String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
+      public long getUserId() {
+        return userId_;
       }
 
       public static final int USER_NAME_FIELD_NUMBER = 2;
@@ -959,8 +924,8 @@ public final class RelationProto {
       @java.lang.Override
       public void writeTo(com.google.protobuf.CodedOutputStream output)
                           throws java.io.IOException {
-        if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-          com.google.protobuf.GeneratedMessageV3.writeString(output, 1, userId_);
+        if (userId_ != 0L) {
+          output.writeInt64(1, userId_);
         }
         if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userName_)) {
           com.google.protobuf.GeneratedMessageV3.writeString(output, 2, userName_);
@@ -980,8 +945,9 @@ public final class RelationProto {
         if (size != -1) return size;
 
         size = 0;
-        if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-          size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, userId_);
+        if (userId_ != 0L) {
+          size += com.google.protobuf.CodedOutputStream
+            .computeInt64Size(1, userId_);
         }
         if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userName_)) {
           size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, userName_);
@@ -1007,8 +973,8 @@ public final class RelationProto {
         }
         com.github.moxib.pomelo.proto.relation.RelationProto.SearchUserResp.UserInfo other = (com.github.moxib.pomelo.proto.relation.RelationProto.SearchUserResp.UserInfo) obj;
 
-        if (!getUserId()
-            .equals(other.getUserId())) return false;
+        if (getUserId()
+            != other.getUserId()) return false;
         if (!getUserName()
             .equals(other.getUserName())) return false;
         if (!getNickname()
@@ -1027,7 +993,8 @@ public final class RelationProto {
         int hash = 41;
         hash = (19 * hash) + getDescriptor().hashCode();
         hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-        hash = (53 * hash) + getUserId().hashCode();
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getUserId());
         hash = (37 * hash) + USER_NAME_FIELD_NUMBER;
         hash = (53 * hash) + getUserName().hashCode();
         hash = (37 * hash) + NICKNAME_FIELD_NUMBER;
@@ -1165,7 +1132,7 @@ public final class RelationProto {
         public Builder clear() {
           super.clear();
           bitField0_ = 0;
-          userId_ = "";
+          userId_ = 0L;
           userName_ = "";
           nickname_ = "";
           avatar_ = "";
@@ -1260,10 +1227,8 @@ public final class RelationProto {
 
         public Builder mergeFrom(com.github.moxib.pomelo.proto.relation.RelationProto.SearchUserResp.UserInfo other) {
           if (other == com.github.moxib.pomelo.proto.relation.RelationProto.SearchUserResp.UserInfo.getDefaultInstance()) return this;
-          if (!other.getUserId().isEmpty()) {
-            userId_ = other.userId_;
-            bitField0_ |= 0x00000001;
-            onChanged();
+          if (other.getUserId() != 0L) {
+            setUserId(other.getUserId());
           }
           if (!other.getUserName().isEmpty()) {
             userName_ = other.userName_;
@@ -1306,11 +1271,11 @@ public final class RelationProto {
                 case 0:
                   done = true;
                   break;
-                case 10: {
-                  userId_ = input.readStringRequireUtf8();
+                case 8: {
+                  userId_ = input.readInt64();
                   bitField0_ |= 0x00000001;
                   break;
-                } // case 10
+                } // case 8
                 case 18: {
                   userName_ = input.readStringRequireUtf8();
                   bitField0_ |= 0x00000002;
@@ -1343,74 +1308,34 @@ public final class RelationProto {
         }
         private int bitField0_;
 
-        private java.lang.Object userId_ = "";
+        private long userId_ ;
         /**
-         * <code>string user_id = 1;</code>
+         * <code>int64 user_id = 1;</code>
          * @return The userId.
          */
-        public java.lang.String getUserId() {
-          java.lang.Object ref = userId_;
-          if (!(ref instanceof java.lang.String)) {
-            com.google.protobuf.ByteString bs =
-                (com.google.protobuf.ByteString) ref;
-            java.lang.String s = bs.toStringUtf8();
-            userId_ = s;
-            return s;
-          } else {
-            return (java.lang.String) ref;
-          }
+        @java.lang.Override
+        public long getUserId() {
+          return userId_;
         }
         /**
-         * <code>string user_id = 1;</code>
-         * @return The bytes for userId.
-         */
-        public com.google.protobuf.ByteString
-            getUserIdBytes() {
-          java.lang.Object ref = userId_;
-          if (ref instanceof String) {
-            com.google.protobuf.ByteString b = 
-                com.google.protobuf.ByteString.copyFromUtf8(
-                    (java.lang.String) ref);
-            userId_ = b;
-            return b;
-          } else {
-            return (com.google.protobuf.ByteString) ref;
-          }
-        }
-        /**
-         * <code>string user_id = 1;</code>
+         * <code>int64 user_id = 1;</code>
          * @param value The userId to set.
          * @return This builder for chaining.
          */
-        public Builder setUserId(
-            java.lang.String value) {
-          if (value == null) { throw new NullPointerException(); }
+        public Builder setUserId(long value) {
+
           userId_ = value;
           bitField0_ |= 0x00000001;
           onChanged();
           return this;
         }
         /**
-         * <code>string user_id = 1;</code>
+         * <code>int64 user_id = 1;</code>
          * @return This builder for chaining.
          */
         public Builder clearUserId() {
-          userId_ = getDefaultInstance().getUserId();
           bitField0_ = (bitField0_ & ~0x00000001);
-          onChanged();
-          return this;
-        }
-        /**
-         * <code>string user_id = 1;</code>
-         * @param value The bytes for userId to set.
-         * @return This builder for chaining.
-         */
-        public Builder setUserIdBytes(
-            com.google.protobuf.ByteString value) {
-          if (value == null) { throw new NullPointerException(); }
-          checkByteStringIsUtf8(value);
-          userId_ = value;
-          bitField0_ |= 0x00000001;
+          userId_ = 0L;
           onChanged();
           return this;
         }
@@ -2622,40 +2547,20 @@ public final class RelationProto {
      * 发起方
      * </pre>
      *
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
-    java.lang.String getUserId();
-    /**
-     * <pre>
-     * 发起方
-     * </pre>
-     *
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    com.google.protobuf.ByteString
-        getUserIdBytes();
+    long getUserId();
 
     /**
      * <pre>
      * 目标用户
      * </pre>
      *
-     * <code>string friend_id = 2;</code>
+     * <code>int64 friend_id = 2;</code>
      * @return The friendId.
      */
-    java.lang.String getFriendId();
-    /**
-     * <pre>
-     * 目标用户
-     * </pre>
-     *
-     * <code>string friend_id = 2;</code>
-     * @return The bytes for friendId.
-     */
-    com.google.protobuf.ByteString
-        getFriendIdBytes();
+    long getFriendId();
   }
   /**
    * <pre>
@@ -2676,8 +2581,6 @@ public final class RelationProto {
       super(builder);
     }
     private FriendAddReq() {
-      userId_ = "";
-      friendId_ = "";
     }
 
     @java.lang.Override
@@ -2701,97 +2604,33 @@ public final class RelationProto {
     }
 
     public static final int USER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object userId_ = "";
+    private long userId_ = 0L;
     /**
      * <pre>
      * 发起方
      * </pre>
      *
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
     @java.lang.Override
-    public java.lang.String getUserId() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        userId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 发起方
-     * </pre>
-     *
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUserIdBytes() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        userId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getUserId() {
+      return userId_;
     }
 
     public static final int FRIEND_ID_FIELD_NUMBER = 2;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object friendId_ = "";
+    private long friendId_ = 0L;
     /**
      * <pre>
      * 目标用户
      * </pre>
      *
-     * <code>string friend_id = 2;</code>
+     * <code>int64 friend_id = 2;</code>
      * @return The friendId.
      */
     @java.lang.Override
-    public java.lang.String getFriendId() {
-      java.lang.Object ref = friendId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        friendId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 目标用户
-     * </pre>
-     *
-     * <code>string friend_id = 2;</code>
-     * @return The bytes for friendId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getFriendIdBytes() {
-      java.lang.Object ref = friendId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        friendId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getFriendId() {
+      return friendId_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -2808,11 +2647,11 @@ public final class RelationProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, userId_);
+      if (userId_ != 0L) {
+        output.writeInt64(1, userId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(friendId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, friendId_);
+      if (friendId_ != 0L) {
+        output.writeInt64(2, friendId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -2823,11 +2662,13 @@ public final class RelationProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, userId_);
+      if (userId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, userId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(friendId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, friendId_);
+      if (friendId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, friendId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -2844,10 +2685,10 @@ public final class RelationProto {
       }
       com.github.moxib.pomelo.proto.relation.RelationProto.FriendAddReq other = (com.github.moxib.pomelo.proto.relation.RelationProto.FriendAddReq) obj;
 
-      if (!getUserId()
-          .equals(other.getUserId())) return false;
-      if (!getFriendId()
-          .equals(other.getFriendId())) return false;
+      if (getUserId()
+          != other.getUserId()) return false;
+      if (getFriendId()
+          != other.getFriendId()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -2860,9 +2701,11 @@ public final class RelationProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getUserId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getUserId());
       hash = (37 * hash) + FRIEND_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getFriendId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getFriendId());
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -3000,8 +2843,8 @@ public final class RelationProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        userId_ = "";
-        friendId_ = "";
+        userId_ = 0L;
+        friendId_ = 0L;
         return this;
       }
 
@@ -3087,15 +2930,11 @@ public final class RelationProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.relation.RelationProto.FriendAddReq other) {
         if (other == com.github.moxib.pomelo.proto.relation.RelationProto.FriendAddReq.getDefaultInstance()) return this;
-        if (!other.getUserId().isEmpty()) {
-          userId_ = other.userId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getUserId() != 0L) {
+          setUserId(other.getUserId());
         }
-        if (!other.getFriendId().isEmpty()) {
-          friendId_ = other.friendId_;
-          bitField0_ |= 0x00000002;
-          onChanged();
+        if (other.getFriendId() != 0L) {
+          setFriendId(other.getFriendId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
@@ -3123,16 +2962,16 @@ public final class RelationProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                userId_ = input.readStringRequireUtf8();
+              case 8: {
+                userId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
-              case 18: {
-                friendId_ = input.readStringRequireUtf8();
+              } // case 8
+              case 16: {
+                friendId_ = input.readInt64();
                 bitField0_ |= 0x00000002;
                 break;
-              } // case 18
+              } // case 16
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -3150,60 +2989,30 @@ public final class RelationProto {
       }
       private int bitField0_;
 
-      private java.lang.Object userId_ = "";
+      private long userId_ ;
       /**
        * <pre>
        * 发起方
        * </pre>
        *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return The userId.
        */
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getUserId() {
+        return userId_;
       }
       /**
        * <pre>
        * 发起方
        * </pre>
        *
-       * <code>string user_id = 1;</code>
-       * @return The bytes for userId.
-       */
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 发起方
-       * </pre>
-       *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @param value The userId to set.
        * @return This builder for chaining.
        */
-      public Builder setUserId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setUserId(long value) {
+
         userId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
@@ -3214,88 +3023,40 @@ public final class RelationProto {
        * 发起方
        * </pre>
        *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearUserId() {
-        userId_ = getDefaultInstance().getUserId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 发起方
-       * </pre>
-       *
-       * <code>string user_id = 1;</code>
-       * @param value The bytes for userId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setUserIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        userId_ = value;
-        bitField0_ |= 0x00000001;
+        userId_ = 0L;
         onChanged();
         return this;
       }
 
-      private java.lang.Object friendId_ = "";
+      private long friendId_ ;
       /**
        * <pre>
        * 目标用户
        * </pre>
        *
-       * <code>string friend_id = 2;</code>
+       * <code>int64 friend_id = 2;</code>
        * @return The friendId.
        */
-      public java.lang.String getFriendId() {
-        java.lang.Object ref = friendId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          friendId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getFriendId() {
+        return friendId_;
       }
       /**
        * <pre>
        * 目标用户
        * </pre>
        *
-       * <code>string friend_id = 2;</code>
-       * @return The bytes for friendId.
-       */
-      public com.google.protobuf.ByteString
-          getFriendIdBytes() {
-        java.lang.Object ref = friendId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          friendId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 目标用户
-       * </pre>
-       *
-       * <code>string friend_id = 2;</code>
+       * <code>int64 friend_id = 2;</code>
        * @param value The friendId to set.
        * @return This builder for chaining.
        */
-      public Builder setFriendId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setFriendId(long value) {
+
         friendId_ = value;
         bitField0_ |= 0x00000002;
         onChanged();
@@ -3306,30 +3067,12 @@ public final class RelationProto {
        * 目标用户
        * </pre>
        *
-       * <code>string friend_id = 2;</code>
+       * <code>int64 friend_id = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearFriendId() {
-        friendId_ = getDefaultInstance().getFriendId();
         bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 目标用户
-       * </pre>
-       *
-       * <code>string friend_id = 2;</code>
-       * @param value The bytes for friendId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setFriendIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        friendId_ = value;
-        bitField0_ |= 0x00000002;
+        friendId_ = 0L;
         onChanged();
         return this;
       }
@@ -4030,20 +3773,10 @@ public final class RelationProto {
      * 发起方（谁加你）
      * </pre>
      *
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
-    java.lang.String getUserId();
-    /**
-     * <pre>
-     * 发起方（谁加你）
-     * </pre>
-     *
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    com.google.protobuf.ByteString
-        getUserIdBytes();
+    long getUserId();
 
     /**
      * <code>string user_name = 2;</code>
@@ -4094,7 +3827,6 @@ public final class RelationProto {
       super(builder);
     }
     private FriendAddNotify() {
-      userId_ = "";
       userName_ = "";
       nickname_ = "";
       avatar_ = "";
@@ -4121,50 +3853,18 @@ public final class RelationProto {
     }
 
     public static final int USER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object userId_ = "";
+    private long userId_ = 0L;
     /**
      * <pre>
      * 发起方（谁加你）
      * </pre>
      *
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
     @java.lang.Override
-    public java.lang.String getUserId() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        userId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 发起方（谁加你）
-     * </pre>
-     *
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUserIdBytes() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        userId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getUserId() {
+      return userId_;
     }
 
     public static final int USER_NAME_FIELD_NUMBER = 2;
@@ -4298,8 +3998,8 @@ public final class RelationProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, userId_);
+      if (userId_ != 0L) {
+        output.writeInt64(1, userId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userName_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, userName_);
@@ -4319,8 +4019,9 @@ public final class RelationProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, userId_);
+      if (userId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, userId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userName_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, userName_);
@@ -4346,8 +4047,8 @@ public final class RelationProto {
       }
       com.github.moxib.pomelo.proto.relation.RelationProto.FriendAddNotify other = (com.github.moxib.pomelo.proto.relation.RelationProto.FriendAddNotify) obj;
 
-      if (!getUserId()
-          .equals(other.getUserId())) return false;
+      if (getUserId()
+          != other.getUserId()) return false;
       if (!getUserName()
           .equals(other.getUserName())) return false;
       if (!getNickname()
@@ -4366,7 +4067,8 @@ public final class RelationProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getUserId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getUserId());
       hash = (37 * hash) + USER_NAME_FIELD_NUMBER;
       hash = (53 * hash) + getUserName().hashCode();
       hash = (37 * hash) + NICKNAME_FIELD_NUMBER;
@@ -4504,7 +4206,7 @@ public final class RelationProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        userId_ = "";
+        userId_ = 0L;
         userName_ = "";
         nickname_ = "";
         avatar_ = "";
@@ -4599,10 +4301,8 @@ public final class RelationProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.relation.RelationProto.FriendAddNotify other) {
         if (other == com.github.moxib.pomelo.proto.relation.RelationProto.FriendAddNotify.getDefaultInstance()) return this;
-        if (!other.getUserId().isEmpty()) {
-          userId_ = other.userId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getUserId() != 0L) {
+          setUserId(other.getUserId());
         }
         if (!other.getUserName().isEmpty()) {
           userName_ = other.userName_;
@@ -4645,11 +4345,11 @@ public final class RelationProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                userId_ = input.readStringRequireUtf8();
+              case 8: {
+                userId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               case 18: {
                 userName_ = input.readStringRequireUtf8();
                 bitField0_ |= 0x00000002;
@@ -4682,60 +4382,30 @@ public final class RelationProto {
       }
       private int bitField0_;
 
-      private java.lang.Object userId_ = "";
+      private long userId_ ;
       /**
        * <pre>
        * 发起方（谁加你）
        * </pre>
        *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return The userId.
        */
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getUserId() {
+        return userId_;
       }
       /**
        * <pre>
        * 发起方（谁加你）
        * </pre>
        *
-       * <code>string user_id = 1;</code>
-       * @return The bytes for userId.
-       */
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 发起方（谁加你）
-       * </pre>
-       *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @param value The userId to set.
        * @return This builder for chaining.
        */
-      public Builder setUserId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setUserId(long value) {
+
         userId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
@@ -4746,30 +4416,12 @@ public final class RelationProto {
        * 发起方（谁加你）
        * </pre>
        *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearUserId() {
-        userId_ = getDefaultInstance().getUserId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 发起方（谁加你）
-       * </pre>
-       *
-       * <code>string user_id = 1;</code>
-       * @param value The bytes for userId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setUserIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        userId_ = value;
-        bitField0_ |= 0x00000001;
+        userId_ = 0L;
         onChanged();
         return this;
       }
@@ -5062,40 +4714,20 @@ public final class RelationProto {
      * 接受方
      * </pre>
      *
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
-    java.lang.String getUserId();
-    /**
-     * <pre>
-     * 接受方
-     * </pre>
-     *
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    com.google.protobuf.ByteString
-        getUserIdBytes();
+    long getUserId();
 
     /**
      * <pre>
      * 发起申请方（接受谁的申请）
      * </pre>
      *
-     * <code>string friend_id = 2;</code>
+     * <code>int64 friend_id = 2;</code>
      * @return The friendId.
      */
-    java.lang.String getFriendId();
-    /**
-     * <pre>
-     * 发起申请方（接受谁的申请）
-     * </pre>
-     *
-     * <code>string friend_id = 2;</code>
-     * @return The bytes for friendId.
-     */
-    com.google.protobuf.ByteString
-        getFriendIdBytes();
+    long getFriendId();
   }
   /**
    * <pre>
@@ -5116,8 +4748,6 @@ public final class RelationProto {
       super(builder);
     }
     private FriendAcceptReq() {
-      userId_ = "";
-      friendId_ = "";
     }
 
     @java.lang.Override
@@ -5141,97 +4771,33 @@ public final class RelationProto {
     }
 
     public static final int USER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object userId_ = "";
+    private long userId_ = 0L;
     /**
      * <pre>
      * 接受方
      * </pre>
      *
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
     @java.lang.Override
-    public java.lang.String getUserId() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        userId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 接受方
-     * </pre>
-     *
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUserIdBytes() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        userId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getUserId() {
+      return userId_;
     }
 
     public static final int FRIEND_ID_FIELD_NUMBER = 2;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object friendId_ = "";
+    private long friendId_ = 0L;
     /**
      * <pre>
      * 发起申请方（接受谁的申请）
      * </pre>
      *
-     * <code>string friend_id = 2;</code>
+     * <code>int64 friend_id = 2;</code>
      * @return The friendId.
      */
     @java.lang.Override
-    public java.lang.String getFriendId() {
-      java.lang.Object ref = friendId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        friendId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 发起申请方（接受谁的申请）
-     * </pre>
-     *
-     * <code>string friend_id = 2;</code>
-     * @return The bytes for friendId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getFriendIdBytes() {
-      java.lang.Object ref = friendId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        friendId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getFriendId() {
+      return friendId_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -5248,11 +4814,11 @@ public final class RelationProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, userId_);
+      if (userId_ != 0L) {
+        output.writeInt64(1, userId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(friendId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, friendId_);
+      if (friendId_ != 0L) {
+        output.writeInt64(2, friendId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -5263,11 +4829,13 @@ public final class RelationProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, userId_);
+      if (userId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, userId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(friendId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, friendId_);
+      if (friendId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, friendId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -5284,10 +4852,10 @@ public final class RelationProto {
       }
       com.github.moxib.pomelo.proto.relation.RelationProto.FriendAcceptReq other = (com.github.moxib.pomelo.proto.relation.RelationProto.FriendAcceptReq) obj;
 
-      if (!getUserId()
-          .equals(other.getUserId())) return false;
-      if (!getFriendId()
-          .equals(other.getFriendId())) return false;
+      if (getUserId()
+          != other.getUserId()) return false;
+      if (getFriendId()
+          != other.getFriendId()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -5300,9 +4868,11 @@ public final class RelationProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getUserId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getUserId());
       hash = (37 * hash) + FRIEND_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getFriendId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getFriendId());
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -5440,8 +5010,8 @@ public final class RelationProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        userId_ = "";
-        friendId_ = "";
+        userId_ = 0L;
+        friendId_ = 0L;
         return this;
       }
 
@@ -5527,15 +5097,11 @@ public final class RelationProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.relation.RelationProto.FriendAcceptReq other) {
         if (other == com.github.moxib.pomelo.proto.relation.RelationProto.FriendAcceptReq.getDefaultInstance()) return this;
-        if (!other.getUserId().isEmpty()) {
-          userId_ = other.userId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getUserId() != 0L) {
+          setUserId(other.getUserId());
         }
-        if (!other.getFriendId().isEmpty()) {
-          friendId_ = other.friendId_;
-          bitField0_ |= 0x00000002;
-          onChanged();
+        if (other.getFriendId() != 0L) {
+          setFriendId(other.getFriendId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
@@ -5563,16 +5129,16 @@ public final class RelationProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                userId_ = input.readStringRequireUtf8();
+              case 8: {
+                userId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
-              case 18: {
-                friendId_ = input.readStringRequireUtf8();
+              } // case 8
+              case 16: {
+                friendId_ = input.readInt64();
                 bitField0_ |= 0x00000002;
                 break;
-              } // case 18
+              } // case 16
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -5590,60 +5156,30 @@ public final class RelationProto {
       }
       private int bitField0_;
 
-      private java.lang.Object userId_ = "";
+      private long userId_ ;
       /**
        * <pre>
        * 接受方
        * </pre>
        *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return The userId.
        */
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getUserId() {
+        return userId_;
       }
       /**
        * <pre>
        * 接受方
        * </pre>
        *
-       * <code>string user_id = 1;</code>
-       * @return The bytes for userId.
-       */
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 接受方
-       * </pre>
-       *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @param value The userId to set.
        * @return This builder for chaining.
        */
-      public Builder setUserId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setUserId(long value) {
+
         userId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
@@ -5654,88 +5190,40 @@ public final class RelationProto {
        * 接受方
        * </pre>
        *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearUserId() {
-        userId_ = getDefaultInstance().getUserId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 接受方
-       * </pre>
-       *
-       * <code>string user_id = 1;</code>
-       * @param value The bytes for userId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setUserIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        userId_ = value;
-        bitField0_ |= 0x00000001;
+        userId_ = 0L;
         onChanged();
         return this;
       }
 
-      private java.lang.Object friendId_ = "";
+      private long friendId_ ;
       /**
        * <pre>
        * 发起申请方（接受谁的申请）
        * </pre>
        *
-       * <code>string friend_id = 2;</code>
+       * <code>int64 friend_id = 2;</code>
        * @return The friendId.
        */
-      public java.lang.String getFriendId() {
-        java.lang.Object ref = friendId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          friendId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getFriendId() {
+        return friendId_;
       }
       /**
        * <pre>
        * 发起申请方（接受谁的申请）
        * </pre>
        *
-       * <code>string friend_id = 2;</code>
-       * @return The bytes for friendId.
-       */
-      public com.google.protobuf.ByteString
-          getFriendIdBytes() {
-        java.lang.Object ref = friendId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          friendId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 发起申请方（接受谁的申请）
-       * </pre>
-       *
-       * <code>string friend_id = 2;</code>
+       * <code>int64 friend_id = 2;</code>
        * @param value The friendId to set.
        * @return This builder for chaining.
        */
-      public Builder setFriendId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setFriendId(long value) {
+
         friendId_ = value;
         bitField0_ |= 0x00000002;
         onChanged();
@@ -5746,30 +5234,12 @@ public final class RelationProto {
        * 发起申请方（接受谁的申请）
        * </pre>
        *
-       * <code>string friend_id = 2;</code>
+       * <code>int64 friend_id = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearFriendId() {
-        friendId_ = getDefaultInstance().getFriendId();
         bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 发起申请方（接受谁的申请）
-       * </pre>
-       *
-       * <code>string friend_id = 2;</code>
-       * @param value The bytes for friendId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setFriendIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        friendId_ = value;
-        bitField0_ |= 0x00000002;
+        friendId_ = 0L;
         onChanged();
         return this;
       }
@@ -6470,20 +5940,10 @@ public final class RelationProto {
      * 接受方（谁接受了你的申请）
      * </pre>
      *
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
-    java.lang.String getUserId();
-    /**
-     * <pre>
-     * 接受方（谁接受了你的申请）
-     * </pre>
-     *
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    com.google.protobuf.ByteString
-        getUserIdBytes();
+    long getUserId();
 
     /**
      * <code>string user_name = 2;</code>
@@ -6534,7 +5994,6 @@ public final class RelationProto {
       super(builder);
     }
     private FriendAcceptNotify() {
-      userId_ = "";
       userName_ = "";
       nickname_ = "";
       avatar_ = "";
@@ -6561,50 +6020,18 @@ public final class RelationProto {
     }
 
     public static final int USER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object userId_ = "";
+    private long userId_ = 0L;
     /**
      * <pre>
      * 接受方（谁接受了你的申请）
      * </pre>
      *
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
     @java.lang.Override
-    public java.lang.String getUserId() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        userId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 接受方（谁接受了你的申请）
-     * </pre>
-     *
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUserIdBytes() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        userId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getUserId() {
+      return userId_;
     }
 
     public static final int USER_NAME_FIELD_NUMBER = 2;
@@ -6738,8 +6165,8 @@ public final class RelationProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, userId_);
+      if (userId_ != 0L) {
+        output.writeInt64(1, userId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userName_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, userName_);
@@ -6759,8 +6186,9 @@ public final class RelationProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, userId_);
+      if (userId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, userId_);
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userName_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, userName_);
@@ -6786,8 +6214,8 @@ public final class RelationProto {
       }
       com.github.moxib.pomelo.proto.relation.RelationProto.FriendAcceptNotify other = (com.github.moxib.pomelo.proto.relation.RelationProto.FriendAcceptNotify) obj;
 
-      if (!getUserId()
-          .equals(other.getUserId())) return false;
+      if (getUserId()
+          != other.getUserId()) return false;
       if (!getUserName()
           .equals(other.getUserName())) return false;
       if (!getNickname()
@@ -6806,7 +6234,8 @@ public final class RelationProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getUserId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getUserId());
       hash = (37 * hash) + USER_NAME_FIELD_NUMBER;
       hash = (53 * hash) + getUserName().hashCode();
       hash = (37 * hash) + NICKNAME_FIELD_NUMBER;
@@ -6944,7 +6373,7 @@ public final class RelationProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        userId_ = "";
+        userId_ = 0L;
         userName_ = "";
         nickname_ = "";
         avatar_ = "";
@@ -7039,10 +6468,8 @@ public final class RelationProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.relation.RelationProto.FriendAcceptNotify other) {
         if (other == com.github.moxib.pomelo.proto.relation.RelationProto.FriendAcceptNotify.getDefaultInstance()) return this;
-        if (!other.getUserId().isEmpty()) {
-          userId_ = other.userId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getUserId() != 0L) {
+          setUserId(other.getUserId());
         }
         if (!other.getUserName().isEmpty()) {
           userName_ = other.userName_;
@@ -7085,11 +6512,11 @@ public final class RelationProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                userId_ = input.readStringRequireUtf8();
+              case 8: {
+                userId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               case 18: {
                 userName_ = input.readStringRequireUtf8();
                 bitField0_ |= 0x00000002;
@@ -7122,60 +6549,30 @@ public final class RelationProto {
       }
       private int bitField0_;
 
-      private java.lang.Object userId_ = "";
+      private long userId_ ;
       /**
        * <pre>
        * 接受方（谁接受了你的申请）
        * </pre>
        *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return The userId.
        */
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getUserId() {
+        return userId_;
       }
       /**
        * <pre>
        * 接受方（谁接受了你的申请）
        * </pre>
        *
-       * <code>string user_id = 1;</code>
-       * @return The bytes for userId.
-       */
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 接受方（谁接受了你的申请）
-       * </pre>
-       *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @param value The userId to set.
        * @return This builder for chaining.
        */
-      public Builder setUserId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setUserId(long value) {
+
         userId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
@@ -7186,30 +6583,12 @@ public final class RelationProto {
        * 接受方（谁接受了你的申请）
        * </pre>
        *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearUserId() {
-        userId_ = getDefaultInstance().getUserId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 接受方（谁接受了你的申请）
-       * </pre>
-       *
-       * <code>string user_id = 1;</code>
-       * @param value The bytes for userId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setUserIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        userId_ = value;
-        bitField0_ |= 0x00000001;
+        userId_ = 0L;
         onChanged();
         return this;
       }
@@ -7498,28 +6877,16 @@ public final class RelationProto {
       com.google.protobuf.MessageOrBuilder {
 
     /**
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
-    java.lang.String getUserId();
-    /**
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    com.google.protobuf.ByteString
-        getUserIdBytes();
+    long getUserId();
 
     /**
-     * <code>string friend_id = 2;</code>
+     * <code>int64 friend_id = 2;</code>
      * @return The friendId.
      */
-    java.lang.String getFriendId();
-    /**
-     * <code>string friend_id = 2;</code>
-     * @return The bytes for friendId.
-     */
-    com.google.protobuf.ByteString
-        getFriendIdBytes();
+    long getFriendId();
   }
   /**
    * <pre>
@@ -7540,8 +6907,6 @@ public final class RelationProto {
       super(builder);
     }
     private FriendDeleteReq() {
-      userId_ = "";
-      friendId_ = "";
     }
 
     @java.lang.Override
@@ -7565,81 +6930,25 @@ public final class RelationProto {
     }
 
     public static final int USER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object userId_ = "";
+    private long userId_ = 0L;
     /**
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
     @java.lang.Override
-    public java.lang.String getUserId() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        userId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUserIdBytes() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        userId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getUserId() {
+      return userId_;
     }
 
     public static final int FRIEND_ID_FIELD_NUMBER = 2;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object friendId_ = "";
+    private long friendId_ = 0L;
     /**
-     * <code>string friend_id = 2;</code>
+     * <code>int64 friend_id = 2;</code>
      * @return The friendId.
      */
     @java.lang.Override
-    public java.lang.String getFriendId() {
-      java.lang.Object ref = friendId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        friendId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string friend_id = 2;</code>
-     * @return The bytes for friendId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getFriendIdBytes() {
-      java.lang.Object ref = friendId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        friendId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getFriendId() {
+      return friendId_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -7656,11 +6965,11 @@ public final class RelationProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, userId_);
+      if (userId_ != 0L) {
+        output.writeInt64(1, userId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(friendId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, friendId_);
+      if (friendId_ != 0L) {
+        output.writeInt64(2, friendId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -7671,11 +6980,13 @@ public final class RelationProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, userId_);
+      if (userId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, userId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(friendId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, friendId_);
+      if (friendId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, friendId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -7692,10 +7003,10 @@ public final class RelationProto {
       }
       com.github.moxib.pomelo.proto.relation.RelationProto.FriendDeleteReq other = (com.github.moxib.pomelo.proto.relation.RelationProto.FriendDeleteReq) obj;
 
-      if (!getUserId()
-          .equals(other.getUserId())) return false;
-      if (!getFriendId()
-          .equals(other.getFriendId())) return false;
+      if (getUserId()
+          != other.getUserId()) return false;
+      if (getFriendId()
+          != other.getFriendId()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -7708,9 +7019,11 @@ public final class RelationProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getUserId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getUserId());
       hash = (37 * hash) + FRIEND_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getFriendId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getFriendId());
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -7848,8 +7161,8 @@ public final class RelationProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        userId_ = "";
-        friendId_ = "";
+        userId_ = 0L;
+        friendId_ = 0L;
         return this;
       }
 
@@ -7935,15 +7248,11 @@ public final class RelationProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.relation.RelationProto.FriendDeleteReq other) {
         if (other == com.github.moxib.pomelo.proto.relation.RelationProto.FriendDeleteReq.getDefaultInstance()) return this;
-        if (!other.getUserId().isEmpty()) {
-          userId_ = other.userId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getUserId() != 0L) {
+          setUserId(other.getUserId());
         }
-        if (!other.getFriendId().isEmpty()) {
-          friendId_ = other.friendId_;
-          bitField0_ |= 0x00000002;
-          onChanged();
+        if (other.getFriendId() != 0L) {
+          setFriendId(other.getFriendId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
@@ -7971,16 +7280,16 @@ public final class RelationProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                userId_ = input.readStringRequireUtf8();
+              case 8: {
+                userId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
-              case 18: {
-                friendId_ = input.readStringRequireUtf8();
+              } // case 8
+              case 16: {
+                friendId_ = input.readInt64();
                 bitField0_ |= 0x00000002;
                 break;
-              } // case 18
+              } // case 16
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -7998,146 +7307,66 @@ public final class RelationProto {
       }
       private int bitField0_;
 
-      private java.lang.Object userId_ = "";
+      private long userId_ ;
       /**
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return The userId.
        */
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getUserId() {
+        return userId_;
       }
       /**
-       * <code>string user_id = 1;</code>
-       * @return The bytes for userId.
-       */
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @param value The userId to set.
        * @return This builder for chaining.
        */
-      public Builder setUserId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setUserId(long value) {
+
         userId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
         return this;
       }
       /**
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearUserId() {
-        userId_ = getDefaultInstance().getUserId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string user_id = 1;</code>
-       * @param value The bytes for userId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setUserIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        userId_ = value;
-        bitField0_ |= 0x00000001;
+        userId_ = 0L;
         onChanged();
         return this;
       }
 
-      private java.lang.Object friendId_ = "";
+      private long friendId_ ;
       /**
-       * <code>string friend_id = 2;</code>
+       * <code>int64 friend_id = 2;</code>
        * @return The friendId.
        */
-      public java.lang.String getFriendId() {
-        java.lang.Object ref = friendId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          friendId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getFriendId() {
+        return friendId_;
       }
       /**
-       * <code>string friend_id = 2;</code>
-       * @return The bytes for friendId.
-       */
-      public com.google.protobuf.ByteString
-          getFriendIdBytes() {
-        java.lang.Object ref = friendId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          friendId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string friend_id = 2;</code>
+       * <code>int64 friend_id = 2;</code>
        * @param value The friendId to set.
        * @return This builder for chaining.
        */
-      public Builder setFriendId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setFriendId(long value) {
+
         friendId_ = value;
         bitField0_ |= 0x00000002;
         onChanged();
         return this;
       }
       /**
-       * <code>string friend_id = 2;</code>
+       * <code>int64 friend_id = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearFriendId() {
-        friendId_ = getDefaultInstance().getFriendId();
         bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string friend_id = 2;</code>
-       * @param value The bytes for friendId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setFriendIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        friendId_ = value;
-        bitField0_ |= 0x00000002;
+        friendId_ = 0L;
         onChanged();
         return this;
       }
@@ -8838,20 +8067,10 @@ public final class RelationProto {
      * 操作方（谁删了你）
      * </pre>
      *
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
-    java.lang.String getUserId();
-    /**
-     * <pre>
-     * 操作方（谁删了你）
-     * </pre>
-     *
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    com.google.protobuf.ByteString
-        getUserIdBytes();
+    long getUserId();
   }
   /**
    * Protobuf type {@code im.relation.FriendDeleteNotify}
@@ -8866,7 +8085,6 @@ public final class RelationProto {
       super(builder);
     }
     private FriendDeleteNotify() {
-      userId_ = "";
     }
 
     @java.lang.Override
@@ -8890,50 +8108,18 @@ public final class RelationProto {
     }
 
     public static final int USER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object userId_ = "";
+    private long userId_ = 0L;
     /**
      * <pre>
      * 操作方（谁删了你）
      * </pre>
      *
-     * <code>string user_id = 1;</code>
+     * <code>int64 user_id = 1;</code>
      * @return The userId.
      */
     @java.lang.Override
-    public java.lang.String getUserId() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        userId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 操作方（谁删了你）
-     * </pre>
-     *
-     * <code>string user_id = 1;</code>
-     * @return The bytes for userId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getUserIdBytes() {
-      java.lang.Object ref = userId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        userId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getUserId() {
+      return userId_;
     }
 
     private byte memoizedIsInitialized = -1;
@@ -8950,8 +8136,8 @@ public final class RelationProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, userId_);
+      if (userId_ != 0L) {
+        output.writeInt64(1, userId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -8962,8 +8148,9 @@ public final class RelationProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(userId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, userId_);
+      if (userId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, userId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -8980,8 +8167,8 @@ public final class RelationProto {
       }
       com.github.moxib.pomelo.proto.relation.RelationProto.FriendDeleteNotify other = (com.github.moxib.pomelo.proto.relation.RelationProto.FriendDeleteNotify) obj;
 
-      if (!getUserId()
-          .equals(other.getUserId())) return false;
+      if (getUserId()
+          != other.getUserId()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -8994,7 +8181,8 @@ public final class RelationProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + USER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getUserId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getUserId());
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -9126,7 +8314,7 @@ public final class RelationProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        userId_ = "";
+        userId_ = 0L;
         return this;
       }
 
@@ -9209,10 +8397,8 @@ public final class RelationProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.relation.RelationProto.FriendDeleteNotify other) {
         if (other == com.github.moxib.pomelo.proto.relation.RelationProto.FriendDeleteNotify.getDefaultInstance()) return this;
-        if (!other.getUserId().isEmpty()) {
-          userId_ = other.userId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getUserId() != 0L) {
+          setUserId(other.getUserId());
         }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
@@ -9240,11 +8426,11 @@ public final class RelationProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                userId_ = input.readStringRequireUtf8();
+              case 8: {
+                userId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -9262,60 +8448,30 @@ public final class RelationProto {
       }
       private int bitField0_;
 
-      private java.lang.Object userId_ = "";
+      private long userId_ ;
       /**
        * <pre>
        * 操作方（谁删了你）
        * </pre>
        *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return The userId.
        */
-      public java.lang.String getUserId() {
-        java.lang.Object ref = userId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          userId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getUserId() {
+        return userId_;
       }
       /**
        * <pre>
        * 操作方（谁删了你）
        * </pre>
        *
-       * <code>string user_id = 1;</code>
-       * @return The bytes for userId.
-       */
-      public com.google.protobuf.ByteString
-          getUserIdBytes() {
-        java.lang.Object ref = userId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          userId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 操作方（谁删了你）
-       * </pre>
-       *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @param value The userId to set.
        * @return This builder for chaining.
        */
-      public Builder setUserId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setUserId(long value) {
+
         userId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
@@ -9326,30 +8482,12 @@ public final class RelationProto {
        * 操作方（谁删了你）
        * </pre>
        *
-       * <code>string user_id = 1;</code>
+       * <code>int64 user_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearUserId() {
-        userId_ = getDefaultInstance().getUserId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 操作方（谁删了你）
-       * </pre>
-       *
-       * <code>string user_id = 1;</code>
-       * @param value The bytes for userId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setUserIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        userId_ = value;
-        bitField0_ |= 0x00000001;
+        userId_ = 0L;
         onChanged();
         return this;
       }
@@ -9491,21 +8629,21 @@ public final class RelationProto {
       "rchUserResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001" +
       "(\t\0223\n\005users\030\003 \003(\0132$.im.relation.SearchUs" +
       "erResp.UserInfo\032P\n\010UserInfo\022\017\n\007user_id\030\001" +
-      " \001(\t\022\021\n\tuser_name\030\002 \001(\t\022\020\n\010nickname\030\003 \001(" +
+      " \001(\003\022\021\n\tuser_name\030\002 \001(\t\022\020\n\010nickname\030\003 \001(" +
       "\t\022\016\n\006avatar\030\004 \001(\t\"2\n\014FriendAddReq\022\017\n\007use" +
-      "r_id\030\001 \001(\t\022\021\n\tfriend_id\030\002 \001(\t\".\n\rFriendA" +
+      "r_id\030\001 \001(\003\022\021\n\tfriend_id\030\002 \001(\003\".\n\rFriendA" +
       "ddResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\"W\n" +
-      "\017FriendAddNotify\022\017\n\007user_id\030\001 \001(\t\022\021\n\tuse" +
+      "\017FriendAddNotify\022\017\n\007user_id\030\001 \001(\003\022\021\n\tuse" +
       "r_name\030\002 \001(\t\022\020\n\010nickname\030\003 \001(\t\022\016\n\006avatar" +
       "\030\004 \001(\t\"5\n\017FriendAcceptReq\022\017\n\007user_id\030\001 \001" +
-      "(\t\022\021\n\tfriend_id\030\002 \001(\t\"1\n\020FriendAcceptRes" +
+      "(\003\022\021\n\tfriend_id\030\002 \001(\003\"1\n\020FriendAcceptRes" +
       "p\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\"Z\n\022Frie" +
-      "ndAcceptNotify\022\017\n\007user_id\030\001 \001(\t\022\021\n\tuser_" +
+      "ndAcceptNotify\022\017\n\007user_id\030\001 \001(\003\022\021\n\tuser_" +
       "name\030\002 \001(\t\022\020\n\010nickname\030\003 \001(\t\022\016\n\006avatar\030\004" +
-      " \001(\t\"5\n\017FriendDeleteReq\022\017\n\007user_id\030\001 \001(\t" +
-      "\022\021\n\tfriend_id\030\002 \001(\t\"1\n\020FriendDeleteResp\022" +
+      " \001(\t\"5\n\017FriendDeleteReq\022\017\n\007user_id\030\001 \001(\003" +
+      "\022\021\n\tfriend_id\030\002 \001(\003\"1\n\020FriendDeleteResp\022" +
       "\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\"%\n\022Friend" +
-      "DeleteNotify\022\017\n\007user_id\030\001 \001(\tB7\n&com.git" +
+      "DeleteNotify\022\017\n\007user_id\030\001 \001(\003B7\n&com.git" +
       "hub.moxib.pomelo.proto.relationB\rRelatio" +
       "nProtob\006proto3"
     };

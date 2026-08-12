@@ -6,7 +6,6 @@ import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
 import com.github.moxib.pomelo.logic.infrastructure.TokenService;
-import com.github.moxib.pomelo.logic.id.NanoIdGenerator;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
@@ -35,29 +34,29 @@ public class ApiVerticle extends VerticleBase {
   private static final Logger LOG = LoggerFactory.getLogger(ApiVerticle.class);
 
   private static final String INSERT_USER_SQL = """
-    INSERT INTO im_user (id, user_id, user_name, nickname, avatar, password, status, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $7) ON CONFLICT (user_name) DO NOTHING
+    INSERT INTO im_user (id, user_name, nickname, avatar, password, status, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, 0, $6, $6) ON CONFLICT (user_name) DO NOTHING
     """;
   private static final String FIND_USER_SQL = """
-    SELECT user_id, user_name, nickname, avatar, status, created_at FROM im_user WHERE user_id = $1
+    SELECT id, user_name, nickname, avatar, status, created_at FROM im_user WHERE id = $1
     """;
   private static final String FIND_BY_USERNAME_SQL = """
-    SELECT id, user_id, user_name, nickname, avatar, password, status, created_at
+    SELECT id, user_name, nickname, avatar, password, status, created_at
     FROM im_user WHERE user_name = $1
     """;
   private static final String LIST_FRIENDS_SQL = """
-    SELECT u.user_id, u.user_name, u.nickname, u.avatar, u.status, f.created_at AS friended_at
+    SELECT u.id, u.user_name, u.nickname, u.avatar, u.status, f.created_at AS friended_at
     FROM im_friend f
     JOIN im_user me ON f.user_id = me.id
     JOIN im_user u  ON f.friend_id = u.id
-    WHERE me.user_id = $1 AND f.status = 1 ORDER BY f.created_at DESC
+    WHERE me.id = $1 AND f.status = 1 ORDER BY f.created_at DESC
     """;
   private static final String LIST_PENDING_SQL = """
-    SELECT u.user_id, u.user_name, u.nickname, u.avatar, u.status, f.created_at AS requested_at
+    SELECT u.id, u.user_name, u.nickname, u.avatar, u.status, f.created_at AS requested_at
     FROM im_friend f
     JOIN im_user me ON f.friend_id = me.id
     JOIN im_user u  ON f.user_id = u.id
-    WHERE me.user_id = $1 AND f.status = 0 ORDER BY f.created_at DESC
+    WHERE me.id = $1 AND f.status = 0 ORDER BY f.created_at DESC
     """;
 
   private int port;
@@ -75,7 +74,6 @@ public class ApiVerticle extends VerticleBase {
     this.snowflake = new SnowflakeIdGenerator(
       ConfigHolder.getInt("snowflake.workerId", 1));
     pgPool = PgPoolFactory.get(vertx);
-    // 在线状态统一从 session 路由派生（gateway 维护），路由表供 HTTP 查询在线
     routeTable = new SessionRouteTable(vertx);
 
     return RedisFactory.get(vertx).connect()
@@ -105,7 +103,7 @@ public class ApiVerticle extends VerticleBase {
     ctx.json(new JsonObject().put("status", "ok"));
   }
 
-  /** POST /api/user/register — userName + password，返回系统生成的 NanoID userId */
+  /** POST /api/user/register — userName + password，返回 Snowflake userId */
   private void register(RoutingContext ctx) {
     JsonObject body = ctx.body().asJsonObject();
     String userName = body.getString("userName");
@@ -116,14 +114,14 @@ public class ApiVerticle extends VerticleBase {
     if (isBlank(userName) || isBlank(password)) { fail(ctx, 400, "userName 和 password 不能为空"); return; }
 
     long id = snowflake.nextId();
-    String userId = NanoIdGenerator.next();
+    String userId = String.valueOf(id);
     String hash = BCrypt.withDefaults().hashToString(bcryptCost, password.toCharArray());
     long now = System.currentTimeMillis();
 
-    pgPool.preparedQuery(INSERT_USER_SQL).execute(Tuple.of(id, userId, userName, nickname, avatar, hash, now))
+    pgPool.preparedQuery(INSERT_USER_SQL).execute(Tuple.of(id, userName, nickname, avatar, hash, now))
       .onSuccess(r -> {
         if (r.rowCount() > 0) {
-          String token = TokenService.get(vertx).generate(userId);
+          String token = TokenService.get(vertx).generate(userId, userName, nickname, "");
           LOG.info("注册成功: userId={} userName={}", userId, userName);
           ok(ctx, 201, new JsonObject().put("userId", userId).put("userName", userName).put("token", token));
         } else {
@@ -133,7 +131,7 @@ public class ApiVerticle extends VerticleBase {
       .onFailure(e -> fail(ctx, 500, "注册失败"));
   }
 
-  /** POST /api/user/login — userName + password，返回 userId（NanoID） */
+  /** POST /api/user/login — userName + password，返回 userId（Snowflake 字符串） */
   private void login(RoutingContext ctx) {
     JsonObject body = ctx.body().asJsonObject();
     String userName = body.getString("userName");
@@ -150,9 +148,10 @@ public class ApiVerticle extends VerticleBase {
           fail(ctx, 401, "密码错误");
           return;
         }
-        String userId = r.getString("user_id");
+        long id = r.getLong("id");
+        String userId = String.valueOf(id);
         String platform = body.getString("platform", "");
-        String token = TokenService.get(vertx).generate(userId, r.getLong("id"),
+        String token = TokenService.get(vertx).generate(userId,
           r.getString("user_name"), r.getString("nickname"), platform);
         ok(ctx, 200, new JsonObject()
           .put("userId", userId)
@@ -164,15 +163,22 @@ public class ApiVerticle extends VerticleBase {
       .onFailure(e -> fail(ctx, 500, "登录失败"));
   }
 
-  /** GET /api/user/:userId/profile */
+  /** GET /api/user/:userId/profile — 按 Snowflake ID 查询 */
   private void profile(RoutingContext ctx) {
     String userId = ctx.pathParam("userId");
-    pgPool.preparedQuery(FIND_USER_SQL).execute(Tuple.of(userId))
+    long id;
+    try {
+      id = Long.parseLong(userId);
+    } catch (NumberFormatException e) {
+      fail(ctx, 400, "无效的 userId");
+      return;
+    }
+    pgPool.preparedQuery(FIND_USER_SQL).execute(Tuple.of(id))
       .onSuccess(rows -> {
         if (rows.size() == 0) { fail(ctx, 404, "用户不存在"); return; }
         Row r = rows.iterator().next();
         ok(ctx, 200, new JsonObject()
-          .put("userId", r.getString("user_id"))
+          .put("userId", String.valueOf(r.getLong("id")))
           .put("userName", r.getString("user_name"))
           .put("nickname", r.getString("nickname"))
           .put("avatar", r.getString("avatar"))
@@ -185,7 +191,14 @@ public class ApiVerticle extends VerticleBase {
   /** GET /api/friends/:userId */
   private void friends(RoutingContext ctx) {
     String userId = ctx.pathParam("userId");
-    pgPool.preparedQuery(LIST_FRIENDS_SQL).execute(Tuple.of(userId))
+    long id;
+    try {
+      id = Long.parseLong(userId);
+    } catch (NumberFormatException e) {
+      fail(ctx, 400, "无效的 userId");
+      return;
+    }
+    pgPool.preparedQuery(LIST_FRIENDS_SQL).execute(Tuple.of(id))
       .compose(rows -> buildFriendListWithOnline(rows, "friended_at")
         .map(arr -> new JsonObject().put("friends", arr)))
       .onSuccess(json -> ok(ctx, 200, json))
@@ -195,7 +208,14 @@ public class ApiVerticle extends VerticleBase {
   /** GET /api/friends/:userId/pending */
   private void pending(RoutingContext ctx) {
     String userId = ctx.pathParam("userId");
-    pgPool.preparedQuery(LIST_PENDING_SQL).execute(Tuple.of(userId))
+    long id;
+    try {
+      id = Long.parseLong(userId);
+    } catch (NumberFormatException e) {
+      fail(ctx, 400, "无效的 userId");
+      return;
+    }
+    pgPool.preparedQuery(LIST_PENDING_SQL).execute(Tuple.of(id))
       .compose(rows -> buildFriendListWithOnline(rows, "requested_at")
         .map(arr -> new JsonObject().put("pending", arr)))
       .onSuccess(json -> ok(ctx, 200, json))
@@ -210,7 +230,7 @@ public class ApiVerticle extends VerticleBase {
     List<String> userIds = new ArrayList<>();
     for (Row r : rows) {
       rowList.add(r);
-      userIds.add(r.getString("user_id"));
+      userIds.add(String.valueOf(r.getLong("id")));
     }
 
     if (rowList.isEmpty()) {
@@ -224,7 +244,7 @@ public class ApiVerticle extends VerticleBase {
           Row r = rowList.get(i);
           boolean online = i < onlineFlags.size() && onlineFlags.get(i);
           arr.add(new JsonObject()
-            .put("userId", r.getString("user_id"))
+            .put("userId", String.valueOf(r.getLong("id")))
             .put("userName", r.getString("user_name"))
             .put("nickname", r.getString("nickname"))
             .put("avatar", r.getString("avatar"))

@@ -12,14 +12,8 @@ public interface GroupRepository {
 
   Future<GroupInfo> findById(long id);
 
-  Future<GroupInfo> findByGroupId(String groupId);
-
   Future<List<GroupInfo>> findGroupsByUserId(long userId);
 
-  /**
-   * groupId 参数均为 im_group.id（BIGINT 内部主键）。
-   * 对外部 NanoID groupId 的解析由 service 层通过 findByGroupId() 完成。
-   */
   Future<List<GroupMemberRecord>> findMembers(long groupId);
 
   Future<Void> addMember(long id, long groupId, long userId, int role, long now);

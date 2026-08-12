@@ -62,19 +62,18 @@ public class GroupPullService extends ServiceBase {
       boolean backward = body.getBoolean("isBackward", false);
       long rawCursor = body.getLong("cursor", 0L);
 
-      // backward=true 且 cursor<=0：从最新一页开始拉（seq < Long.MAX_VALUE），
-      // 避免 seq < 0 永远查不到（群 seq 从 1 起）
       long cursor = backward && rawCursor <= 0 ? Long.MAX_VALUE : rawCursor;
 
       LOG.info("拉取群消息: userId={} groupId={} cursor={} limit={} backward={}",
         userId, groupId, cursor, limit, backward);
 
-      return groupRepo.findByGroupId(groupId).compose(group -> {
+      long numericGroupId = Long.parseLong(groupId);
+      return groupRepo.findById(numericGroupId).compose(group -> {
         if (group == null) {
           return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_PULL_MSG_RESP_VALUE,
             ErrorCode.NOT_FOUND, "群不存在"));
         }
-        return groupRepo.pullMessages(group.getId(), cursor, limit, backward)
+        return groupRepo.pullMessages(numericGroupId, cursor, limit, backward)
           .compose(msgs -> buildPullResp(message, codecId, msgs, limit));
       });
     } catch (Exception e) {
@@ -116,7 +115,7 @@ public class GroupPullService extends ServiceBase {
           .setTimestamp(m.getCreatedAt());
         mc.putExt("id", String.valueOf(m.getId()));
         mc.putExt("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(m.getSenderNumericId()));
-        mc.putExt("groupId", m.getGroupId());
+        mc.putExt("groupId", String.valueOf(m.getGroupId()));
         if (senderInfo != null && senderInfo.userName() != null) {
           mc.putExt("senderUserName", senderInfo.userName());
         }
@@ -139,7 +138,7 @@ public class GroupPullService extends ServiceBase {
         UserIdInfo senderInfo = idToInfo.get(m.getSenderNumericId());
         msg.put("id", String.valueOf(m.getId()));
         msg.put("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(m.getSenderNumericId()));
-        msg.put("groupId", m.getGroupId());
+        msg.put("groupId", String.valueOf(m.getGroupId()));
         msg.put("msgType", m.getMsgType());
         msg.put("content", m.getContent() != null ? m.getContent() : "");
         msg.put("seq", m.getSeq());
@@ -156,8 +155,6 @@ public class GroupPullService extends ServiceBase {
 
   private ImMessage buildEmptyPullResp(ImMessage request, byte codecId) {
     Object respBody;
-    // PbPullGroupMsgResp still works — regenerated proto only changed messages field type to MessageContent
-    // Empty list is empty list regardless of element type
     if (codecId == ProtobufCodec.CODEC_ID) {
       respBody = PullProto.PullResp.newBuilder()
         .setCode(0).setMessage("success").setHasMore(false).build();

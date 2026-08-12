@@ -50,7 +50,7 @@ public class ProtobufCodecTest {
         AuthProto.AuthResp original = AuthProto.AuthResp.newBuilder()
             .setCode(0)
             .setMessage("success")
-            .setUserId("user-12345")
+            .setUserId(12345L)
             .setExpireAt(System.currentTimeMillis() + 3600000)
             .build();
 
@@ -107,8 +107,8 @@ public class ProtobufCodecTest {
             .build();
 
         ChatProto.C2CReq original = ChatProto.C2CReq.newBuilder()
-            .setSenderId("user-001")
-            .setRecipientId("user-002")
+            .setSenderId(1001L)
+            .setRecipientId(1002L)
             .setMessage(content)
             .build();
 
@@ -156,8 +156,8 @@ public class ProtobufCodecTest {
             .build();
 
         ChatProto.C2CNotify original = ChatProto.C2CNotify.newBuilder()
-            .setSenderId("user-001")
-            .setRecipientId("user-002")
+            .setSenderId(1001L)
+            .setRecipientId(1002L)
             .setMessage(content)
             .setSeq(3001L)
             .build();
@@ -184,8 +184,8 @@ public class ProtobufCodecTest {
             .build();
 
         GroupProto.C2GReq original = GroupProto.C2GReq.newBuilder()
-            .setSenderId("user-001")
-            .setGroupId("group-100")
+            .setSenderId(1001L)
+            .setGroupId(100100L)
             .setMessage(content)
             .build();
 
@@ -206,7 +206,7 @@ public class ProtobufCodecTest {
             .setCode(0)
             .setMessage("success")
             .setMessageId(5001)
-            .setGroupId("group-100")
+            .setGroupId(100100L)
             .setServerTime(System.currentTimeMillis())
             .setSeq(100L)
             .build();
@@ -233,8 +233,8 @@ public class ProtobufCodecTest {
             .build();
 
         GroupProto.C2GNotify original = GroupProto.C2GNotify.newBuilder()
-            .setSenderId("user-001")
-            .setGroupId("group-100")
+            .setSenderId(1001L)
+            .setGroupId(100100L)
             .setMessage(content)
             .setSeq(100L)
             .build();
@@ -486,8 +486,8 @@ public class ProtobufCodecTest {
             .build();
 
         ChatProto.C2CReq original = ChatProto.C2CReq.newBuilder()
-            .setSenderId("user-001")
-            .setRecipientId("user-002")
+            .setSenderId(1001L)
+            .setRecipientId(1002L)
             .setMessage(content)
             .build();
 
@@ -514,8 +514,8 @@ public class ProtobufCodecTest {
             .build();
 
         ChatProto.C2CReq original = ChatProto.C2CReq.newBuilder()
-            .setSenderId("user-001")
-            .setRecipientId("user-002")
+            .setSenderId(1001L)
+            .setRecipientId(1002L)
             .setMessage(content)
             .build();
 

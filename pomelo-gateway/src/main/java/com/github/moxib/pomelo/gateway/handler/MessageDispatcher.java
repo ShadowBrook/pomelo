@@ -208,11 +208,12 @@ public class MessageDispatcher {
           LOG.warn("Token 无效，无法注册 session");
           return;
         }
-        String userId = claims.getString("sub");
+        long id = claims.getLong("id", 0L);
+        // 优先使用 numeric id claim（Snowflake），兼容旧 token 中 sub 为 NanoID 的情况
+        String userId = id != 0 ? String.valueOf(id) : claims.getString("sub");
         if (userId == null || userId.isEmpty()) {
           return;
         }
-        long id = claims.getLong("id", 0L);
         String userName = claims.getString("userName", "");
         String nickname = claims.getString("nickname", "");
         String platform = claims.getString("platform", "");
