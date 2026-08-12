@@ -48,11 +48,11 @@ public class JwtTokenParser {
   }
 
   /** 签发 token（含身份信息，用于登录场景，避免二次查 DB） */
-  public String generate(String userId, long id, String userName, String nickname, String platform) {
+  public String generate(String userId, String userName, String nickname, String platform) {
     JsonObject claims = new JsonObject()
       .put("sub", userId)
+      .put("id", Long.parseLong(userId))
       .put("jti", UUID.randomUUID().toString().replace("-", ""));
-    if (id != 0) claims.put("id", id);
     if (userName != null) claims.put("userName", userName);
     if (nickname != null) claims.put("nickname", nickname);
     if (platform != null && !platform.isEmpty()) claims.put("platform", platform);

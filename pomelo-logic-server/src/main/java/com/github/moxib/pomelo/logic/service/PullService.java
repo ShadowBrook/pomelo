@@ -36,12 +36,10 @@ public class PullService extends ServiceBase {
       PullRequest req = decode(message, PullRequest.class);
       String userId = req.userId() != null && !req.userId().isEmpty()
         ? req.userId() : getUserIdFromHeaders(message);
-      // PB 的 PullReq 无 peerId 字段：proto 客户端通过 varHeaders["peerId"] 传会话历史目标
       String headerPeerId = message.getVarHeaders() != null ? message.getVarHeaders().get("peerId") : null;
       String peerId = req.peerId() != null && !req.peerId().isEmpty() && !"0".equals(req.peerId())
         ? req.peerId()
         : (headerPeerId != null && !headerPeerId.isEmpty() && !"0".equals(headerPeerId) ? headerPeerId : null);
-      // lastMsgId 是通用游标：离线拉 = 收件人同步水位(sinceSeq)；会话历史 = 时间游标(beforeTime)
       long cursor = req.seq();
       int limit = req.limit() > 0 ? req.limit() : defaultPullLimit;
 
@@ -51,48 +49,31 @@ public class PullService extends ServiceBase {
 
       final boolean isHistoryPull = peerId != null;
 
-      return resolveId(userId, peerId)
-        .compose(resolved -> {
-          if (isHistoryPull) {
-            LOG.info("拉取会话历史: userId={}({}) peerId={}({}) beforeTime={} limit={}",
-              userId, resolved.userId, peerId, resolved.peerId, cursor, limit);
-            String conversationId = MessageServiceImpl.buildConversationId(resolved.userId, resolved.peerId);
-            return messageRepo.pullConversation(conversationId, cursor, limit)
-                .compose(records -> sendPullResp(message, records, limit));
-          } else {
-            LOG.info("拉取离线消息: userId={}({}) sinceSeq={} limit={}",
-              userId, resolved.userId, cursor, limit);
-            return messageRepo.pullPending(resolved.userId, cursor, limit)
-              .compose(records -> sendPullResp(message, records, limit));
-          }
-        })
-        .onFailure(e -> {
-          LOG.error("拉取失败", e);
-        });
+      long resolvedUserId = Long.parseLong(userId);
+      long resolvedPeerId = peerId != null ? Long.parseLong(peerId) : 0;
+
+      if (isHistoryPull) {
+        LOG.info("拉取会话历史: userId={}({}) peerId={}({}) beforeTime={} limit={}",
+          userId, resolvedUserId, peerId, resolvedPeerId, cursor, limit);
+        String conversationId = MessageServiceImpl.buildConversationId(resolvedUserId, resolvedPeerId);
+        return messageRepo.pullConversation(conversationId, cursor, limit)
+            .compose(records -> sendPullResp(message, records, limit));
+      } else {
+        LOG.info("拉取离线消息: userId={}({}) sinceSeq={} limit={}",
+          userId, resolvedUserId, cursor, limit);
+        return messageRepo.pullPending(resolvedUserId, cursor, limit)
+          .compose(records -> sendPullResp(message, records, limit));
+      }
     } catch (Exception e) {
       LOG.error("处理拉取请求失败", e);
       return Future.succeededFuture(buildErrorResp(message, CMD_PULL_RESP_VALUE, ErrorCode.INTERNAL_ERROR, "处理失败：" + e.getMessage()));
     }
   }
 
-  private record Resolved(long userId, long peerId) {}
-
-  private Future<Resolved> resolveId(String userId, String peerId) {
-    Future<Long> uidF = resolveUserId(userId);
-    if (peerId == null) return uidF.map(uid -> new Resolved(uid, 0));
-    return uidF.compose(uid -> resolveUserId(peerId).map(pid -> new Resolved(uid, pid)));
-  }
-
-  private Future<Long> resolveUserId(String userId) {
-    try { return Future.succeededFuture(Long.parseLong(userId)); }
-    catch (NumberFormatException e) { return messageRepo.findUserId(userId); }
-  }
-
   private Future<ImMessage> sendPullResp(ImMessage request, List<MessageRecord> records, int limit) {
     if (records == null || records.isEmpty()) {
       return Future.succeededFuture(buildPullResp(request, null, limit, java.util.Collections.emptyMap()));
     }
-    // 收集所有待解析的 numeric id → 批量查 DB 获取 userId + userName + nickname
     java.util.Set<Long> numericIds = new java.util.HashSet<>();
     for (MessageRecord r : records) {
       numericIds.add(r.getSenderId());
@@ -115,7 +96,6 @@ public class PullService extends ServiceBase {
       PullProto.PullResp.Builder resp = PullProto.PullResp.newBuilder()
         .setCode(0).setMessage("success")
         .setHasMore(records != null && records.size() >= limit);
-      // PB 通道也返回消息列表：MessageContent + ext{id, senderId, recipientId, seq, 显示名}
       if (records != null) {
         for (MessageRecord r : records) {
           com.github.moxib.pomelo.logic.model.UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
@@ -148,9 +128,7 @@ public class PullService extends ServiceBase {
         for (MessageRecord r : records) {
           JsonObject msg = new JsonObject();
           arr.add(msg);
-          // 使用 String 避免 JavaScript Number 精度丢失（snowflake ID > 2^53）
           msg.put("id", String.valueOf(r.getId()));
-          // 用 DB 查到的 NanoID + 显示名，fallback 到数字 ID
           com.github.moxib.pomelo.logic.model.UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
           com.github.moxib.pomelo.logic.model.UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());
           msg.put("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(r.getSenderId()));

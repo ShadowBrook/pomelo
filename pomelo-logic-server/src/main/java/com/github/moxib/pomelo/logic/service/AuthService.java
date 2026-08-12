@@ -56,8 +56,9 @@ public class AuthService extends ServiceBase {
         if (claims == null) {
           return Future.succeededFuture(buildErrorResp(message, CMD_AUTH_RESP_VALUE, ErrorCode.UNAUTHORIZED, "Token 无效"));
         }
-        String userId = claims.getString("sub");
         long id = claims.getLong("id", 0L);
+        // 优先使用 numeric id claim（Snowflake），兼容旧 token 中 sub 为 NanoID 的情况
+        String userId = id != 0 ? String.valueOf(id) : claims.getString("sub");
         String userName = claims.getString("userName");
         String nickname = claims.getString("nickname");
         byte codecId = message.getCodecId();
@@ -67,7 +68,7 @@ public class AuthService extends ServiceBase {
         Object respBody;
         if (codecId == ProtobufCodec.CODEC_ID) {
           respBody = AuthProto.AuthResp.newBuilder()
-            .setCode(0).setMessage("success").setUserId(userId).build();
+            .setCode(0).setMessage("success").setUserId(id).build();
         } else {
           respBody = new JsonObject()
             .put("code", 0).put("message", "success")
@@ -75,8 +76,6 @@ public class AuthService extends ServiceBase {
             .put("nickname", nickname != null ? nickname : "");
         }
 
-        // 用户身份信息由 gateway 从 AUTH_REQ 请求的 token 自行解析（JWT claims），
-        // 此处不再通过 varHeaders 回传
         return Future.succeededFuture(buildResponse(message, CMD_AUTH_RESP_VALUE, respBody));
       });
     });
@@ -88,7 +87,6 @@ public class AuthService extends ServiceBase {
     LOG.info("登出请求: userId={}", userId);
 
     byte codecId = message.getCodecId();
-    // Token 黑名单：token 从 varHeaders 传入
     String token = null;
     Map<String, String> headers = message.getVarHeaders();
     if (headers != null) token = headers.get("token");

@@ -21,43 +21,23 @@ public final class ChatProto {
 
     /**
      * <pre>
-     * 发送者用户 ID
+     * 发送者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string sender_id = 1;</code>
+     * <code>int64 sender_id = 1;</code>
      * @return The senderId.
      */
-    java.lang.String getSenderId();
-    /**
-     * <pre>
-     * 发送者用户 ID
-     * </pre>
-     *
-     * <code>string sender_id = 1;</code>
-     * @return The bytes for senderId.
-     */
-    com.google.protobuf.ByteString
-        getSenderIdBytes();
+    long getSenderId();
 
     /**
      * <pre>
-     * 接收者用户 ID
+     * 接收者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string recipient_id = 2;</code>
+     * <code>int64 recipient_id = 2;</code>
      * @return The recipientId.
      */
-    java.lang.String getRecipientId();
-    /**
-     * <pre>
-     * 接收者用户 ID
-     * </pre>
-     *
-     * <code>string recipient_id = 2;</code>
-     * @return The bytes for recipientId.
-     */
-    com.google.protobuf.ByteString
-        getRecipientIdBytes();
+    long getRecipientId();
 
     /**
      * <code>int64 message_id = 3;</code>
@@ -111,8 +91,6 @@ public final class ChatProto {
       super(builder);
     }
     private C2CReq() {
-      senderId_ = "";
-      recipientId_ = "";
     }
 
     @java.lang.Override
@@ -137,97 +115,33 @@ public final class ChatProto {
 
     private int bitField0_;
     public static final int SENDER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object senderId_ = "";
+    private long senderId_ = 0L;
     /**
      * <pre>
-     * 发送者用户 ID
+     * 发送者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string sender_id = 1;</code>
+     * <code>int64 sender_id = 1;</code>
      * @return The senderId.
      */
     @java.lang.Override
-    public java.lang.String getSenderId() {
-      java.lang.Object ref = senderId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        senderId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 发送者用户 ID
-     * </pre>
-     *
-     * <code>string sender_id = 1;</code>
-     * @return The bytes for senderId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getSenderIdBytes() {
-      java.lang.Object ref = senderId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        senderId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getSenderId() {
+      return senderId_;
     }
 
     public static final int RECIPIENT_ID_FIELD_NUMBER = 2;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object recipientId_ = "";
+    private long recipientId_ = 0L;
     /**
      * <pre>
-     * 接收者用户 ID
+     * 接收者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string recipient_id = 2;</code>
+     * <code>int64 recipient_id = 2;</code>
      * @return The recipientId.
      */
     @java.lang.Override
-    public java.lang.String getRecipientId() {
-      java.lang.Object ref = recipientId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        recipientId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 接收者用户 ID
-     * </pre>
-     *
-     * <code>string recipient_id = 2;</code>
-     * @return The bytes for recipientId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getRecipientIdBytes() {
-      java.lang.Object ref = recipientId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        recipientId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getRecipientId() {
+      return recipientId_;
     }
 
     public static final int MESSAGE_ID_FIELD_NUMBER = 3;
@@ -293,11 +207,11 @@ public final class ChatProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(senderId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, senderId_);
+      if (senderId_ != 0L) {
+        output.writeInt64(1, senderId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(recipientId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, recipientId_);
+      if (recipientId_ != 0L) {
+        output.writeInt64(2, recipientId_);
       }
       if (messageId_ != 0L) {
         output.writeInt64(3, messageId_);
@@ -314,11 +228,13 @@ public final class ChatProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(senderId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, senderId_);
+      if (senderId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, senderId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(recipientId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, recipientId_);
+      if (recipientId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, recipientId_);
       }
       if (messageId_ != 0L) {
         size += com.google.protobuf.CodedOutputStream
@@ -343,10 +259,10 @@ public final class ChatProto {
       }
       com.github.moxib.pomelo.proto.chat.ChatProto.C2CReq other = (com.github.moxib.pomelo.proto.chat.ChatProto.C2CReq) obj;
 
-      if (!getSenderId()
-          .equals(other.getSenderId())) return false;
-      if (!getRecipientId()
-          .equals(other.getRecipientId())) return false;
+      if (getSenderId()
+          != other.getSenderId()) return false;
+      if (getRecipientId()
+          != other.getRecipientId()) return false;
       if (getMessageId()
           != other.getMessageId()) return false;
       if (hasMessage() != other.hasMessage()) return false;
@@ -366,9 +282,11 @@ public final class ChatProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + SENDER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getSenderId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getSenderId());
       hash = (37 * hash) + RECIPIENT_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getRecipientId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getRecipientId());
       hash = (37 * hash) + MESSAGE_ID_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getMessageId());
@@ -519,8 +437,8 @@ public final class ChatProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        senderId_ = "";
-        recipientId_ = "";
+        senderId_ = 0L;
+        recipientId_ = 0L;
         messageId_ = 0L;
         message_ = null;
         if (messageBuilder_ != null) {
@@ -623,15 +541,11 @@ public final class ChatProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.chat.ChatProto.C2CReq other) {
         if (other == com.github.moxib.pomelo.proto.chat.ChatProto.C2CReq.getDefaultInstance()) return this;
-        if (!other.getSenderId().isEmpty()) {
-          senderId_ = other.senderId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getSenderId() != 0L) {
+          setSenderId(other.getSenderId());
         }
-        if (!other.getRecipientId().isEmpty()) {
-          recipientId_ = other.recipientId_;
-          bitField0_ |= 0x00000002;
-          onChanged();
+        if (other.getRecipientId() != 0L) {
+          setRecipientId(other.getRecipientId());
         }
         if (other.getMessageId() != 0L) {
           setMessageId(other.getMessageId());
@@ -665,16 +579,16 @@ public final class ChatProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                senderId_ = input.readStringRequireUtf8();
+              case 8: {
+                senderId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
-              case 18: {
-                recipientId_ = input.readStringRequireUtf8();
+              } // case 8
+              case 16: {
+                recipientId_ = input.readInt64();
                 bitField0_ |= 0x00000002;
                 break;
-              } // case 18
+              } // case 16
               case 24: {
                 messageId_ = input.readInt64();
                 bitField0_ |= 0x00000004;
@@ -704,60 +618,30 @@ public final class ChatProto {
       }
       private int bitField0_;
 
-      private java.lang.Object senderId_ = "";
+      private long senderId_ ;
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @return The senderId.
        */
-      public java.lang.String getSenderId() {
-        java.lang.Object ref = senderId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          senderId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getSenderId() {
+        return senderId_;
       }
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
-       * @return The bytes for senderId.
-       */
-      public com.google.protobuf.ByteString
-          getSenderIdBytes() {
-        java.lang.Object ref = senderId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          senderId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 发送者用户 ID
-       * </pre>
-       *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @param value The senderId to set.
        * @return This builder for chaining.
        */
-      public Builder setSenderId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setSenderId(long value) {
+
         senderId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
@@ -765,91 +649,43 @@ public final class ChatProto {
       }
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearSenderId() {
-        senderId_ = getDefaultInstance().getSenderId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 发送者用户 ID
-       * </pre>
-       *
-       * <code>string sender_id = 1;</code>
-       * @param value The bytes for senderId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setSenderIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        senderId_ = value;
-        bitField0_ |= 0x00000001;
+        senderId_ = 0L;
         onChanged();
         return this;
       }
 
-      private java.lang.Object recipientId_ = "";
+      private long recipientId_ ;
       /**
        * <pre>
-       * 接收者用户 ID
+       * 接收者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string recipient_id = 2;</code>
+       * <code>int64 recipient_id = 2;</code>
        * @return The recipientId.
        */
-      public java.lang.String getRecipientId() {
-        java.lang.Object ref = recipientId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          recipientId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getRecipientId() {
+        return recipientId_;
       }
       /**
        * <pre>
-       * 接收者用户 ID
+       * 接收者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string recipient_id = 2;</code>
-       * @return The bytes for recipientId.
-       */
-      public com.google.protobuf.ByteString
-          getRecipientIdBytes() {
-        java.lang.Object ref = recipientId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          recipientId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 接收者用户 ID
-       * </pre>
-       *
-       * <code>string recipient_id = 2;</code>
+       * <code>int64 recipient_id = 2;</code>
        * @param value The recipientId to set.
        * @return This builder for chaining.
        */
-      public Builder setRecipientId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setRecipientId(long value) {
+
         recipientId_ = value;
         bitField0_ |= 0x00000002;
         onChanged();
@@ -857,33 +693,15 @@ public final class ChatProto {
       }
       /**
        * <pre>
-       * 接收者用户 ID
+       * 接收者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string recipient_id = 2;</code>
+       * <code>int64 recipient_id = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearRecipientId() {
-        recipientId_ = getDefaultInstance().getRecipientId();
         bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 接收者用户 ID
-       * </pre>
-       *
-       * <code>string recipient_id = 2;</code>
-       * @param value The bytes for recipientId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setRecipientIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        recipientId_ = value;
-        bitField0_ |= 0x00000002;
+        recipientId_ = 0L;
         onChanged();
         return this;
       }
@@ -2147,43 +1965,23 @@ public final class ChatProto {
 
     /**
      * <pre>
-     * 发送者用户 ID
+     * 发送者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string sender_id = 1;</code>
+     * <code>int64 sender_id = 1;</code>
      * @return The senderId.
      */
-    java.lang.String getSenderId();
-    /**
-     * <pre>
-     * 发送者用户 ID
-     * </pre>
-     *
-     * <code>string sender_id = 1;</code>
-     * @return The bytes for senderId.
-     */
-    com.google.protobuf.ByteString
-        getSenderIdBytes();
+    long getSenderId();
 
     /**
      * <pre>
-     * 接收者用户 ID
+     * 接收者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string recipient_id = 2;</code>
+     * <code>int64 recipient_id = 2;</code>
      * @return The recipientId.
      */
-    java.lang.String getRecipientId();
-    /**
-     * <pre>
-     * 接收者用户 ID
-     * </pre>
-     *
-     * <code>string recipient_id = 2;</code>
-     * @return The bytes for recipientId.
-     */
-    com.google.protobuf.ByteString
-        getRecipientIdBytes();
+    long getRecipientId();
 
     /**
      * <pre>
@@ -2263,8 +2061,6 @@ public final class ChatProto {
       super(builder);
     }
     private C2CNotify() {
-      senderId_ = "";
-      recipientId_ = "";
     }
 
     @java.lang.Override
@@ -2289,97 +2085,33 @@ public final class ChatProto {
 
     private int bitField0_;
     public static final int SENDER_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object senderId_ = "";
+    private long senderId_ = 0L;
     /**
      * <pre>
-     * 发送者用户 ID
+     * 发送者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string sender_id = 1;</code>
+     * <code>int64 sender_id = 1;</code>
      * @return The senderId.
      */
     @java.lang.Override
-    public java.lang.String getSenderId() {
-      java.lang.Object ref = senderId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        senderId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 发送者用户 ID
-     * </pre>
-     *
-     * <code>string sender_id = 1;</code>
-     * @return The bytes for senderId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getSenderIdBytes() {
-      java.lang.Object ref = senderId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        senderId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getSenderId() {
+      return senderId_;
     }
 
     public static final int RECIPIENT_ID_FIELD_NUMBER = 2;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object recipientId_ = "";
+    private long recipientId_ = 0L;
     /**
      * <pre>
-     * 接收者用户 ID
+     * 接收者用户 ID (Snowflake)
      * </pre>
      *
-     * <code>string recipient_id = 2;</code>
+     * <code>int64 recipient_id = 2;</code>
      * @return The recipientId.
      */
     @java.lang.Override
-    public java.lang.String getRecipientId() {
-      java.lang.Object ref = recipientId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        recipientId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 接收者用户 ID
-     * </pre>
-     *
-     * <code>string recipient_id = 2;</code>
-     * @return The bytes for recipientId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getRecipientIdBytes() {
-      java.lang.Object ref = recipientId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        recipientId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getRecipientId() {
+      return recipientId_;
     }
 
     public static final int MESSAGE_FIELD_NUMBER = 3;
@@ -2488,11 +2220,11 @@ public final class ChatProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(senderId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, senderId_);
+      if (senderId_ != 0L) {
+        output.writeInt64(1, senderId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(recipientId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, recipientId_);
+      if (recipientId_ != 0L) {
+        output.writeInt64(2, recipientId_);
       }
       if (((bitField0_ & 0x00000001) != 0)) {
         output.writeMessage(3, getMessage());
@@ -2512,11 +2244,13 @@ public final class ChatProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(senderId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, senderId_);
+      if (senderId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, senderId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(recipientId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, recipientId_);
+      if (recipientId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(2, recipientId_);
       }
       if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.CodedOutputStream
@@ -2545,10 +2279,10 @@ public final class ChatProto {
       }
       com.github.moxib.pomelo.proto.chat.ChatProto.C2CNotify other = (com.github.moxib.pomelo.proto.chat.ChatProto.C2CNotify) obj;
 
-      if (!getSenderId()
-          .equals(other.getSenderId())) return false;
-      if (!getRecipientId()
-          .equals(other.getRecipientId())) return false;
+      if (getSenderId()
+          != other.getSenderId()) return false;
+      if (getRecipientId()
+          != other.getRecipientId()) return false;
       if (hasMessage() != other.hasMessage()) return false;
       if (hasMessage()) {
         if (!getMessage()
@@ -2576,9 +2310,11 @@ public final class ChatProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + SENDER_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getSenderId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getSenderId());
       hash = (37 * hash) + RECIPIENT_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getRecipientId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getRecipientId());
       if (hasMessage()) {
         hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
         hash = (53 * hash) + getMessage().hashCode();
@@ -2730,8 +2466,8 @@ public final class ChatProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        senderId_ = "";
-        recipientId_ = "";
+        senderId_ = 0L;
+        recipientId_ = 0L;
         message_ = null;
         if (messageBuilder_ != null) {
           messageBuilder_.dispose();
@@ -2840,15 +2576,11 @@ public final class ChatProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.chat.ChatProto.C2CNotify other) {
         if (other == com.github.moxib.pomelo.proto.chat.ChatProto.C2CNotify.getDefaultInstance()) return this;
-        if (!other.getSenderId().isEmpty()) {
-          senderId_ = other.senderId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getSenderId() != 0L) {
+          setSenderId(other.getSenderId());
         }
-        if (!other.getRecipientId().isEmpty()) {
-          recipientId_ = other.recipientId_;
-          bitField0_ |= 0x00000002;
-          onChanged();
+        if (other.getRecipientId() != 0L) {
+          setRecipientId(other.getRecipientId());
         }
         if (other.hasMessage()) {
           mergeMessage(other.getMessage());
@@ -2885,16 +2617,16 @@ public final class ChatProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                senderId_ = input.readStringRequireUtf8();
+              case 8: {
+                senderId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
-              case 18: {
-                recipientId_ = input.readStringRequireUtf8();
+              } // case 8
+              case 16: {
+                recipientId_ = input.readInt64();
                 bitField0_ |= 0x00000002;
                 break;
-              } // case 18
+              } // case 16
               case 26: {
                 input.readMessage(
                     getMessageFieldBuilder().getBuilder(),
@@ -2929,60 +2661,30 @@ public final class ChatProto {
       }
       private int bitField0_;
 
-      private java.lang.Object senderId_ = "";
+      private long senderId_ ;
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @return The senderId.
        */
-      public java.lang.String getSenderId() {
-        java.lang.Object ref = senderId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          senderId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getSenderId() {
+        return senderId_;
       }
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
-       * @return The bytes for senderId.
-       */
-      public com.google.protobuf.ByteString
-          getSenderIdBytes() {
-        java.lang.Object ref = senderId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          senderId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 发送者用户 ID
-       * </pre>
-       *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @param value The senderId to set.
        * @return This builder for chaining.
        */
-      public Builder setSenderId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setSenderId(long value) {
+
         senderId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
@@ -2990,91 +2692,43 @@ public final class ChatProto {
       }
       /**
        * <pre>
-       * 发送者用户 ID
+       * 发送者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string sender_id = 1;</code>
+       * <code>int64 sender_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearSenderId() {
-        senderId_ = getDefaultInstance().getSenderId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 发送者用户 ID
-       * </pre>
-       *
-       * <code>string sender_id = 1;</code>
-       * @param value The bytes for senderId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setSenderIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        senderId_ = value;
-        bitField0_ |= 0x00000001;
+        senderId_ = 0L;
         onChanged();
         return this;
       }
 
-      private java.lang.Object recipientId_ = "";
+      private long recipientId_ ;
       /**
        * <pre>
-       * 接收者用户 ID
+       * 接收者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string recipient_id = 2;</code>
+       * <code>int64 recipient_id = 2;</code>
        * @return The recipientId.
        */
-      public java.lang.String getRecipientId() {
-        java.lang.Object ref = recipientId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          recipientId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getRecipientId() {
+        return recipientId_;
       }
       /**
        * <pre>
-       * 接收者用户 ID
+       * 接收者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string recipient_id = 2;</code>
-       * @return The bytes for recipientId.
-       */
-      public com.google.protobuf.ByteString
-          getRecipientIdBytes() {
-        java.lang.Object ref = recipientId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          recipientId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 接收者用户 ID
-       * </pre>
-       *
-       * <code>string recipient_id = 2;</code>
+       * <code>int64 recipient_id = 2;</code>
        * @param value The recipientId to set.
        * @return This builder for chaining.
        */
-      public Builder setRecipientId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setRecipientId(long value) {
+
         recipientId_ = value;
         bitField0_ |= 0x00000002;
         onChanged();
@@ -3082,33 +2736,15 @@ public final class ChatProto {
       }
       /**
        * <pre>
-       * 接收者用户 ID
+       * 接收者用户 ID (Snowflake)
        * </pre>
        *
-       * <code>string recipient_id = 2;</code>
+       * <code>int64 recipient_id = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearRecipientId() {
-        recipientId_ = getDefaultInstance().getRecipientId();
         bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 接收者用户 ID
-       * </pre>
-       *
-       * <code>string recipient_id = 2;</code>
-       * @param value The bytes for recipientId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setRecipientIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        recipientId_ = value;
-        bitField0_ |= 0x00000002;
+        recipientId_ = 0L;
         onChanged();
         return this;
       }
@@ -3470,14 +3106,14 @@ public final class ChatProto {
   static {
     java.lang.String[] descriptorData = {
       "\n\017chat/chat.proto\022\007im.chat\032\023common/commo" +
-      "n.proto\"q\n\006C2CReq\022\021\n\tsender_id\030\001 \001(\t\022\024\n\014" +
-      "recipient_id\030\002 \001(\t\022\022\n\nmessage_id\030\003 \001(\003\022*" +
+      "n.proto\"q\n\006C2CReq\022\021\n\tsender_id\030\001 \001(\003\022\024\n\014" +
+      "recipient_id\030\002 \001(\003\022\022\n\nmessage_id\030\003 \001(\003\022*" +
       "\n\007message\030\004 \001(\0132\031.im.common.MessageConte" +
       "nt\"k\n\007C2CResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002" +
       " \001(\t\022\022\n\nmessage_id\030\003 \001(\003\022\023\n\013server_time\030" +
       "\004 \001(\003\022\020\n\003seq\030\005 \001(\003H\000\210\001\001B\006\n\004_seq\"\242\001\n\tC2CN" +
-      "otify\022\021\n\tsender_id\030\001 \001(\t\022\024\n\014recipient_id" +
-      "\030\002 \001(\t\022*\n\007message\030\003 \001(\0132\031.im.common.Mess" +
+      "otify\022\021\n\tsender_id\030\001 \001(\003\022\024\n\014recipient_id" +
+      "\030\002 \001(\003\022*\n\007message\030\003 \001(\0132\031.im.common.Mess" +
       "ageContent\022\020\n\003seq\030\004 \001(\003H\000\210\001\001\022\027\n\nmessage_" +
       "id\030\005 \001(\003H\001\210\001\001B\006\n\004_seqB\r\n\013_message_idB/\n\"" +
       "com.github.moxib.pomelo.proto.chatB\tChat" +

@@ -2,9 +2,8 @@ package com.github.moxib.pomelo.logic.model;
 
 public class GroupMemberRecord {
 
-  private final long groupId;  // im_group.id（BIGINT 内部主键）
+  private final long groupId;
   private final long userId;
-  private final String nanoId;
   private final String userName;
   private final String nickname;
   private final String avatar;
@@ -14,7 +13,6 @@ public class GroupMemberRecord {
   private GroupMemberRecord(Builder builder) {
     this.groupId = builder.groupId;
     this.userId = builder.userId;
-    this.nanoId = builder.nanoId;
     this.userName = builder.userName;
     this.nickname = builder.nickname;
     this.avatar = builder.avatar;
@@ -26,7 +24,6 @@ public class GroupMemberRecord {
 
   public long getGroupId() { return groupId; }
   public long getUserId() { return userId; }
-  public String getNanoId() { return nanoId; }
   public String getUserName() { return userName; }
   public String getNickname() { return nickname; }
   public String getAvatar() { return avatar; }
@@ -36,7 +33,6 @@ public class GroupMemberRecord {
   public static class Builder {
     private long groupId;
     private long userId;
-    private String nanoId;
     private String userName;
     private String nickname;
     private String avatar;
@@ -45,7 +41,6 @@ public class GroupMemberRecord {
 
     public Builder groupId(long groupId) { this.groupId = groupId; return this; }
     public Builder userId(long userId) { this.userId = userId; return this; }
-    public Builder nanoId(String nanoId) { this.nanoId = nanoId; return this; }
     public Builder userName(String userName) { this.userName = userName; return this; }
     public Builder nickname(String nickname) { this.nickname = nickname; return this; }
     public Builder avatar(String avatar) { this.avatar = avatar; return this; }

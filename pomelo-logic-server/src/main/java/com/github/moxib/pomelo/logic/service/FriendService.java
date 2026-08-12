@@ -4,7 +4,6 @@ import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.ConfigHolder;
-import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
 import com.github.moxib.pomelo.logic.model.requests.FriendOpRequest;
 import com.github.moxib.pomelo.logic.model.requests.SearchRequest;
@@ -27,7 +26,7 @@ public class FriendService extends ServiceBase {
   private static final Logger LOG = LoggerFactory.getLogger(FriendService.class);
 
   private static final String SEARCH_SQL = """
-    SELECT user_id, user_name, nickname, avatar FROM im_user
+    SELECT id, user_name, nickname, avatar FROM im_user
     WHERE user_name LIKE $1 OR nickname LIKE $1 LIMIT $2
     """;
   private static final String INSERT_FRIEND_SQL = """
@@ -46,13 +45,11 @@ public class FriendService extends ServiceBase {
     """;
 
   private final PushRouter pushRouter;
-  private final MessageRepository messageRepo;
   private final Pool pgPool;
   private final int searchLimit;
 
-  public FriendService(Vertx vertx, PushRouter pushRouter, MessageRepository messageRepo) {
+  public FriendService(Vertx vertx, PushRouter pushRouter) {
     this.pushRouter = pushRouter;
-    this.messageRepo = messageRepo;
     this.pgPool = PgPoolFactory.get(vertx);
     this.searchLimit = ConfigHolder.getInt("friend.searchLimit", 20);
   }
@@ -90,7 +87,7 @@ public class FriendService extends ServiceBase {
       RelationProto.SearchUserResp.Builder b = RelationProto.SearchUserResp.newBuilder().setCode(0).setMessage("ok");
       for (Row row : rows) {
         b.addUsers(RelationProto.SearchUserResp.UserInfo.newBuilder()
-          .setUserId(row.getString("user_id")).setUserName(row.getString("user_name"))
+          .setUserId(row.getLong("id")).setUserName(row.getString("user_name"))
           .setNickname(row.getString("nickname")).setAvatar(row.getString("avatar")));
       }
       return b.build();
@@ -98,7 +95,7 @@ public class FriendService extends ServiceBase {
     JsonObject json = jsonBody().put("code", 0).put("message", "ok");
     JsonArray arr = new JsonArray(); json.put("users", arr);
     for (Row row : rows) {
-      arr.add(new JsonObject().put("userId", row.getString("user_id"))
+      arr.add(new JsonObject().put("userId", String.valueOf(row.getLong("id")))
         .put("userName", row.getString("user_name")).put("nickname", row.getString("nickname"))
         .put("avatar", row.getString("avatar")));
     }
@@ -108,46 +105,43 @@ public class FriendService extends ServiceBase {
   private Future<ImMessage> handleAdd(ImMessage message) {
     Parsed p = parseFriendReq(message);
     if (p.invalid()) return Future.succeededFuture(buildErrorResp(message, CMD_FRIEND_ADD_RESP_VALUE, ErrorCode.BAD_REQUEST, "参数无效"));
-    return resolveBoth(p).compose(ids -> {
-      long now = System.currentTimeMillis();
-      return pgPool.preparedQuery(INSERT_FRIEND_SQL).execute(Tuple.of(ids.userId, ids.friendId, now))
-        .compose(r -> {
-          if (r.rowCount() == 0) return Future.failedFuture("已申请或已是好友");
-          LOG.info("好友申请: userId={} friendId={}", ids.userId, ids.friendId);
-          publishFriendNotify(ids.friendId, CMD_FRIEND_ADD_NOTIFY_VALUE, ids.userId);
-          return Future.succeededFuture(buildFriendResp(message, CMD_FRIEND_ADD_RESP_VALUE, "申请已发送"));
-        });
-    }).recover(e -> Future.succeededFuture(buildErrorResp(message, CMD_FRIEND_ADD_RESP_VALUE, ErrorCode.CONFLICT, e.getMessage())));
+    ResolvedIds ids = resolveBoth(p);
+    long now = System.currentTimeMillis();
+    return pgPool.preparedQuery(INSERT_FRIEND_SQL).execute(Tuple.of(ids.userId, ids.friendId, now))
+      .compose(r -> {
+        if (r.rowCount() == 0) return Future.failedFuture("已申请或已是好友");
+        LOG.info("好友申请: userId={} friendId={}", ids.userId, ids.friendId);
+        publishFriendNotify(ids.friendId, CMD_FRIEND_ADD_NOTIFY_VALUE, ids.userId);
+        return Future.succeededFuture(buildFriendResp(message, CMD_FRIEND_ADD_RESP_VALUE, "申请已发送"));
+      }).recover(e -> Future.succeededFuture(buildErrorResp(message, CMD_FRIEND_ADD_RESP_VALUE, ErrorCode.CONFLICT, e.getMessage())));
   }
 
   private Future<ImMessage> handleAccept(ImMessage message) {
     Parsed p = parseFriendReq(message);
     if (p.invalid()) return Future.succeededFuture(buildErrorResp(message, CMD_FRIEND_ACCEPT_RESP_VALUE, ErrorCode.BAD_REQUEST, "参数无效"));
-    return resolveBoth(p).compose(ids -> {
-      long now = System.currentTimeMillis();
-      return pgPool.preparedQuery(ACCEPT_FRIEND_SQL).execute(Tuple.of(ids.friendId, ids.userId))
-        .compose(r -> r.rowCount() == 0
-          ? Future.failedFuture("没有待处理的申请")
-          : pgPool.preparedQuery(INSERT_REVERSE_SQL).execute(Tuple.of(ids.userId, ids.friendId, now)))
-        .onSuccess(r -> {
-          LOG.info("好友接受: userId={} friendId={}", ids.userId, ids.friendId);
-          publishFriendNotify(ids.friendId, CMD_FRIEND_ACCEPT_NOTIFY_VALUE, ids.userId);
-        })
-        .map(r -> buildFriendResp(message, CMD_FRIEND_ACCEPT_RESP_VALUE, "已添加好友"));
-    }).recover(e -> Future.succeededFuture(buildErrorResp(message, CMD_FRIEND_ACCEPT_RESP_VALUE, ErrorCode.BAD_REQUEST, e.getMessage())));
+    ResolvedIds ids = resolveBoth(p);
+    long now = System.currentTimeMillis();
+    return pgPool.preparedQuery(ACCEPT_FRIEND_SQL).execute(Tuple.of(ids.friendId, ids.userId))
+      .compose(r -> r.rowCount() == 0
+        ? Future.failedFuture("没有待处理的申请")
+        : pgPool.preparedQuery(INSERT_REVERSE_SQL).execute(Tuple.of(ids.userId, ids.friendId, now)))
+      .onSuccess(r -> {
+        LOG.info("好友接受: userId={} friendId={}", ids.userId, ids.friendId);
+        publishFriendNotify(ids.friendId, CMD_FRIEND_ACCEPT_NOTIFY_VALUE, ids.userId);
+      })
+      .map(r -> buildFriendResp(message, CMD_FRIEND_ACCEPT_RESP_VALUE, "已添加好友"));
   }
 
   private Future<ImMessage> handleDelete(ImMessage message) {
     Parsed p = parseFriendReq(message);
     if (p.invalid()) return Future.succeededFuture(buildErrorResp(message, CMD_FRIEND_DELETE_RESP_VALUE, ErrorCode.BAD_REQUEST, "参数无效"));
-    return resolveBoth(p).compose(ids ->
-      pgPool.preparedQuery(DELETE_FRIEND_SQL).execute(Tuple.of(ids.userId, ids.friendId))
-        .onSuccess(r -> {
-          LOG.info("好友删除: userId={} friendId={}", ids.userId, ids.friendId);
-          publishFriendNotify(ids.friendId, CMD_FRIEND_DELETE_NOTIFY_VALUE, ids.userId);
-        })
-        .map(r -> buildFriendResp(message, CMD_FRIEND_DELETE_RESP_VALUE, "已删除"))
-    ).recover(e -> Future.succeededFuture(buildErrorResp(message, CMD_FRIEND_DELETE_RESP_VALUE, ErrorCode.INTERNAL_ERROR, "删除失败")));
+    ResolvedIds ids = resolveBoth(p);
+    return pgPool.preparedQuery(DELETE_FRIEND_SQL).execute(Tuple.of(ids.userId, ids.friendId))
+      .onSuccess(r -> {
+        LOG.info("好友删除: userId={} friendId={}", ids.userId, ids.friendId);
+        publishFriendNotify(ids.friendId, CMD_FRIEND_DELETE_NOTIFY_VALUE, ids.userId);
+      })
+      .map(r -> buildFriendResp(message, CMD_FRIEND_DELETE_RESP_VALUE, "已删除"));
   }
 
   // -- helpers --
@@ -173,13 +167,8 @@ public class FriendService extends ServiceBase {
     return new Parsed(req.userId(), req.friendId());
   }
 
-  private Future<ResolvedIds> resolveBoth(Parsed p) {
-    return resolveId(p.userId).compose(uid -> resolveId(p.friendId).map(fid -> new ResolvedIds(uid, fid)));
-  }
-
-  private Future<Long> resolveId(String userId) {
-    try { return Future.succeededFuture(Long.parseLong(userId)); }
-    catch (NumberFormatException e) { return messageRepo.findUserId(userId).map(foundId -> foundId != 0 ? foundId : 0L); }
+  private ResolvedIds resolveBoth(Parsed p) {
+    return new ResolvedIds(Long.parseLong(p.userId), Long.parseLong(p.friendId));
   }
 
   private ImMessage buildFriendResp(ImMessage req, int respCmd, String msg) {
@@ -198,18 +187,17 @@ public class FriendService extends ServiceBase {
   }
 
   private void publishFriendNotify(long targetUserId, int cmd, long fromUserId) {
-    // 使用数字 id 作为 targetUserId（Gateway 侧会查 SessionRegistry 或忽略）
     PushEnvelope env = new PushEnvelope(
       String.valueOf(targetUserId),
       cmd,
-      buildFriendNotifyBody(cmd, String.valueOf(fromUserId)),
+      buildFriendNotifyBody(cmd, fromUserId),
       (byte) 0
     );
     pushRouter.push(env);
     LOG.debug("FriendNotify 已广播: target={} cmd={}", targetUserId, cmd);
   }
 
-  private byte[] buildFriendNotifyBody(int cmd, String userId) {
+  private byte[] buildFriendNotifyBody(int cmd, long userId) {
     if (cmd == CMD_FRIEND_ADD_NOTIFY_VALUE)
       return RelationProto.FriendAddNotify.newBuilder()
         .setUserId(userId).setUserName("").setNickname("").setAvatar("").build().toByteArray();

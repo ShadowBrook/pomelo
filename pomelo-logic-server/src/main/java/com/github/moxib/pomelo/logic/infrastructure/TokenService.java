@@ -45,14 +45,9 @@ public class TokenService {
     return instance;
   }
 
-  /** 签发 token（仅 userId，用于注册场景） */
-  public String generate(String userId) {
-    return parser.generate(userId, 0, null, null, null);
-  }
-
-  /** 签发 token（含身份信息，用于登录场景，避免 LoginHandler 二次查 DB） */
-  public String generate(String userId, long id, String userName, String nickname, String platform) {
-    return parser.generate(userId, id, userName, nickname, platform);
+  /** 签发 token（含身份信息），避免 Handler 二次查 DB */
+  public String generate(String userId, String userName, String nickname, String platform) {
+    return parser.generate(userId, userName, nickname, platform);
   }
 
   /** 验证并解析 token，成功返回完整 claims（JsonObject） */

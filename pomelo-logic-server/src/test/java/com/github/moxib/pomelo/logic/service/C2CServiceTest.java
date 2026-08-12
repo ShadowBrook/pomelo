@@ -68,7 +68,6 @@ class C2CServiceTest {
       @Override public Future<List<MessageRecord>> pullConversation(String conversationId, long beforeTime, int limit) {
         return Future.succeededFuture(List.of());
       }
-      @Override public Future<Long> findUserId(String userId) { return Future.succeededFuture(0L); }
       @Override public Future<Map<Long, com.github.moxib.pomelo.logic.model.UserIdInfo>> findUserIdsByIds(List<Long> ids) {
         return Future.succeededFuture(Map.of());
       }

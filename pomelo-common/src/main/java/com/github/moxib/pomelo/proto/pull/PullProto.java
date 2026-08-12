@@ -1885,23 +1885,13 @@ public final class PullProto {
 
     /**
      * <pre>
-     * 群 ID
+     * 群 ID (Snowflake)
      * </pre>
      *
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
-    java.lang.String getGroupId();
-    /**
-     * <pre>
-     * 群 ID
-     * </pre>
-     *
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    com.google.protobuf.ByteString
-        getGroupIdBytes();
+    long getGroupId();
 
     /**
      * <pre>
@@ -1952,7 +1942,6 @@ public final class PullProto {
       super(builder);
     }
     private PullGroupMsgReq() {
-      groupId_ = "";
     }
 
     @java.lang.Override
@@ -1976,50 +1965,18 @@ public final class PullProto {
     }
 
     public static final int GROUP_ID_FIELD_NUMBER = 1;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object groupId_ = "";
+    private long groupId_ = 0L;
     /**
      * <pre>
-     * 群 ID
+     * 群 ID (Snowflake)
      * </pre>
      *
-     * <code>string group_id = 1;</code>
+     * <code>int64 group_id = 1;</code>
      * @return The groupId.
      */
     @java.lang.Override
-    public java.lang.String getGroupId() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        groupId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <pre>
-     * 群 ID
-     * </pre>
-     *
-     * <code>string group_id = 1;</code>
-     * @return The bytes for groupId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getGroupIdBytes() {
-      java.lang.Object ref = groupId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        groupId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
+    public long getGroupId() {
+      return groupId_;
     }
 
     public static final int CURSOR_FIELD_NUMBER = 2;
@@ -2081,8 +2038,8 @@ public final class PullProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 1, groupId_);
+      if (groupId_ != 0L) {
+        output.writeInt64(1, groupId_);
       }
       if (cursor_ != 0L) {
         output.writeInt64(2, cursor_);
@@ -2102,8 +2059,9 @@ public final class PullProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(groupId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, groupId_);
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(1, groupId_);
       }
       if (cursor_ != 0L) {
         size += com.google.protobuf.CodedOutputStream
@@ -2132,8 +2090,8 @@ public final class PullProto {
       }
       com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq other = (com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq) obj;
 
-      if (!getGroupId()
-          .equals(other.getGroupId())) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
       if (getCursor()
           != other.getCursor()) return false;
       if (getLimit()
@@ -2152,7 +2110,8 @@ public final class PullProto {
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getGroupId().hashCode();
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       hash = (37 * hash) + CURSOR_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getCursor());
@@ -2298,7 +2257,7 @@ public final class PullProto {
       public Builder clear() {
         super.clear();
         bitField0_ = 0;
-        groupId_ = "";
+        groupId_ = 0L;
         cursor_ = 0L;
         limit_ = 0;
         isBackward_ = false;
@@ -2393,10 +2352,8 @@ public final class PullProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq other) {
         if (other == com.github.moxib.pomelo.proto.pull.PullProto.PullGroupMsgReq.getDefaultInstance()) return this;
-        if (!other.getGroupId().isEmpty()) {
-          groupId_ = other.groupId_;
-          bitField0_ |= 0x00000001;
-          onChanged();
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
         }
         if (other.getCursor() != 0L) {
           setCursor(other.getCursor());
@@ -2433,11 +2390,11 @@ public final class PullProto {
               case 0:
                 done = true;
                 break;
-              case 10: {
-                groupId_ = input.readStringRequireUtf8();
+              case 8: {
+                groupId_ = input.readInt64();
                 bitField0_ |= 0x00000001;
                 break;
-              } // case 10
+              } // case 8
               case 16: {
                 cursor_ = input.readInt64();
                 bitField0_ |= 0x00000002;
@@ -2470,60 +2427,30 @@ public final class PullProto {
       }
       private int bitField0_;
 
-      private java.lang.Object groupId_ = "";
+      private long groupId_ ;
       /**
        * <pre>
-       * 群 ID
+       * 群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return The groupId.
        */
-      public java.lang.String getGroupId() {
-        java.lang.Object ref = groupId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          groupId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
       }
       /**
        * <pre>
-       * 群 ID
+       * 群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 1;</code>
-       * @return The bytes for groupId.
-       */
-      public com.google.protobuf.ByteString
-          getGroupIdBytes() {
-        java.lang.Object ref = groupId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          groupId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <pre>
-       * 群 ID
-       * </pre>
-       *
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @param value The groupId to set.
        * @return This builder for chaining.
        */
-      public Builder setGroupId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
+      public Builder setGroupId(long value) {
+
         groupId_ = value;
         bitField0_ |= 0x00000001;
         onChanged();
@@ -2531,33 +2458,15 @@ public final class PullProto {
       }
       /**
        * <pre>
-       * 群 ID
+       * 群 ID (Snowflake)
        * </pre>
        *
-       * <code>string group_id = 1;</code>
+       * <code>int64 group_id = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearGroupId() {
-        groupId_ = getDefaultInstance().getGroupId();
         bitField0_ = (bitField0_ & ~0x00000001);
-        onChanged();
-        return this;
-      }
-      /**
-       * <pre>
-       * 群 ID
-       * </pre>
-       *
-       * <code>string group_id = 1;</code>
-       * @param value The bytes for groupId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setGroupIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        groupId_ = value;
-        bitField0_ |= 0x00000001;
+        groupId_ = 0L;
         onChanged();
         return this;
       }
@@ -2786,7 +2695,7 @@ public final class PullProto {
       "\030\002 \001(\003\"h\n\010PullResp\022\014\n\004code\030\001 \001(\005\022\017\n\007mess" +
       "age\030\002 \001(\t\022+\n\010messages\030\003 \003(\0132\031.im.common." +
       "MessageContent\022\020\n\010has_more\030\004 \001(\010\"W\n\017Pull" +
-      "GroupMsgReq\022\020\n\010group_id\030\001 \001(\t\022\016\n\006cursor\030" +
+      "GroupMsgReq\022\020\n\010group_id\030\001 \001(\003\022\016\n\006cursor\030" +
       "\002 \001(\003\022\r\n\005limit\030\003 \001(\005\022\023\n\013is_backward\030\004 \001(" +
       "\010B/\n\"com.github.moxib.pomelo.proto.pullB" +
       "\tPullProtob\006proto3"

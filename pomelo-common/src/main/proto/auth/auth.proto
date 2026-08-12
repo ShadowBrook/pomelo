@@ -18,7 +18,7 @@ message AuthReq {
 message AuthResp {
     int32 code          = 1;  // 响应码 0=成功
     string message      = 2;  // 响应消息
-    string user_id      = 3;  // 用户 ID
+    int64 user_id       = 3;  // 用户 ID (Snowflake)
     int64 expire_at     = 4;  // 过期时间
 }
 

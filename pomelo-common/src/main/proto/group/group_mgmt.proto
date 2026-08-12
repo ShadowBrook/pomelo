@@ -25,11 +25,11 @@ message CreateGroupResp {
 // 群基本信息（复用于多个响应）
 // ============================================================================
 message GroupInfo {
-    string group_id    = 1;
+    int64 group_id     = 1;
     string name        = 2;
     string avatar      = 3;
     string description = 4;
-    string owner_id    = 5;
+    int64 owner_id     = 5;
     int32 member_count = 6;
     int32 max_members  = 7;
     int64 created_at   = 8;
@@ -39,8 +39,8 @@ message GroupInfo {
 // 邀请入群
 // ============================================================================
 message InviteToGroupReq {
-    string group_id = 1;
-    string user_id  = 2;   // 被邀请者 userId (NanoID)
+    int64 group_id  = 1;
+    int64 user_id   = 2;   // 被邀请者 userId (Snowflake)
 }
 
 message InviteToGroupResp {
@@ -52,7 +52,7 @@ message InviteToGroupResp {
 // 获取群信息
 // ============================================================================
 message GetGroupInfoReq {
-    string group_id = 1;
+    int64 group_id = 1;
 }
 
 message GetGroupInfoResp {
@@ -65,11 +65,11 @@ message GetGroupInfoResp {
 // 获取群成员
 // ============================================================================
 message GetGroupMembersReq {
-    string group_id = 1;
+    int64 group_id = 1;
 }
 
 message GroupMember {
-    string user_id   = 1;
+    int64 user_id   = 1;
     string user_name = 2;
     string nickname  = 3;
     string avatar    = 4;
@@ -99,10 +99,10 @@ message GetMyGroupsResp {
 // 成员变更推送
 // ============================================================================
 message GroupMemberChangeNotify {
-    string group_id     = 1;
+    int64 group_id     = 1;
     ChangeType type     = 2;
-    string user_id      = 3;
-    string operator_id  = 4;
+    int64 user_id       = 3;
+    int64 operator_id   = 4;
     string user_name    = 5;
     string nickname     = 6;
 
@@ -120,7 +120,7 @@ message GroupMemberChangeNotify {
 // 群 ACK（已读回执）
 // ============================================================================
 message GroupAckReq {
-    string group_id      = 1;
+    int64 group_id      = 1;
     int64 last_read_seq  = 2;
 }
 
@@ -133,13 +133,13 @@ message GroupAckResp {
 // 查询群消息已读用户列表
 // ============================================================================
 message GetGroupMsgReadStatusReq {
-    string group_id   = 1;
+    int64 group_id   = 1;
     string message_id = 2;
     int64 seq         = 3;   // 消息的 seq（服务端也可从 message_id 查，传 seq 省一次查）
 }
 
 message GroupMsgReader {
-    string user_id   = 1;
+    int64 user_id   = 1;
     string nickname  = 2;
     string avatar    = 3;
 }

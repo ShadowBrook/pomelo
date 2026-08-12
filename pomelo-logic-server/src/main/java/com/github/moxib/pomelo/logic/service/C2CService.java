@@ -5,7 +5,6 @@ import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
-import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.C2CReqContext;
 import com.github.moxib.pomelo.logic.model.C2CRespResult;
@@ -14,6 +13,7 @@ import com.github.moxib.pomelo.logic.model.requests.C2CRequest;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.chat.ChatProto;
 import com.github.moxib.pomelo.proto.common.CommonProto;
+import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonObject;
@@ -59,14 +59,19 @@ public class C2CService extends ServiceBase {
         return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.BAD_REQUEST, "senderId 和 recipientId 不能为空"));
       }
 
-      // 从 varHeaders 提取发送者显示名（Gateway 转发时已附加）
       Map<String, String> varHeaders = message.getVarHeaders();
       String senderUserName = varHeaders != null ? varHeaders.get("userName") : null;
       String senderNickname = varHeaders != null ? varHeaders.get("nickname") : null;
 
-      // NanoID → numeric id：优先 parseLong，失败则查 DB
-      final String fSenderUserId = senderUserId;
-      final String fRecipientUserId = recipientUserId;
+      long senderId = Long.parseLong(senderUserId);
+      if (senderId == 0) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.UNAUTHORIZED, "发送者不存在"));
+      }
+      long recipientId = Long.parseLong(recipientUserId);
+      if (recipientId == 0) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.NOT_FOUND, "接收者不存在"));
+      }
+
       final String fSenderUserName = senderUserName;
       final String fSenderNickname = senderNickname;
       final long fTimestamp = timestamp;
@@ -75,33 +80,20 @@ public class C2CService extends ServiceBase {
       final String fContent = content;
       final byte fCodecId = codecId;
 
-      return resolveId(senderUserId).compose(senderId -> {
-        if (senderId == 0) {
-          return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.UNAUTHORIZED, "发送者不存在"));
-        }
-        return resolveId(recipientUserId).compose(recipientId -> {
-          if (recipientId == 0) {
-            return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.NOT_FOUND, "接收者不存在"));
-          }
+      C2CReqContext ctx = C2CReqContext.builder()
+        .messageId(fClientMsgId)
+        .senderId(senderId)
+        .recipientId(recipientId)
+        .senderUserName(fSenderUserName)
+        .senderNickname(fSenderNickname)
+        .msgType(fMsgType)
+        .content(fContent)
+        .timestamp(fTimestamp)
+        .codecId(fCodecId)
+        .build();
 
-          C2CReqContext ctx = C2CReqContext.builder()
-            .messageId(fClientMsgId)
-            .senderId(senderId)
-            .recipientId(recipientId)
-            .senderUserId(fSenderUserId)
-            .recipientUserId(fRecipientUserId)
-            .senderUserName(fSenderUserName)
-            .senderNickname(fSenderNickname)
-            .msgType(fMsgType)
-            .content(fContent)
-            .timestamp(fTimestamp)
-            .codecId(fCodecId)
-            .build();
-
-          return doSend(ctx)
-            .map(result -> buildC2CResponse(message, fCodecId, result));
-        });
-      });
+      return doSend(ctx)
+        .map(result -> buildC2CResponse(message, fCodecId, result));
     } catch (Exception e) {
       LOG.error("C2C 消息处理失败", e);
       return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.BAD_REQUEST, "消息格式错误：" + e.getMessage()));
@@ -109,9 +101,7 @@ public class C2CService extends ServiceBase {
   }
 
   private Future<C2CRespResult> doSend(C2CReqContext ctx) {
-    // 服务端生成全局唯一 Snowflake ID，客户端本地 ID（ctx.getMessageId()）仅用于线路关联
     long snowflakeId = snowflake.nextId();
-    // seq 是收件人信箱的同步版本号（写扩散：消息写进收件人信箱时取收件人的 seq 作为递增序号）
     return seqClient.fetchNextSequence(ctx.getRecipientId())
       .compose(seq -> {
         long now = System.currentTimeMillis();
@@ -131,8 +121,7 @@ public class C2CService extends ServiceBase {
         return messageRepo.save(record)
           .map(inserted -> {
             if (inserted) {
-              publishC2CNotify(record, ctx.getSenderUserId(), ctx.getRecipientUserId(),
-                ctx.getSenderUserName(), ctx.getSenderNickname());
+              publishC2CNotify(record, ctx.getSenderUserName(), ctx.getSenderNickname());
             }
             return C2CRespResult.builder()
               .code(0).message("success")
@@ -143,9 +132,8 @@ public class C2CService extends ServiceBase {
       });
   }
 
-  private void publishC2CNotify(MessageRecord record, String senderUserId, String recipientUserId,
-                                  String senderUserName, String senderNickname) {
-    // 查接收方 codec，按需构建一种 body（PB 或 JSON）
+  private void publishC2CNotify(MessageRecord record, String senderUserName, String senderNickname) {
+    String recipientUserId = String.valueOf(record.getRecipientId());
     routeTable.resolveCodec(recipientUserId)
       .onSuccess(recipientCodec -> {
         byte[] body;
@@ -162,8 +150,8 @@ public class C2CService extends ServiceBase {
           }
           CommonProto.MessageContent msgContent = msgContentBuilder.build();
           ChatProto.C2CNotify notify = ChatProto.C2CNotify.newBuilder()
-            .setSenderId(senderUserId)
-            .setRecipientId(String.valueOf(record.getRecipientId()))
+            .setSenderId(record.getSenderId())
+            .setRecipientId(record.getRecipientId())
             .setMessage(msgContent)
             .setSeq(record.getSeq())
             .setMessageId(record.getId())
@@ -172,8 +160,8 @@ public class C2CService extends ServiceBase {
           pushCodec = 0;
         } else {
           JsonObject json = new JsonObject();
-          json.put("senderId", senderUserId);
-          json.put("recipientId", recipientUserId);
+          json.put("senderId", String.valueOf(record.getSenderId()));
+          json.put("recipientId", String.valueOf(record.getRecipientId()));
           if (senderUserName != null) json.put("senderUserName", senderUserName);
           if (senderNickname != null) json.put("senderNickname", senderNickname);
           json.put("conversationId", record.getConversationId());
@@ -182,7 +170,6 @@ public class C2CService extends ServiceBase {
           json.put("message", jsonMsgContent);
           jsonMsgContent.put("msgType", record.getMsgType());
           jsonMsgContent.put("content", record.getContent() != null ? record.getContent() : "");
-          // 使用 String 避免 JavaScript Number 精度丢失（snowflake ID > 2^53）
           json.put("id", String.valueOf(record.getId()));
           json.put("messageId", String.valueOf(record.getId()));
           json.put("createdAt", record.getCreatedAt());
@@ -210,12 +197,6 @@ public class C2CService extends ServiceBase {
           .setSeq(result.getSeq()).build()
       : result;
     return buildResponse(request, CMD_C2C_RESP_VALUE, respBody);
-  }
-
-  private Future<Long> resolveId(String userId) {
-    // 先尝试解析为数字 id，否则查 DB
-    try { return Future.succeededFuture(Long.parseLong(userId)); }
-    catch (NumberFormatException e) { return messageRepo.findUserId(userId); }
   }
 
   private String extractSenderUserId(ImMessage message, String bodySenderId) {

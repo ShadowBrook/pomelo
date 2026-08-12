@@ -18,11 +18,9 @@ public class GroupAckService extends ServiceBase {
   private static final Logger LOG = LoggerFactory.getLogger(GroupAckService.class);
 
   private final GroupRepository groupRepo;
-  private final MessageRepository messageRepo;
 
   public GroupAckService(GroupRepository groupRepo, MessageRepository messageRepo) {
     this.groupRepo = groupRepo;
-    this.messageRepo = messageRepo;
   }
 
   public Future<ImMessage> process(ImMessage message) {
@@ -47,24 +45,26 @@ public class GroupAckService extends ServiceBase {
           ErrorCode.BAD_REQUEST, "groupId 不能为空"));
       }
 
-      return resolveId(userId).compose(numericId -> {
-        if (numericId == 0) {
-          return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
-            ErrorCode.UNAUTHORIZED, "用户不存在"));
-        }
-        LOG.debug("群 ACK: userId={} groupId={} lastReadSeq={}", userId, groupId, lastReadSeq);
-      return groupRepo.findByGroupId(groupId).compose(group -> {
+      long numericId = Long.parseLong(userId);
+      if (numericId == 0) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
+          ErrorCode.UNAUTHORIZED, "用户不存在"));
+      }
+
+      long numericGroupId = Long.parseLong(groupId);
+
+      LOG.debug("群 ACK: userId={} groupId={} lastReadSeq={}", userId, groupId, lastReadSeq);
+      return groupRepo.findById(numericGroupId).compose(group -> {
         if (group == null) {
           return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
             ErrorCode.NOT_FOUND, "群不存在"));
         }
-        long internalGroupId = group.getId();
-        return groupRepo.isMember(internalGroupId, numericId).compose(isMember -> {
+        return groupRepo.isMember(numericGroupId, numericId).compose(isMember -> {
           if (!isMember) {
             return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
               ErrorCode.UNAUTHORIZED, "你不是该群成员"));
           }
-          return groupRepo.updateLastReadSeq(internalGroupId, numericId, lastReadSeq)
+          return groupRepo.updateLastReadSeq(numericGroupId, numericId, lastReadSeq)
             .map(v -> {
               byte codecId = message.getCodecId();
               Object respBody;
@@ -78,16 +78,10 @@ public class GroupAckService extends ServiceBase {
             });
         });
       });
-      });
     } catch (Exception e) {
       LOG.error("群 ACK 处理失败", e);
       return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
         ErrorCode.INTERNAL_ERROR, "处理失败：" + e.getMessage()));
     }
-  }
-
-  private Future<Long> resolveId(String userId) {
-    try { return Future.succeededFuture(Long.parseLong(userId)); }
-    catch (NumberFormatException e) { return messageRepo.findUserId(userId); }
   }
 }

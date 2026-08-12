@@ -19,7 +19,7 @@ import java.util.stream.Collectors;
 
 /**
  * 基于 PostgreSQL 的 MessageRepository 实现。
- * sender_id / recipient_id 使用 im_user.id (BIGINT)。
+ * sender_id / recipient_id 使用 im_user.id (BIGINT Snowflake)。
  */
 public class PgMessageRepository implements MessageRepository {
 
@@ -58,12 +58,8 @@ public class PgMessageRepository implements MessageRepository {
     FROM im_message_c2c WHERE conversation_id = $1 AND created_at < $2 ORDER BY created_at DESC LIMIT $3
     """;
 
-  private static final String FIND_USER_ID_SQL = """
-    SELECT id FROM im_user WHERE user_id = $1
-    """;
-
   private static final String FIND_USER_IDS_BY_IDS_SQL = """
-    SELECT id, user_id, user_name, nickname FROM im_user WHERE id = ANY($1)
+    SELECT id, user_name, nickname FROM im_user WHERE id = ANY($1)
     """;
 
   private final Pool pool;
@@ -165,13 +161,6 @@ public class PgMessageRepository implements MessageRepository {
   }
 
   @Override
-  public Future<Long> findUserId(String userId) {
-    return pool.preparedQuery(FIND_USER_ID_SQL)
-      .execute(Tuple.of(userId))
-      .map(rows -> rows.size() > 0 ? rows.iterator().next().getLong("id") : 0L);
-  }
-
-  @Override
   public Future<Map<Long, UserIdInfo>> findUserIdsByIds(List<Long> ids) {
     if (ids == null || ids.isEmpty()) {
       return Future.succeededFuture(Collections.emptyMap());
@@ -182,8 +171,9 @@ public class PgMessageRepository implements MessageRepository {
       .map(rows -> {
         Map<Long, UserIdInfo> result = new HashMap<>();
         for (Row row : rows) {
-          result.put(row.getLong("id"), new UserIdInfo(
-            row.getString("user_id"),
+          long uid = row.getLong("id");
+          result.put(uid, new UserIdInfo(
+            String.valueOf(uid),
             row.getString("user_name"),
             row.getString("nickname")));
         }
