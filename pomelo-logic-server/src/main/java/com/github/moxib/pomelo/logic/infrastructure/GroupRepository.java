@@ -8,6 +8,12 @@ import java.util.List;
 
 public interface GroupRepository {
 
+  /**
+   * 发送消息路径专用：单次查询获取群上下文（群存在性 + 群名 + 成员身份 + 禁言状态）。
+   * 替代 findById + isMember + isMuted 三次 DB 查询。
+   */
+  Future<GroupMemberContext> getGroupMemberContext(long groupId, long userId);
+
   Future<Void> createGroup(GroupInfo group);
 
   Future<GroupInfo> findById(long id);
@@ -21,6 +27,12 @@ public interface GroupRepository {
   Future<Void> removeMember(long groupId, long userId);
 
   Future<Boolean> isMember(long groupId, long userId);
+
+  /**
+   * 检查用户在群内是否被禁言。
+   * 返回 true 表示 muted_until > 当前毫秒时间戳，处于禁言状态。
+   */
+  Future<Boolean> isMuted(long groupId, long userId);
 
   Future<Boolean> isFriend(long userId1, long userId2);
 

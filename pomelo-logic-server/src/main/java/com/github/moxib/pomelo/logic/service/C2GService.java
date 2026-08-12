@@ -5,6 +5,7 @@ import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
+import com.github.moxib.pomelo.logic.infrastructure.GroupMemberContextCache;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
@@ -15,6 +16,7 @@ import com.github.moxib.pomelo.proto.group.GroupProto;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,15 +31,17 @@ public class C2GService extends ServiceBase {
 
   private final PushRouter pushRouter;
   private final GroupRepository groupRepo;
+  private final GroupMemberContextCache memberCtxCache;
   private final SeqClientService seqClient;
   private final SnowflakeIdGenerator snowflake;
   private final SessionRouteTable routeTable;
 
-  public C2GService(PushRouter pushRouter, GroupRepository groupRepo,
-                    MessageRepository messageRepo, SeqClientService seqClient,
-                    SnowflakeIdGenerator snowflake, SessionRouteTable routeTable) {
+  public C2GService(Vertx vertx, PushRouter pushRouter, GroupRepository groupRepo,
+                    SeqClientService seqClient, SnowflakeIdGenerator snowflake,
+                    SessionRouteTable routeTable) {
     this.pushRouter = pushRouter;
     this.groupRepo = groupRepo;
+    this.memberCtxCache = new GroupMemberContextCache(vertx, groupRepo);
     this.seqClient = seqClient;
     this.snowflake = snowflake;
     this.routeTable = routeTable;
@@ -98,34 +102,36 @@ public class C2GService extends ServiceBase {
       final long fClientMsgId = clientMsgId;
       final byte fCodecId = codecId;
 
-      return groupRepo.findById(numericGroupId).compose(group -> {
-        if (group == null) {
+      // Caffeine 缓存群上下文（5s TTL），未命中时单次 DB 查询
+      return memberCtxCache.get(numericGroupId, senderNumericId).compose(gctx -> {
+        if (!gctx.groupExists()) {
           return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
             ErrorCode.NOT_FOUND, "群不存在"));
         }
+        if (!gctx.isMember()) {
+          return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
+            ErrorCode.UNAUTHORIZED, "你不是该群成员"));
+        }
+        if (gctx.isMuted()) {
+          return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
+            ErrorCode.UNAUTHORIZED, "你已被禁言"));
+        }
 
-        return groupRepo.isMember(numericGroupId, senderNumericId).compose(isMember -> {
-          if (!isMember) {
-            return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
-              ErrorCode.UNAUTHORIZED, "你不是该群成员"));
-          }
+        GroupMsgContext ctx = GroupMsgContext.builder()
+          .messageId(fClientMsgId)
+          .groupId(numericGroupId)
+          .groupName(gctx.groupName())
+          .senderUserId(senderNumericId)
+          .senderUserName(fSenderUserName)
+          .senderNickname(fSenderNickname)
+          .msgType(fMsgType)
+          .content(fContent)
+          .timestamp(System.currentTimeMillis())
+          .codecId(fCodecId)
+          .build();
 
-          GroupMsgContext ctx = GroupMsgContext.builder()
-            .messageId(fClientMsgId)
-            .groupId(numericGroupId)
-            .groupName(group.getName())
-            .senderUserId(senderNumericId)
-            .senderUserName(fSenderUserName)
-            .senderNickname(fSenderNickname)
-            .msgType(fMsgType)
-            .content(fContent)
-            .timestamp(System.currentTimeMillis())
-            .codecId(fCodecId)
-            .build();
-
-          return doSend(ctx, senderNumericId, numericGroupId)
-            .map(result -> buildC2GResponse(message, fCodecId, result));
-        });
+        return doSend(ctx, senderNumericId, numericGroupId)
+          .map(result -> buildC2GResponse(message, fCodecId, result));
       });
     } catch (Exception e) {
       LOG.error("C2G 消息处理失败", e);
@@ -172,6 +178,7 @@ public class C2GService extends ServiceBase {
                 .setSenderId(ctx.getSenderUserId())
                 .setGroupId(ctx.getGroupId())
                 .setMessage(msgContent)
+                .setName(ctx.getGroupName() != null ? ctx.getGroupName() : "")
                 .setSeq(seq)
                 .build();
               pbBody = notify.toByteArray();
