@@ -17,6 +17,9 @@ import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+import java.util.function.Function;
+
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 public class GroupManagementService extends ServiceBase {
@@ -25,23 +28,30 @@ public class GroupManagementService extends ServiceBase {
 
   private final GroupRepository groupRepo;
   private final SnowflakeIdGenerator snowflake;
+  private final Map<Integer, Function<ImMessage, Future<ImMessage>>> dispatchMap;
 
   public GroupManagementService(PushRouter pushRouter,
                                 GroupRepository groupRepo, SessionRouteTable routeTable,
                                 SnowflakeIdGenerator snowflake, MessageRepository messageRepo) {
     this.groupRepo = groupRepo;
     this.snowflake = snowflake;
+    this.dispatchMap = Map.of(
+      CMD_GROUP_CREATE_REQ_VALUE, this::handleCreateGroup,
+      CMD_GROUP_INVITE_REQ_VALUE, this::handleInviteToGroup,
+      CMD_GROUP_GET_INFO_REQ_VALUE, this::handleGetGroupInfo,
+      CMD_GROUP_GET_MEMBERS_REQ_VALUE, this::handleGetMembers,
+      CMD_GROUP_GET_MY_GROUPS_REQ_VALUE, this::handleGetMyGroups,
+      CMD_GROUP_MSG_READ_REQ_VALUE, this::handleGetMsgReadStatus
+    );
   }
 
   public Future<ImMessage> process(ImMessage message) {
     int cmd = message.getCmd();
     try {
-      if (cmd == CMD_GROUP_CREATE_REQ_VALUE) return handleCreateGroup(message);
-      if (cmd == CMD_GROUP_INVITE_REQ_VALUE) return handleInviteToGroup(message);
-      if (cmd == CMD_GROUP_GET_INFO_REQ_VALUE) return handleGetGroupInfo(message);
-      if (cmd == CMD_GROUP_GET_MEMBERS_REQ_VALUE) return handleGetMembers(message);
-      if (cmd == CMD_GROUP_GET_MY_GROUPS_REQ_VALUE) return handleGetMyGroups(message);
-      if (cmd == CMD_GROUP_MSG_READ_REQ_VALUE) return handleGetMsgReadStatus(message);
+      Function<ImMessage, Future<ImMessage>> handler = dispatchMap.get(cmd);
+      if (handler != null) {
+        return handler.apply(message);
+      }
       return Future.succeededFuture(buildErrorResp(message, CMD_ERROR_VALUE,
         ErrorCode.UNKNOWN_CMD, "不支持的群管理操作"));
     } catch (Exception e) {
@@ -305,7 +315,7 @@ public class GroupManagementService extends ServiceBase {
             GroupMgmtProto.GetGroupMsgReadStatusResp.newBuilder().setCode(0).setMessage("success");
           for (GroupMsgReader r : readers) {
             resp.addReaders(GroupMgmtProto.GroupMsgReader.newBuilder()
-              .setUserId(r.getUserId()).setNickname(nn(r.getNickname())).setAvatar(nn(r.getAvatar())).build());
+              .setUserId(r.userId()).setNickname(nn(r.nickname())).setAvatar(nn(r.avatar())).build());
           }
           respBody = resp.build();
         } else {
@@ -314,9 +324,9 @@ public class GroupManagementService extends ServiceBase {
           json.put("readers", arr);
           for (GroupMsgReader r : readers) {
             JsonObject jr = new JsonObject();
-            jr.put("userId", String.valueOf(r.getUserId()));
-            jr.put("nickname", nn(r.getNickname()));
-            jr.put("avatar", nn(r.getAvatar()));
+            jr.put("userId", String.valueOf(r.userId()));
+            jr.put("nickname", nn(r.nickname()));
+            jr.put("avatar", nn(r.avatar()));
             arr.add(jr);
           }
           respBody = json;

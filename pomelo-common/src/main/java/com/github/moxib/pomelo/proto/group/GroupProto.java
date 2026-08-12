@@ -2125,6 +2125,35 @@ public final class GroupProto {
 
     /**
      * <pre>
+     * 群名称
+     * </pre>
+     *
+     * <code>optional string name = 4;</code>
+     * @return Whether the name field is set.
+     */
+    boolean hasName();
+    /**
+     * <pre>
+     * 群名称
+     * </pre>
+     *
+     * <code>optional string name = 4;</code>
+     * @return The name.
+     */
+    java.lang.String getName();
+    /**
+     * <pre>
+     * 群名称
+     * </pre>
+     *
+     * <code>optional string name = 4;</code>
+     * @return The bytes for name.
+     */
+    com.google.protobuf.ByteString
+        getNameBytes();
+
+    /**
+     * <pre>
      * 序列号
      * </pre>
      *
@@ -2155,6 +2184,7 @@ public final class GroupProto {
       super(builder);
     }
     private C2GNotify() {
+      name_ = "";
     }
 
     @java.lang.Override
@@ -2246,6 +2276,65 @@ public final class GroupProto {
       return message_ == null ? com.github.moxib.pomelo.proto.common.CommonProto.MessageContent.getDefaultInstance() : message_;
     }
 
+    public static final int NAME_FIELD_NUMBER = 4;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object name_ = "";
+    /**
+     * <pre>
+     * 群名称
+     * </pre>
+     *
+     * <code>optional string name = 4;</code>
+     * @return Whether the name field is set.
+     */
+    @java.lang.Override
+    public boolean hasName() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <pre>
+     * 群名称
+     * </pre>
+     *
+     * <code>optional string name = 4;</code>
+     * @return The name.
+     */
+    @java.lang.Override
+    public java.lang.String getName() {
+      java.lang.Object ref = name_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        name_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * 群名称
+     * </pre>
+     *
+     * <code>optional string name = 4;</code>
+     * @return The bytes for name.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getNameBytes() {
+      java.lang.Object ref = name_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        name_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     public static final int SEQ_FIELD_NUMBER = 5;
     private long seq_ = 0L;
     /**
@@ -2258,7 +2347,7 @@ public final class GroupProto {
      */
     @java.lang.Override
     public boolean hasSeq() {
-      return ((bitField0_ & 0x00000002) != 0);
+      return ((bitField0_ & 0x00000004) != 0);
     }
     /**
      * <pre>
@@ -2297,6 +2386,9 @@ public final class GroupProto {
         output.writeMessage(3, getMessage());
       }
       if (((bitField0_ & 0x00000002) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 4, name_);
+      }
+      if (((bitField0_ & 0x00000004) != 0)) {
         output.writeInt64(5, seq_);
       }
       getUnknownFields().writeTo(output);
@@ -2321,6 +2413,9 @@ public final class GroupProto {
           .computeMessageSize(3, getMessage());
       }
       if (((bitField0_ & 0x00000002) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, name_);
+      }
+      if (((bitField0_ & 0x00000004) != 0)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(5, seq_);
       }
@@ -2348,6 +2443,11 @@ public final class GroupProto {
         if (!getMessage()
             .equals(other.getMessage())) return false;
       }
+      if (hasName() != other.hasName()) return false;
+      if (hasName()) {
+        if (!getName()
+            .equals(other.getName())) return false;
+      }
       if (hasSeq() != other.hasSeq()) return false;
       if (hasSeq()) {
         if (getSeq()
@@ -2373,6 +2473,10 @@ public final class GroupProto {
       if (hasMessage()) {
         hash = (37 * hash) + MESSAGE_FIELD_NUMBER;
         hash = (53 * hash) + getMessage().hashCode();
+      }
+      if (hasName()) {
+        hash = (37 * hash) + NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getName().hashCode();
       }
       if (hasSeq()) {
         hash = (37 * hash) + SEQ_FIELD_NUMBER;
@@ -2523,6 +2627,7 @@ public final class GroupProto {
           messageBuilder_.dispose();
           messageBuilder_ = null;
         }
+        name_ = "";
         seq_ = 0L;
         return this;
       }
@@ -2571,8 +2676,12 @@ public final class GroupProto {
           to_bitField0_ |= 0x00000001;
         }
         if (((from_bitField0_ & 0x00000008) != 0)) {
-          result.seq_ = seq_;
+          result.name_ = name_;
           to_bitField0_ |= 0x00000002;
+        }
+        if (((from_bitField0_ & 0x00000010) != 0)) {
+          result.seq_ = seq_;
+          to_bitField0_ |= 0x00000004;
         }
         result.bitField0_ |= to_bitField0_;
       }
@@ -2630,6 +2739,11 @@ public final class GroupProto {
         if (other.hasMessage()) {
           mergeMessage(other.getMessage());
         }
+        if (other.hasName()) {
+          name_ = other.name_;
+          bitField0_ |= 0x00000008;
+          onChanged();
+        }
         if (other.hasSeq()) {
           setSeq(other.getSeq());
         }
@@ -2676,9 +2790,14 @@ public final class GroupProto {
                 bitField0_ |= 0x00000004;
                 break;
               } // case 26
+              case 34: {
+                name_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000008;
+                break;
+              } // case 34
               case 40: {
                 seq_ = input.readInt64();
-                bitField0_ |= 0x00000008;
+                bitField0_ |= 0x00000010;
                 break;
               } // case 40
               default: {
@@ -2943,6 +3062,109 @@ public final class GroupProto {
         return messageBuilder_;
       }
 
+      private java.lang.Object name_ = "";
+      /**
+       * <pre>
+       * 群名称
+       * </pre>
+       *
+       * <code>optional string name = 4;</code>
+       * @return Whether the name field is set.
+       */
+      public boolean hasName() {
+        return ((bitField0_ & 0x00000008) != 0);
+      }
+      /**
+       * <pre>
+       * 群名称
+       * </pre>
+       *
+       * <code>optional string name = 4;</code>
+       * @return The name.
+       */
+      public java.lang.String getName() {
+        java.lang.Object ref = name_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          name_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 群名称
+       * </pre>
+       *
+       * <code>optional string name = 4;</code>
+       * @return The bytes for name.
+       */
+      public com.google.protobuf.ByteString
+          getNameBytes() {
+        java.lang.Object ref = name_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          name_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 群名称
+       * </pre>
+       *
+       * <code>optional string name = 4;</code>
+       * @param value The name to set.
+       * @return This builder for chaining.
+       */
+      public Builder setName(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        name_ = value;
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 群名称
+       * </pre>
+       *
+       * <code>optional string name = 4;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearName() {
+        name_ = getDefaultInstance().getName();
+        bitField0_ = (bitField0_ & ~0x00000008);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 群名称
+       * </pre>
+       *
+       * <code>optional string name = 4;</code>
+       * @param value The bytes for name to set.
+       * @return This builder for chaining.
+       */
+      public Builder setNameBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        name_ = value;
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return this;
+      }
+
       private long seq_ ;
       /**
        * <pre>
@@ -2954,7 +3176,7 @@ public final class GroupProto {
        */
       @java.lang.Override
       public boolean hasSeq() {
-        return ((bitField0_ & 0x00000008) != 0);
+        return ((bitField0_ & 0x00000010) != 0);
       }
       /**
        * <pre>
@@ -2980,7 +3202,7 @@ public final class GroupProto {
       public Builder setSeq(long value) {
 
         seq_ = value;
-        bitField0_ |= 0x00000008;
+        bitField0_ |= 0x00000010;
         onChanged();
         return this;
       }
@@ -2993,7 +3215,7 @@ public final class GroupProto {
        * @return This builder for chaining.
        */
       public Builder clearSeq() {
-        bitField0_ = (bitField0_ & ~0x00000008);
+        bitField0_ = (bitField0_ & ~0x00000010);
         seq_ = 0L;
         onChanged();
         return this;
@@ -3093,11 +3315,12 @@ public final class GroupProto {
       "t\"}\n\007C2GResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 " +
       "\001(\t\022\022\n\nmessage_id\030\003 \001(\003\022\020\n\010group_id\030\004 \001(" +
       "\003\022\023\n\013server_time\030\005 \001(\003\022\020\n\003seq\030\006 \001(\003H\000\210\001\001" +
-      "B\006\n\004_seq\"v\n\tC2GNotify\022\021\n\tsender_id\030\001 \001(\003" +
-      "\022\020\n\010group_id\030\002 \001(\003\022*\n\007message\030\003 \001(\0132\031.im" +
-      ".common.MessageContent\022\020\n\003seq\030\005 \001(\003H\000\210\001\001" +
-      "B\006\n\004_seqB1\n#com.github.moxib.pomelo.prot" +
-      "o.groupB\nGroupProtob\006proto3"
+      "B\006\n\004_seq\"\222\001\n\tC2GNotify\022\021\n\tsender_id\030\001 \001(" +
+      "\003\022\020\n\010group_id\030\002 \001(\003\022*\n\007message\030\003 \001(\0132\031.i" +
+      "m.common.MessageContent\022\021\n\004name\030\004 \001(\tH\000\210" +
+      "\001\001\022\020\n\003seq\030\005 \001(\003H\001\210\001\001B\007\n\005_nameB\006\n\004_seqB1\n" +
+      "#com.github.moxib.pomelo.proto.groupB\nGr" +
+      "oupProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -3121,7 +3344,7 @@ public final class GroupProto {
     internal_static_im_group_C2GNotify_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_C2GNotify_descriptor,
-        new java.lang.String[] { "SenderId", "GroupId", "Message", "Seq", });
+        new java.lang.String[] { "SenderId", "GroupId", "Message", "Name", "Seq", });
     com.github.moxib.pomelo.proto.common.CommonProto.getDescriptor();
   }
 

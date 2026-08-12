@@ -431,11 +431,70 @@ interface GroupState {
 
 ---
 
-## 七、设计决策记录
+## 七、范围补充（实施中新增）
+
+以下功能在原设计中未覆盖，经代码审查和实际开发需求补充：
+
+### 7.1 Snowflake ID 统一
+
+**背景：** 原设计采用双 ID 模型（NanoID 对外 + Snowflake BIGINT 内部），每个 service 入口都需要 `resolveId` / `findByGroupId` 翻译层，导致大量重复代码（`C2CService`、`FriendService`、`C2GService`、`GroupManagementService`、`GroupAckService`、`PullService` 等 6 处 `resolveId`）。
+
+**方案：** 干掉 NanoID，snowflake BIGINT 作为全系统唯一标识符。
+- `im_user.user_id` / `im_group.group_id` 列删除
+- `NanoIdGenerator` 删除
+- JSON codec 中 snowflake 值序列化为字符串（Discord 方案，兼容 JS Number 精度限制）
+- Proto 中 `user_id`/`group_id` 字段 `string` → `int64`
+
+详见 `docs/superpowers/plans/rosy-skipping-wozniak.md`（统一 ID 方案实施计划）。
+
+### 7.2 群消息已读状态查询（GetGroupMsgReadStatus）
+
+**背景：** 原设计仅有群 ACK（写入 `last_read_seq`），缺少读取端——前端发送群消息后无法知道哪些成员已读。
+
+**方案：** 新增 `CMD_GROUP_MSG_READ_REQ/RESP (0x00A0/0x00A1)`，查询指定 seq 消息的已读用户列表。
+
+```protobuf
+message GetGroupMsgReadStatusReq {
+    int64 group_id = 1;
+    int64 seq      = 2;
+}
+message GroupMsgReader {
+    int64 user_id   = 1;
+    string nickname = 2;
+    string avatar   = 3;
+}
+```
+
+通过 `im_group_member.last_read_seq >= seq` 判断已读，返回已读成员列表。
+
+### 7.3 心跳 PING→Gateway 本地处理
+
+心跳 PING 不路由到 logic server，直接在 Gateway 本地响应 PONG，减少一次 EventBus 往返和序列化开销。
+
+### 7.4 群消息拉取合并到 pull.proto
+
+群消息拉取 `PullGroupMsgReq/Resp` 从独立 cmd `0x0094/0x0095` 合并到 `pull.proto` 的 `PullReq`（`hasPeerId=true` → 群聊历史），cmd 值统一为 `CMD_PULL_REQ/RESP (0x0026/0x0027)`。单聊和群聊拉取共享同一命令码，通过 `peerId` 是否存在区分语义。
+
+### 7.5 JWT 解析下沉到 Gateway
+
+JWT token 解析从 logic server 下沉到 Gateway。Gateway 在连接握手阶段解析 token，将 `userId`/`userName`/`nickname` 写入 `varHeaders` 随消息透传。MessageDispatcher 通过 `enrichWithSenderInfo()` 在路由前注入发送者信息。
+
+优势：
+- logic server 不再重复解析 token
+- 发送者信息在每条消息的 varHeaders 中直接可用
+- 减少序列化开销（合并 token 解析与消息路由）
+
+### 7.6 C2GNotify 群名称字段
+
+Proto `C2GNotify` 新增 `optional string name = 4` 字段，推送群消息时附带群名称，前端无需额外请求即可在通知中展示群名。JSON codec 路径同步支持。
+
+---
+
+## 八、设计决策记录
 
 1. **读扩散** — 群消息只存一份，seqsvr 为 `groupId` 分配群维度全局 seq。比写扩散省 N 倍存储和写入，seqsvr 基础设施复用。
 2. **群管理独立 Cmd 区间** — 0x0070-0x0097，不与聊天消息(0x0020)混。Gateway 统一路由到 `logic.group`。
-3. **群消息拉取独立协议** — `PullGroupMsgReq/Resp` 独立于 C2C 的 `PullReq/Resp`，查询模式和表都不同。
+3. **群消息拉取独立协议** — `PullGroupMsgReq/Resp` 独立于 C2C 的 `PullReq/Resp`，查询模式和表都不同。（注：实施中已合并到 pull.proto，见 7.4）
 4. **已读用游标而非逐条标记** — `last_read_seq` 一个值搞定，简单高效，和读扩散天然匹配。
 5. **单 Service 聚合群管理** — `GroupManagementService` 集中处理所有管理操作，权限校验统一，避免分散在多个 Service 中。
 6. **Web 端 Conversation 统一模型** — C2C 和群聊共用 `Conversation` 数据结构，通过 `type` 字段区分。`useChatStore` 不变，消息存储按 `peerId` 无感。

@@ -60,6 +60,21 @@ public class PgGroupRepository implements GroupRepository {
     SELECT 1 FROM im_group_member WHERE group_id = $1 AND user_id = $2
     """;
 
+  private static final String IS_MUTED_SQL = """
+    SELECT muted_until > EXTRACT(EPOCH FROM NOW()) * 1000 AS muted
+    FROM im_group_member WHERE group_id = $1 AND user_id = $2
+    """;
+
+  // 合并查询：单次 SQL 获取群上下文（替代 findById + isMember + isMuted 三次查询）
+  private static final String GET_MEMBER_CTX_SQL = """
+    SELECT g.name,
+           CASE WHEN gm.user_id IS NOT NULL THEN true ELSE false END AS is_member,
+           COALESCE(gm.muted_until > EXTRACT(EPOCH FROM NOW()) * 1000, false) AS is_muted
+    FROM im_group g
+    LEFT JOIN im_group_member gm ON gm.group_id = g.id AND gm.user_id = $2
+    WHERE g.id = $1
+    """;
+
   private static final String IS_FRIEND_SQL = """
     SELECT 1 FROM im_friend
     WHERE ((user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1))
@@ -175,6 +190,32 @@ public class PgGroupRepository implements GroupRepository {
     return pool.preparedQuery(IS_MEMBER_SQL)
       .execute(Tuple.of(groupId, userId))
       .map(rows -> rows.size() > 0);
+  }
+
+  @Override
+  public Future<Boolean> isMuted(long groupId, long userId) {
+    return pool.preparedQuery(IS_MUTED_SQL)
+      .execute(Tuple.of(groupId, userId))
+      .map(rows -> {
+        if (rows.size() == 0) return false;
+        return rows.iterator().next().getBoolean("muted");
+      });
+  }
+
+  @Override
+  public Future<GroupMemberContext> getGroupMemberContext(long groupId, long userId) {
+    return pool.preparedQuery(GET_MEMBER_CTX_SQL)
+      .execute(Tuple.of(groupId, userId))
+      .map(rows -> {
+        if (rows.size() == 0) {
+          return new GroupMemberContext(false, null, false, false);
+        }
+        Row row = rows.iterator().next();
+        return new GroupMemberContext(true,
+          row.getString("name"),
+          row.getBoolean("is_member"),
+          row.getBoolean("is_muted"));
+      });
   }
 
   @Override
