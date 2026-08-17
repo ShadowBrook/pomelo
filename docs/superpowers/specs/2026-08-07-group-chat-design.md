@@ -234,7 +234,7 @@ C2GReq → decode
 | 操作 | 前置条件 | 效果 |
 |------|----------|------|
 | CreateGroup | name 非空 | INSERT im_group + INSERT creator as owner(role=2) |
-| InviteToGroup | 操作者管理员/群主 | INSERT member, 推送 MemberChangeNotify(INVITED) |
+| InviteToGroup | 操作者是群成员，且只能邀请好友（isFriend 校验） | INSERT member, 推送 MemberChangeNotify(INVITED) |
 | JoinGroup | 任何人 | 推送 JoinRequestNotify 给群主/管理员 |
 | HandleJoin | 群主/管理员 | 同意→INSERT member+推送；拒绝→无 |
 | LeaveGroup | 非群主 | DELETE member, 推送 MemberChangeNotify(LEFT) |
@@ -451,7 +451,7 @@ interface GroupState {
 
 **背景：** 原设计仅有群 ACK（写入 `last_read_seq`），缺少读取端——前端发送群消息后无法知道哪些成员已读。
 
-**方案：** 新增 `CMD_GROUP_MSG_READ_REQ/RESP (0x00A0/0x00A1)`，查询指定 seq 消息的已读用户列表。
+**方案：** 新增 `CMD_GROUP_MSG_READ_REQ/RESP (0x0098/0x0099)`，查询指定 seq 消息的已读用户列表。
 
 ```protobuf
 message GetGroupMsgReadStatusReq {
@@ -471,13 +471,13 @@ message GroupMsgReader {
 
 心跳 PING 不路由到 logic server，直接在 Gateway 本地响应 PONG，减少一次 EventBus 往返和序列化开销。
 
-### 7.4 群消息拉取合并到 pull.proto
+### 7.4 群消息拉取移入 pull.proto
 
-群消息拉取 `PullGroupMsgReq/Resp` 从独立 cmd `0x0094/0x0095` 合并到 `pull.proto` 的 `PullReq`（`hasPeerId=true` → 群聊历史），cmd 值统一为 `CMD_PULL_REQ/RESP (0x0026/0x0027)`。单聊和群聊拉取共享同一命令码，通过 `peerId` 是否存在区分语义。
+群消息拉取 `PullGroupMsgReq` 移入 `pull.proto`（与单聊 `PullReq` 同文件），响应复用 `PullResp`。但请求仍是**独立消息**，沿用独立 cmd `CMD_GROUP_PULL_MSG_REQ/RESP (0x0094/0x0095)`，路由到 `logic.gpull`；单聊拉取走 `CMD_PULL_REQ/RESP (0x0030/0x0031)`。二者未合并为单一命令码——`PullReq` 无 `hasPeerId` 字段，单聊/群聊通过不同 cmd 区分，而非复用同一 cmd。
 
 ### 7.5 JWT 解析下沉到 Gateway
 
-JWT token 解析从 logic server 下沉到 Gateway。Gateway 在连接握手阶段解析 token，将 `userId`/`userName`/`nickname` 写入 `varHeaders` 随消息透传。MessageDispatcher 通过 `enrichWithSenderInfo()` 在路由前注入发送者信息。
+JWT token 解析从 logic server 下沉到 Gateway。Gateway 在收到认证响应（AUTH_RESP）时解析 token 并注册会话，将 `userId`/`userName`/`nickname` 写入 `varHeaders` 随消息透传。MessageDispatcher 通过 `enrichWithSenderInfo()` 在路由前注入发送者信息。
 
 优势：
 - logic server 不再重复解析 token
@@ -494,7 +494,7 @@ Proto `C2GNotify` 新增 `optional string name = 4` 字段，推送群消息时�
 
 1. **读扩散** — 群消息只存一份，seqsvr 为 `groupId` 分配群维度全局 seq。比写扩散省 N 倍存储和写入，seqsvr 基础设施复用。
 2. **群管理独立 Cmd 区间** — 0x0070-0x0097，不与聊天消息(0x0020)混。Gateway 统一路由到 `logic.group`。
-3. **群消息拉取独立协议** — `PullGroupMsgReq/Resp` 独立于 C2C 的 `PullReq/Resp`，查询模式和表都不同。（注：实施中已合并到 pull.proto，见 7.4）
+3. **群消息拉取独立协议** — `PullGroupMsgReq` 独立于 C2C 的 `PullReq`，查询模式和表都不同，走独立 cmd `0x0094/0x0095`（见 7.4）。
 4. **已读用游标而非逐条标记** — `last_read_seq` 一个值搞定，简单高效，和读扩散天然匹配。
 5. **单 Service 聚合群管理** — `GroupManagementService` 集中处理所有管理操作，权限校验统一，避免分散在多个 Service 中。
 6. **Web 端 Conversation 统一模型** — C2C 和群聊共用 `Conversation` 数据结构，通过 `type` 字段区分。`useChatStore` 不变，消息存储按 `peerId` 无感。

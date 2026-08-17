@@ -11654,23 +11654,11 @@ public final class GroupMgmtProto {
     long getGroupId();
 
     /**
-     * <code>string message_id = 2;</code>
-     * @return The messageId.
-     */
-    java.lang.String getMessageId();
-    /**
-     * <code>string message_id = 2;</code>
-     * @return The bytes for messageId.
-     */
-    com.google.protobuf.ByteString
-        getMessageIdBytes();
-
-    /**
      * <pre>
-     * 消息的 seq（服务端也可从 message_id 查，传 seq 省一次查）
+     * 消息的 seq
      * </pre>
      *
-     * <code>int64 seq = 3;</code>
+     * <code>int64 seq = 2;</code>
      * @return The seq.
      */
     long getSeq();
@@ -11694,7 +11682,6 @@ public final class GroupMgmtProto {
       super(builder);
     }
     private GetGroupMsgReadStatusReq() {
-      messageId_ = "";
     }
 
     @java.lang.Override
@@ -11728,53 +11715,14 @@ public final class GroupMgmtProto {
       return groupId_;
     }
 
-    public static final int MESSAGE_ID_FIELD_NUMBER = 2;
-    @SuppressWarnings("serial")
-    private volatile java.lang.Object messageId_ = "";
-    /**
-     * <code>string message_id = 2;</code>
-     * @return The messageId.
-     */
-    @java.lang.Override
-    public java.lang.String getMessageId() {
-      java.lang.Object ref = messageId_;
-      if (ref instanceof java.lang.String) {
-        return (java.lang.String) ref;
-      } else {
-        com.google.protobuf.ByteString bs = 
-            (com.google.protobuf.ByteString) ref;
-        java.lang.String s = bs.toStringUtf8();
-        messageId_ = s;
-        return s;
-      }
-    }
-    /**
-     * <code>string message_id = 2;</code>
-     * @return The bytes for messageId.
-     */
-    @java.lang.Override
-    public com.google.protobuf.ByteString
-        getMessageIdBytes() {
-      java.lang.Object ref = messageId_;
-      if (ref instanceof java.lang.String) {
-        com.google.protobuf.ByteString b = 
-            com.google.protobuf.ByteString.copyFromUtf8(
-                (java.lang.String) ref);
-        messageId_ = b;
-        return b;
-      } else {
-        return (com.google.protobuf.ByteString) ref;
-      }
-    }
-
-    public static final int SEQ_FIELD_NUMBER = 3;
+    public static final int SEQ_FIELD_NUMBER = 2;
     private long seq_ = 0L;
     /**
      * <pre>
-     * 消息的 seq（服务端也可从 message_id 查，传 seq 省一次查）
+     * 消息的 seq
      * </pre>
      *
-     * <code>int64 seq = 3;</code>
+     * <code>int64 seq = 2;</code>
      * @return The seq.
      */
     @java.lang.Override
@@ -11799,11 +11747,8 @@ public final class GroupMgmtProto {
       if (groupId_ != 0L) {
         output.writeInt64(1, groupId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(messageId_)) {
-        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, messageId_);
-      }
       if (seq_ != 0L) {
-        output.writeInt64(3, seq_);
+        output.writeInt64(2, seq_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -11818,12 +11763,9 @@ public final class GroupMgmtProto {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(1, groupId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(messageId_)) {
-        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, messageId_);
-      }
       if (seq_ != 0L) {
         size += com.google.protobuf.CodedOutputStream
-          .computeInt64Size(3, seq_);
+          .computeInt64Size(2, seq_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -11842,8 +11784,6 @@ public final class GroupMgmtProto {
 
       if (getGroupId()
           != other.getGroupId()) return false;
-      if (!getMessageId()
-          .equals(other.getMessageId())) return false;
       if (getSeq()
           != other.getSeq()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
@@ -11860,8 +11800,6 @@ public final class GroupMgmtProto {
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getGroupId());
-      hash = (37 * hash) + MESSAGE_ID_FIELD_NUMBER;
-      hash = (53 * hash) + getMessageId().hashCode();
       hash = (37 * hash) + SEQ_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getSeq());
@@ -12003,7 +11941,6 @@ public final class GroupMgmtProto {
         super.clear();
         bitField0_ = 0;
         groupId_ = 0L;
-        messageId_ = "";
         seq_ = 0L;
         return this;
       }
@@ -12042,9 +11979,6 @@ public final class GroupMgmtProto {
           result.groupId_ = groupId_;
         }
         if (((from_bitField0_ & 0x00000002) != 0)) {
-          result.messageId_ = messageId_;
-        }
-        if (((from_bitField0_ & 0x00000004) != 0)) {
           result.seq_ = seq_;
         }
       }
@@ -12096,11 +12030,6 @@ public final class GroupMgmtProto {
         if (other.getGroupId() != 0L) {
           setGroupId(other.getGroupId());
         }
-        if (!other.getMessageId().isEmpty()) {
-          messageId_ = other.messageId_;
-          bitField0_ |= 0x00000002;
-          onChanged();
-        }
         if (other.getSeq() != 0L) {
           setSeq(other.getSeq());
         }
@@ -12135,16 +12064,11 @@ public final class GroupMgmtProto {
                 bitField0_ |= 0x00000001;
                 break;
               } // case 8
-              case 18: {
-                messageId_ = input.readStringRequireUtf8();
+              case 16: {
+                seq_ = input.readInt64();
                 bitField0_ |= 0x00000002;
                 break;
-              } // case 18
-              case 24: {
-                seq_ = input.readInt64();
-                bitField0_ |= 0x00000004;
-                break;
-              } // case 24
+              } // case 16
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -12194,85 +12118,13 @@ public final class GroupMgmtProto {
         return this;
       }
 
-      private java.lang.Object messageId_ = "";
-      /**
-       * <code>string message_id = 2;</code>
-       * @return The messageId.
-       */
-      public java.lang.String getMessageId() {
-        java.lang.Object ref = messageId_;
-        if (!(ref instanceof java.lang.String)) {
-          com.google.protobuf.ByteString bs =
-              (com.google.protobuf.ByteString) ref;
-          java.lang.String s = bs.toStringUtf8();
-          messageId_ = s;
-          return s;
-        } else {
-          return (java.lang.String) ref;
-        }
-      }
-      /**
-       * <code>string message_id = 2;</code>
-       * @return The bytes for messageId.
-       */
-      public com.google.protobuf.ByteString
-          getMessageIdBytes() {
-        java.lang.Object ref = messageId_;
-        if (ref instanceof String) {
-          com.google.protobuf.ByteString b = 
-              com.google.protobuf.ByteString.copyFromUtf8(
-                  (java.lang.String) ref);
-          messageId_ = b;
-          return b;
-        } else {
-          return (com.google.protobuf.ByteString) ref;
-        }
-      }
-      /**
-       * <code>string message_id = 2;</code>
-       * @param value The messageId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setMessageId(
-          java.lang.String value) {
-        if (value == null) { throw new NullPointerException(); }
-        messageId_ = value;
-        bitField0_ |= 0x00000002;
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string message_id = 2;</code>
-       * @return This builder for chaining.
-       */
-      public Builder clearMessageId() {
-        messageId_ = getDefaultInstance().getMessageId();
-        bitField0_ = (bitField0_ & ~0x00000002);
-        onChanged();
-        return this;
-      }
-      /**
-       * <code>string message_id = 2;</code>
-       * @param value The bytes for messageId to set.
-       * @return This builder for chaining.
-       */
-      public Builder setMessageIdBytes(
-          com.google.protobuf.ByteString value) {
-        if (value == null) { throw new NullPointerException(); }
-        checkByteStringIsUtf8(value);
-        messageId_ = value;
-        bitField0_ |= 0x00000002;
-        onChanged();
-        return this;
-      }
-
       private long seq_ ;
       /**
        * <pre>
-       * 消息的 seq（服务端也可从 message_id 查，传 seq 省一次查）
+       * 消息的 seq
        * </pre>
        *
-       * <code>int64 seq = 3;</code>
+       * <code>int64 seq = 2;</code>
        * @return The seq.
        */
       @java.lang.Override
@@ -12281,30 +12133,30 @@ public final class GroupMgmtProto {
       }
       /**
        * <pre>
-       * 消息的 seq（服务端也可从 message_id 查，传 seq 省一次查）
+       * 消息的 seq
        * </pre>
        *
-       * <code>int64 seq = 3;</code>
+       * <code>int64 seq = 2;</code>
        * @param value The seq to set.
        * @return This builder for chaining.
        */
       public Builder setSeq(long value) {
 
         seq_ = value;
-        bitField0_ |= 0x00000004;
+        bitField0_ |= 0x00000002;
         onChanged();
         return this;
       }
       /**
        * <pre>
-       * 消息的 seq（服务端也可从 message_id 查，传 seq 省一次查）
+       * 消息的 seq
        * </pre>
        *
-       * <code>int64 seq = 3;</code>
+       * <code>int64 seq = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearSeq() {
-        bitField0_ = (bitField0_ & ~0x00000004);
+        bitField0_ = (bitField0_ & ~0x00000002);
         seq_ = 0L;
         onChanged();
         return this;
@@ -14280,14 +14132,14 @@ public final class GroupMgmtProto {
       "\n\021OWNER_TRANSFERRED\020\005\"6\n\013GroupAckReq\022\020\n\010" +
       "group_id\030\001 \001(\003\022\025\n\rlast_read_seq\030\002 \001(\003\"-\n" +
       "\014GroupAckResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002" +
-      " \001(\t\"M\n\030GetGroupMsgReadStatusReq\022\020\n\010grou" +
-      "p_id\030\001 \001(\003\022\022\n\nmessage_id\030\002 \001(\t\022\013\n\003seq\030\003 " +
-      "\001(\003\"C\n\016GroupMsgReader\022\017\n\007user_id\030\001 \001(\003\022\020" +
-      "\n\010nickname\030\002 \001(\t\022\016\n\006avatar\030\003 \001(\t\"e\n\031GetG" +
-      "roupMsgReadStatusResp\022\014\n\004code\030\001 \001(\005\022\017\n\007m" +
-      "essage\030\002 \001(\t\022)\n\007readers\030\003 \003(\0132\030.im.group" +
-      ".GroupMsgReaderB5\n#com.github.moxib.pome" +
-      "lo.proto.groupB\016GroupMgmtProtob\006proto3"
+      " \001(\t\"9\n\030GetGroupMsgReadStatusReq\022\020\n\010grou" +
+      "p_id\030\001 \001(\003\022\013\n\003seq\030\002 \001(\003\"C\n\016GroupMsgReade" +
+      "r\022\017\n\007user_id\030\001 \001(\003\022\020\n\010nickname\030\002 \001(\t\022\016\n\006" +
+      "avatar\030\003 \001(\t\"e\n\031GetGroupMsgReadStatusRes" +
+      "p\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022)\n\007read" +
+      "ers\030\003 \003(\0132\030.im.group.GroupMsgReaderB5\n#c" +
+      "om.github.moxib.pomelo.proto.groupB\016Grou" +
+      "pMgmtProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -14389,7 +14241,7 @@ public final class GroupMgmtProto {
     internal_static_im_group_GetGroupMsgReadStatusReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GetGroupMsgReadStatusReq_descriptor,
-        new java.lang.String[] { "GroupId", "MessageId", "Seq", });
+        new java.lang.String[] { "GroupId", "Seq", });
     internal_static_im_group_GroupMsgReader_descriptor =
       getDescriptor().getMessageTypes().get(16);
     internal_static_im_group_GroupMsgReader_fieldAccessorTable = new
