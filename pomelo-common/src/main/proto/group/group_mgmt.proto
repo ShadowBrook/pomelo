@@ -134,8 +134,7 @@ message GroupAckResp {
 // ============================================================================
 message GetGroupMsgReadStatusReq {
     int64 group_id   = 1;
-    string message_id = 2;
-    int64 seq         = 3;   // 消息的 seq（服务端也可从 message_id 查，传 seq 省一次查）
+    int64 seq         = 2;   // 消息的 seq
 }
 
 message GroupMsgReader {

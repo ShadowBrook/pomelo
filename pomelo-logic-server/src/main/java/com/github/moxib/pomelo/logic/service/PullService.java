@@ -6,16 +6,23 @@ import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
+import com.github.moxib.pomelo.logic.model.UserIdInfo;
 import com.github.moxib.pomelo.logic.model.requests.PullRequest;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.proto.pull.PullProto;
+import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
@@ -72,23 +79,23 @@ public class PullService extends ServiceBase {
 
   private Future<ImMessage> sendPullResp(ImMessage request, List<MessageRecord> records, int limit) {
     if (records == null || records.isEmpty()) {
-      return Future.succeededFuture(buildPullResp(request, null, limit, java.util.Collections.emptyMap()));
+      return Future.succeededFuture(buildPullResp(request, null, limit, Collections.emptyMap()));
     }
-    java.util.Set<Long> numericIds = new java.util.HashSet<>();
+    Set<Long> numericIds = new HashSet<>();
     for (MessageRecord r : records) {
       numericIds.add(r.getSenderId());
       numericIds.add(r.getRecipientId());
     }
-    return messageRepo.findUserIdsByIds(new java.util.ArrayList<>(numericIds))
+    return messageRepo.findUserIdsByIds(new ArrayList<>(numericIds))
       .compose(idToInfo -> Future.succeededFuture(buildPullResp(request, records, limit, idToInfo)))
       .recover(err -> {
         LOG.warn("批量查用户信息失败: {}", err.getMessage());
-        return Future.succeededFuture(buildPullResp(request, records, limit, java.util.Collections.emptyMap()));
+        return Future.succeededFuture(buildPullResp(request, records, limit, Collections.emptyMap()));
       });
   }
 
   private ImMessage buildPullResp(ImMessage request, List<MessageRecord> records, int limit,
-                                   java.util.Map<Long, com.github.moxib.pomelo.logic.model.UserIdInfo> idToInfo) {
+                                   Map<Long, UserIdInfo> idToInfo) {
     byte codecId = request.getCodecId();
     Object respBody;
 
@@ -98,11 +105,11 @@ public class PullService extends ServiceBase {
         .setHasMore(records != null && records.size() >= limit);
       if (records != null) {
         for (MessageRecord r : records) {
-          com.github.moxib.pomelo.logic.model.UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
-          com.github.moxib.pomelo.logic.model.UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());
+          UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
+          UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());
           CommonProto.MessageContent.Builder mc = CommonProto.MessageContent.newBuilder()
             .setMsgTypeValue(r.getMsgType())
-            .setContent(com.google.protobuf.ByteString.copyFromUtf8(r.getContent() != null ? r.getContent() : ""))
+            .setContent(ByteString.copyFromUtf8(r.getContent() != null ? r.getContent() : ""))
             .setTimestamp(r.getCreatedAt());
           mc.putExt("id", String.valueOf(r.getId()));
           mc.putExt("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(r.getSenderId()));
@@ -129,8 +136,8 @@ public class PullService extends ServiceBase {
           JsonObject msg = new JsonObject();
           arr.add(msg);
           msg.put("id", String.valueOf(r.getId()));
-          com.github.moxib.pomelo.logic.model.UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
-          com.github.moxib.pomelo.logic.model.UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());
+          UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
+          UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());
           msg.put("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(r.getSenderId()));
           msg.put("recipientId", recipientInfo != null ? recipientInfo.userId() : String.valueOf(r.getRecipientId()));
           if (senderInfo != null && senderInfo.userName() != null) {

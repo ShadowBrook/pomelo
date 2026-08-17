@@ -10,6 +10,7 @@ import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.GroupInfo;
 import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
+import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
 import io.vertx.core.Future;
 import io.vertx.core.json.JsonArray;
@@ -28,6 +29,8 @@ public class GroupManagementService extends ServiceBase {
 
   private final GroupRepository groupRepo;
   private final SnowflakeIdGenerator snowflake;
+  private final PushRouter pushRouter;
+  private final SessionRouteTable routeTable;
   private final Map<Integer, Function<ImMessage, Future<ImMessage>>> dispatchMap;
 
   public GroupManagementService(PushRouter pushRouter,
@@ -35,6 +38,8 @@ public class GroupManagementService extends ServiceBase {
                                 SnowflakeIdGenerator snowflake, MessageRepository messageRepo) {
     this.groupRepo = groupRepo;
     this.snowflake = snowflake;
+    this.pushRouter = pushRouter;
+    this.routeTable = routeTable;
     this.dispatchMap = Map.of(
       CMD_GROUP_CREATE_REQ_VALUE, this::handleCreateGroup,
       CMD_GROUP_INVITE_REQ_VALUE, this::handleInviteToGroup,
@@ -160,6 +165,7 @@ public class GroupManagementService extends ServiceBase {
           long now = System.currentTimeMillis();
           return groupRepo.addMember(snowflake.nextId(), numericGroupId, inviteeNumericId, 0, now)
             .map(v -> {
+              pushMemberChangeNotify(numericGroupId, inviteeNumericId, operatorNumericId);
               byte codecId = message.getCodecId();
               Object respBody;
               if (codecId == ProtobufCodec.CODEC_ID) {
@@ -174,6 +180,39 @@ public class GroupManagementService extends ServiceBase {
         });
       });
     });
+  }
+
+  private void pushMemberChangeNotify(long groupId, long inviteeId, long operatorId) {
+    groupRepo.findMembers(groupId).onSuccess(members -> {
+      for (GroupMemberRecord member : members) {
+        String targetUserId = String.valueOf(member.getUserId());
+        routeTable.resolveCodec(targetUserId).onSuccess(recipientCodec -> {
+          byte[] pbBody;
+          byte pushCodec;
+          if (recipientCodec == ProtobufCodec.CODEC_ID) {
+            GroupMgmtProto.GroupMemberChangeNotify notify = GroupMgmtProto.GroupMemberChangeNotify.newBuilder()
+              .setGroupId(groupId)
+              .setType(GroupMgmtProto.GroupMemberChangeNotify.ChangeType.INVITED)
+              .setUserId(inviteeId)
+              .setOperatorId(operatorId)
+              .build();
+            pbBody = notify.toByteArray();
+            pushCodec = 0;
+          } else {
+            JsonObject json = new JsonObject();
+            json.put("groupId", String.valueOf(groupId));
+            json.put("type", "INVITED");
+            json.put("userId", String.valueOf(inviteeId));
+            json.put("operatorId", String.valueOf(operatorId));
+            pbBody = json.toBuffer().getBytes();
+            pushCodec = 1;
+          }
+          PushEnvelope env = new PushEnvelope(targetUserId, CMD_GROUP_MEMBER_CHANGE_NOTIFY_VALUE, pbBody, pushCodec);
+          pushRouter.push(env);
+        });
+      }
+      LOG.debug("成员变更推送完成: groupId={} type=INVITED invitee={}", groupId, inviteeId);
+    }).onFailure(e -> LOG.warn("获取群成员失败 groupId={}: {}", groupId, e.getMessage()));
   }
 
   private Future<ImMessage> handleGetGroupInfo(ImMessage message) {
