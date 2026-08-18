@@ -33,8 +33,9 @@ public class TcpGatewayVerticle extends VerticleBase {
     this.tcpPort = ConfigHolder.getInt("gateway.tcp.port", 9000);
     LOG.info("启动 TCP Gateway，端口：{}", tcpPort);
 
+    long heartbeatTimeoutMs = ConfigHolder.getLong("gateway.heartbeat.timeoutMs", 90000L);
     this.sessionRegistry = new SessionRegistry();
-    this.dispatcher = new MessageDispatcher(vertx, sessionRegistry);
+    this.dispatcher = new MessageDispatcher(vertx, sessionRegistry, heartbeatTimeoutMs);
     tcpServer = vertx.createNetServer();
 
     return tcpServer
@@ -82,15 +83,15 @@ public class TcpGatewayVerticle extends VerticleBase {
         } else {
           LOG.error("TCP 连接异常：{}", socket.remoteAddress(), throwable);
         }
-        String userId = sessionRegistry.unregisterByConnection(conn);
+        String userId = sessionRegistry.unregisterByConnection(vertx, conn);
         dispatcher.getRouteTable().unregister(userId);
         socket.close();
       });
 
       socket.closeHandler(v -> {
         LOG.info("TCP 客户端断开连接：{}", socket.remoteAddress());
-        String userId = sessionRegistry.unregisterByConnection(conn);
-        // TODO: Phase 2 — publish gateway.user.offline event to EventBus
+        String userId = sessionRegistry.unregisterByConnection(vertx, conn);
+        dispatcher.getRouteTable().unregister(userId);
       });
     };
   }

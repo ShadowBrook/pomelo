@@ -27,7 +27,7 @@ public final class SessionRouteTable {
 
   public SessionRouteTable(Vertx vertx) {
     this.vertx = vertx;
-    this.nodeId = UUID.randomUUID().toString().substring(0, 8);
+    this.nodeId = UUID.randomUUID().toString();
   }
 
   /** 本 Gateway 节点 ID */

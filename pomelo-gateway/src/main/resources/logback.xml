@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder>
+      <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+    </encoder>
+  </appender>
+
+  <!-- pomelo 应用日志 -->
+  <logger name="com.github.moxib.pomelo" level="DEBUG"/>
+
+  <!-- Vert.x -->
+  <logger name="io.vertx" level="INFO"/>
+
+  <!-- Redis ClusterManager (vertx-redis-clustermanager) -->
+  <logger name="com.retailsvc" level="INFO"/>
+
+  <!-- Redisson (vertx-redis-clustermanager 底层 Redis 客户端) -->
+  <logger name="org.redisson" level="INFO"/>
+
+  <!-- Netty (网络层，较嘈杂) -->
+  <logger name="io.netty" level="WARN"/>
+
+  <root level="INFO">
+    <appender-ref ref="STDOUT"/>
+  </root>
+</configuration>

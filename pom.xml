@@ -13,17 +13,18 @@
     <module>pomelo-common</module>
     <module>pomelo-gateway</module>
     <module>pomelo-logic-server</module>
+    <module>pomelo-seqsvr</module>
   </modules>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <maven-compiler-plugin.version>3.8.1</maven-compiler-plugin.version>
+    <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
     <maven-shade-plugin.version>3.2.4</maven-shade-plugin.version>
-    <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
+    <maven-surefire-plugin.version>3.2.5</maven-surefire-plugin.version>
     <exec-maven-plugin.version>3.0.0</exec-maven-plugin.version>
 
-    <vertx.version>5.0.8</vertx.version>
+    <vertx.version>5.1.5</vertx.version>
     <junit-jupiter.version>5.9.1</junit-jupiter.version>
     <protobuf.version>4.31.1</protobuf.version>
     <jackson.version>2.21.1</jackson.version>
@@ -55,6 +56,16 @@
         <artifactId>pomelo-logic-server</artifactId>
         <version>${project.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.github.moxib</groupId>
+        <artifactId>pomelo-seqsvr-client</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.github.moxib</groupId>
+        <artifactId>pomelo-seqsvr-server</artifactId>
+        <version>${project.version}</version>
+      </dependency>
 
       <!-- 第三方依赖版本统一管理 -->
       <dependency>
@@ -71,11 +82,6 @@
         <groupId>com.fasterxml.jackson.core</groupId>
         <artifactId>jackson-databind</artifactId>
         <version>2.20.1</version>
-      </dependency>
-      <dependency>
-        <groupId>org.redisson</groupId>
-        <artifactId>redisson</artifactId>
-        <version>3.27.2</version>
       </dependency>
       <dependency>
         <groupId>at.favre.lib</groupId>
@@ -134,7 +140,7 @@
           <artifactId>maven-compiler-plugin</artifactId>
           <version>${maven-compiler-plugin.version}</version>
           <configuration>
-            <release>17</release>
+            <release>21</release>
             <parameters>true</parameters>
           </configuration>
         </plugin>

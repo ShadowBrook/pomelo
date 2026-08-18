@@ -26,11 +26,13 @@ public class MessageDispatcher {
   private final Vertx vertx;
   private final SessionRegistry sessionRegistry;
   private final SessionRouteTable routeTable;
+  private final long heartbeatTimeoutMs;
 
-  public MessageDispatcher(Vertx vertx, SessionRegistry sessionRegistry) {
+  public MessageDispatcher(Vertx vertx, SessionRegistry sessionRegistry, long heartbeatTimeoutMs) {
     this.vertx = vertx;
     this.sessionRegistry = sessionRegistry;
     this.routeTable = new SessionRouteTable(vertx);
+    this.heartbeatTimeoutMs = heartbeatTimeoutMs;
     String nodeId = routeTable.getNodeId();
     // 精确路由订阅（logic-server 通过 send 直接投递）
     vertx.eventBus().consumer("gateway.push." + nodeId, msg -> deliverPush(msg.body()));
@@ -82,6 +84,9 @@ public class MessageDispatcher {
   }
 
   public void dispatch(Connection connection, ImMessage message) {
+    // 任何客户端消息都证明用户在线，重置心跳定时器
+    touchHeartbeat(message);
+
     String address = cmdToAddress(message.getCmd());
     if (address == null) {
       handleUnknownCmd(connection, message);
@@ -94,13 +99,34 @@ public class MessageDispatcher {
         Buffer respBuf = replyMsg.body();
         ImMessage response = new ImMessage();
         response.readFromWire(respBuf.getBuffer(4, respBuf.length()));
-        handleSessionUpdates(connection, response);
+        if (isSessionCmd(response.getCmd())) {
+          handleSessionUpdates(connection, response);
+        }
         connection.write(respBuf);
       })
       .onFailure(cause -> {
         LOG.warn("EventBus request failed: address={} cause={}", address, cause.getMessage());
         sendErrorToClient(connection, message, cause.getMessage());
       });
+  }
+
+  /**
+   * 任何客户端消息都证明用户在线，重置心跳超时定时器。
+   */
+  private void touchHeartbeat(ImMessage message) {
+    Map<String, String> headers = message.getVarHeaders();
+    if (headers == null) return;
+    String userId = headers.get("userId");
+    if (userId != null && !userId.isEmpty()) {
+      sessionRegistry.resetHeartbeatTimer(vertx, userId, heartbeatTimeoutMs);
+    }
+  }
+
+  /**
+   * 只有 auth/logout 响应才需要处理 session 变更。
+   */
+  private static boolean isSessionCmd(int cmd) {
+    return cmd == CMD_AUTH_RESP_VALUE || cmd == CMD_LOGOUT_RESP_VALUE;
   }
 
   private void handleSessionUpdates(Connection connection, ImMessage response) {
@@ -116,12 +142,13 @@ public class MessageDispatcher {
       String token = headers.getOrDefault("loginToken", "");
       sessionRegistry.register(loginUserId, id, connection, codecId, userName, nickname, token);
       routeTable.register(loginUserId);
+      sessionRegistry.startHeartbeatTimer(vertx, loginUserId, heartbeatTimeoutMs);
       LOG.info("Session 已注册: userId={} id={}", loginUserId, id);
     }
 
     String logoutUserId = headers.get("logoutUserId");
     if (logoutUserId != null && !logoutUserId.isEmpty()) {
-      sessionRegistry.unregisterByUserId(logoutUserId);
+      sessionRegistry.unregisterByUserId(vertx, logoutUserId);
       routeTable.unregister(logoutUserId);
       LOG.info("Session 已注销: userId={}", logoutUserId);
     }
