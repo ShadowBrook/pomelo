@@ -6,6 +6,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -37,7 +38,7 @@ public class BenchmarkMain {
       regMetrics.report();
       registry.close();
 
-      // 阶段 2：连接 + 登录
+      // 阶段 2：连接 + 登录（登录失败的客户端为 null，后续跳过）
       ImClient[] clients = connectAndLogin(vertx, users, cfg);
 
       int f = Math.min(cfg.friends, users.size() / 2);
@@ -46,11 +47,18 @@ public class BenchmarkMain {
         return;
       }
 
+      // 有效配对：两个用户都登录成功的才参与加好友/发消息，避免 null 客户端
+      List<int[]> pairs = validPairs(clients, f);
+      if (pairs.isEmpty()) {
+        System.out.println("无有效登录配对，跳过加好友和发消息阶段");
+        return;
+      }
+
       // 阶段 3：加好友（申请 + 接受）
-      addFriends(clients, users, f, cfg);
+      addFriends(clients, users, pairs, cfg);
 
       // 阶段 4：发单聊消息
-      sendMessages(clients, users, f, cfg);
+      sendMessages(clients, users, pairs, cfg);
 
       for (ImClient c : clients) {
         if (c != null) c.close();
@@ -60,31 +68,43 @@ public class BenchmarkMain {
     }
   }
 
+  /** 只保留两个用户都登录成功的配对（原始 index 0↔1, 2↔3 …） */
+  private static List<int[]> validPairs(ImClient[] clients, int f) {
+    List<int[]> pairs = new ArrayList<>();
+    for (int i = 0; i < f; i++) {
+      int a = i * 2;
+      int b = i * 2 + 1;
+      if (a < clients.length && b < clients.length && clients[a] != null && clients[b] != null) {
+        pairs.add(new int[]{a, b});
+      }
+    }
+    return pairs;
+  }
+
   private static ImClient[] connectAndLogin(Vertx vertx, List<UserRegistry.UserInfo> users, Config cfg)
       throws InterruptedException {
     int n = users.size();
     ImClient[] clients = new ImClient[n];
-    Metrics loginMetrics = new Metrics("登录", n);
-    CountDownLatch latch = new CountDownLatch(n);
+    AtomicInteger ok = new AtomicInteger();
     AtomicInteger idx = new AtomicInteger();
+    CountDownLatch latch = new CountDownLatch(n);
+    long startNanos = System.nanoTime();
 
     Runnable[] fire = new Runnable[1];
     fire[0] = () -> {
       int i = idx.getAndIncrement();
       if (i >= n) return;
       UserRegistry.UserInfo u = users.get(i);
-      long start = System.nanoTime();
       ImClient.connect(vertx, cfg.host, cfg.tcpPort)
+        .onSuccess(c -> System.out.println("[login] 连接成功 i=" + i))
+        .onFailure(e -> System.err.println("[login] 连接失败 i=" + i + ": " + e.getMessage()))
         .compose(c -> c.login(u.token(), u.userId(), u.userName()).map(r -> {
           clients[i] = c;
+          ok.incrementAndGet();
           return c;
         }))
         .onComplete(ar -> {
-          if (ar.succeeded()) {
-            loginMetrics.record(i, start);
-          } else {
-            loginMetrics.error();
-            loginMetrics.record(i, start);
+          if (ar.failed()) {
             System.err.println("登录失败 " + u.userName() + ": " + ar.cause().getMessage());
           }
           latch.countDown();
@@ -96,30 +116,32 @@ public class BenchmarkMain {
     if (!latch.await(120, TimeUnit.SECONDS)) {
       System.err.println("登录超时");
     }
-    loginMetrics.report();
+    long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
+    int okCount = ok.get();
+    System.out.printf("登录: 成功=%d/%d 耗时=%dms qps=%.0f%n",
+      okCount, n, elapsedMs, okCount > 0 ? okCount * 1000.0 / Math.max(elapsedMs, 1) : 0);
     return clients;
   }
 
-  private static void addFriends(ImClient[] clients, List<UserRegistry.UserInfo> users, int f, Config cfg)
-      throws InterruptedException {
-    Metrics addMetrics = new Metrics("加好友申请", f);
-    Metrics acceptMetrics = new Metrics("接受好友", f);
+  private static void addFriends(ImClient[] clients, List<UserRegistry.UserInfo> users,
+                                 List<int[]> pairs, Config cfg) throws InterruptedException {
+    int valid = pairs.size();
+    Metrics addMetrics = new Metrics("加好友申请", valid);
+    Metrics acceptMetrics = new Metrics("接受好友", valid);
 
-    // 3a：批量申请（用户 i 申请用户 i+1）
-    runConcurrent(f, cfg.concurrency, (i, start) -> {
-      int a = i * 2;
-      int b = i * 2 + 1;
+    // 3a：批量申请（配对第 0 个用户申请第 1 个）
+    runConcurrent(valid, cfg.concurrency, (i, start) -> {
+      int[] p = pairs.get(i);
       return sendAndRecord(
-        clients[a].addFriend(users.get(a).userId(), users.get(b).userId()),
+        clients[p[0]].addFriend(users.get(p[0]).userId(), users.get(p[1]).userId()),
         addMetrics, i, start, "申请好友");
     });
 
-    // 3b：批量接受（用户 i+1 接受用户 i）
-    runConcurrent(f, cfg.concurrency, (i, start) -> {
-      int a = i * 2;
-      int b = i * 2 + 1;
+    // 3b：批量接受（配对第 1 个用户接受第 0 个）
+    runConcurrent(valid, cfg.concurrency, (i, start) -> {
+      int[] p = pairs.get(i);
       return sendAndRecord(
-        clients[b].acceptFriend(users.get(b).userId(), users.get(a).userId()),
+        clients[p[1]].acceptFriend(users.get(p[1]).userId(), users.get(p[0]).userId()),
         acceptMetrics, i, start, "接受好友");
     });
 
@@ -127,14 +149,15 @@ public class BenchmarkMain {
     acceptMetrics.report();
   }
 
-  private static void sendMessages(ImClient[] clients, List<UserRegistry.UserInfo> users, int f, Config cfg)
-      throws InterruptedException {
+  private static void sendMessages(ImClient[] clients, List<UserRegistry.UserInfo> users,
+                                   List<int[]> pairs, Config cfg) throws InterruptedException {
     Metrics msgMetrics = new Metrics("发消息", cfg.messages);
+    int valid = pairs.size();
     runConcurrent(cfg.messages, cfg.concurrency, (i, start) -> {
-      int pair = i % f;
-      boolean aToB = (i / f) % 2 == 0;
-      int sender = aToB ? pair * 2 : pair * 2 + 1;
-      int peer = aToB ? pair * 2 + 1 : pair * 2;
+      int[] p = pairs.get(i % valid);
+      boolean aToB = (i / valid) % 2 == 0;
+      int sender = aToB ? p[0] : p[1];
+      int peer = aToB ? p[1] : p[0];
       return sendAndRecord(
         clients[sender].sendMessage(
           users.get(sender).userId(), users.get(sender).userName(), users.get(peer).userId(), "bench-" + i),

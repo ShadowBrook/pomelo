@@ -4,6 +4,7 @@ import com.github.moxib.pomelo.common.ImMessage;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetSocket;
 import io.vertx.core.parsetools.RecordParser;
 
@@ -17,6 +18,7 @@ import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 /**
  * TCP IM 客户端 — 复用 ImMessage 序列化，走真实 TCP 网关。
  * 粘包处理与 TcpGatewayVerticle 对称（4 字节长度前缀 + wire body）。
+ * 共享单个 NetClient（Vert.x 推荐复用，避免每次连接创建实例导致并发资源耗尽）。
  */
 public class ImClient {
 
@@ -31,7 +33,8 @@ public class ImClient {
   }
 
   public static Future<ImClient> connect(Vertx vertx, String host, int port) {
-    return vertx.createNetClient().connect(port, host).map(ImClient::new);
+    NetClient client = SharedNetClient.get(vertx);
+    return client.connect(port, host).map(ImClient::new);
   }
 
   private void setupParser(NetSocket socket) {
@@ -117,5 +120,21 @@ public class ImClient {
 
   void close() {
     socket.close();
+  }
+
+  /** 共享 NetClient：Vert.x 推荐一个实例管理多个连接，避免并发连接时每次创建耗尽资源 */
+  private static final class SharedNetClient {
+    private static volatile NetClient instance;
+
+    static NetClient get(Vertx vertx) {
+      if (instance == null) {
+        synchronized (SharedNetClient.class) {
+          if (instance == null) {
+            instance = vertx.createNetClient();
+          }
+        }
+      }
+      return instance;
+    }
   }
 }
