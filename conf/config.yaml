@@ -10,8 +10,8 @@ gateway:
 
 redis:
   uri: "redis://redis:6379"
-  maxPoolSize: 4
-  maxWaitingHandlers: 8
+  maxPoolSize: 64
+  maxWaitingHandlers: 512
   onlineSetKey: "im:online:users"
   cm:
     endpoint: "redis://redis:6379"
@@ -23,8 +23,8 @@ database:
   user: pomelo
   password: pomelo123
   pool:
-    maxSize: 10
-    maxWaitQueueSize: 50
+    maxSize: 64
+    maxWaitQueueSize: 512
     connectionTimeout: 10000
     idleTimeout: 60
 
