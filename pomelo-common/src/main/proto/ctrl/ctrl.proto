@@ -10,10 +10,14 @@ option java_outer_classname = "CtrlProto";
 // ============================================================================
 enum CtrlType {
     CTRL_TYPE_UNKNOWN      = 0;
-    CTRL_TYPE_KICK_OFFLINE = 1;  // 踢下线
-    CTRL_TYPE_FORCE_LOGOUT = 2;  // 强制登出
-    CTRL_TYPE_NOTIFY       = 3;  // 通知
-    CTRL_TYPE_SYNC         = 4;  // 同步
+    // 踢下线
+    CTRL_TYPE_KICK_OFFLINE = 1;
+    // 强制登出
+    CTRL_TYPE_FORCE_LOGOUT = 2;
+    // 通知
+    CTRL_TYPE_NOTIFY       = 3;
+    // 同步
+    CTRL_TYPE_SYNC         = 4;
 }
 
 // ============================================================================
@@ -21,18 +25,25 @@ enum CtrlType {
 // ============================================================================
 message CtrlReq {
     CtrlType ctrl_type     = 1;
-    string target_user     = 2;  // 目标用户
-    optional bytes payload = 3;  // 控制载荷
+    // 目标用户
+    string target_user     = 2;
+    // 控制载荷
+    optional bytes payload = 3;
 }
 
 message CtrlResp {
-    int32 code     = 1;  // 响应码
-    string message = 2;  // 响应消息
-    bytes payload  = 3;  // 控制载荷响应
+    // 响应码
+    int32 code     = 1;
+    // 响应消息
+    string message = 2;
+    // 控制载荷响应
+    bytes payload  = 3;
 }
 
 message CtrlNotify {
     CtrlType ctrl_type = 1;
-    string reason      = 2;  // 推送原因
-    bytes payload      = 3;  // 控制载荷
+    // 推送原因
+    string reason      = 2;
+    // 控制载荷
+    bytes payload      = 3;
 }

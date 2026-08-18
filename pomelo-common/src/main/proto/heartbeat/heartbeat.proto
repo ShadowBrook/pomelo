@@ -9,11 +9,14 @@ option java_outer_classname = "HeartbeatProto";
 // 心跳相关消息体
 // ============================================================================
 message Ping {
-    int64 client_time = 1;  // 客户端时间戳
+    // 客户端时间戳
+    int64 client_time = 1;
 }
 
 message Pong {
-    int64 server_time = 1;  // 服务器时间戳
-    int64 client_time = 2;  // 回显客户端时间
+    // 服务器时间戳
+    int64 server_time = 1;
+    // 回显客户端时间
+    int64 client_time = 2;
 }
 

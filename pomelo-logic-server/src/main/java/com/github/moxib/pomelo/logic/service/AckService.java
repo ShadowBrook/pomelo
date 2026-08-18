@@ -54,12 +54,9 @@ public class AckService extends ServiceBase {
           for (AckNotifyContext ctx : notifyContexts) {
             publishAckNotify(ctx);
           }
-          Object respBody;
-          if (codecId == ProtobufCodec.CODEC_ID) {
-            respBody = AckProto.AckResp.newBuilder().setAckTypeValue(ackType).build();
-          } else {
-            respBody = new JsonObject().put("ackType", ackType);
-          }
+          Object respBody = dualBody(codecId,
+            () -> AckProto.AckResp.newBuilder().setAckTypeValue(ackType).build(),
+            () -> new JsonObject().put("ackType", ackType));
           return buildResponse(message, CMD_ACK_RESP_VALUE, respBody);
         });
     } catch (Exception e) {

@@ -12,70 +12,119 @@ enum Cmd {
     CMD_UNKNOWN = 0x0000;
 
     // 认证相关
-    CMD_AUTH_REQ    = 0x0001;  // C→S 认证请求
-    CMD_AUTH_RESP   = 0x0002;  // S→C 认证响应
-    CMD_LOGOUT_REQ  = 0x0003;  // C→S 登出请求
-    CMD_LOGOUT_RESP = 0x0004;  // S→C 登出响应
+    // C→S 认证请求
+    CMD_AUTH_REQ    = 0x0001;
+    // S→C 认证响应
+    CMD_AUTH_RESP   = 0x0002;
+    // C→S 登出请求
+    CMD_LOGOUT_REQ  = 0x0003;
+    // S→C 登出响应
+    CMD_LOGOUT_RESP = 0x0004;
 
     // 单聊相关
-    CMD_C2C_REQ    = 0x0010;  // C→S 单聊发送请求
-    CMD_C2C_RESP   = 0x0011;  // S→C 单聊发送响应
-    CMD_C2C_NOTIFY = 0x0012;  // S→C 单聊消息推送
+    // C→S 单聊发送请求
+    CMD_C2C_REQ    = 0x0010;
+    // S→C 单聊发送响应
+    CMD_C2C_RESP   = 0x0011;
+    // S→C 单聊消息推送
+    CMD_C2C_NOTIFY = 0x0012;
 
     // 群聊相关
-    CMD_C2G_REQ    = 0x0020;  // C→S 群聊发送请求
-    CMD_C2G_RESP   = 0x0021;  // S→C 群聊发送响应
-    CMD_C2G_NOTIFY = 0x0022;  // S→C 群聊消息推送
+    // C→S 群聊发送请求
+    CMD_C2G_REQ    = 0x0020;
+    // S→C 群聊发送响应
+    CMD_C2G_RESP   = 0x0021;
+    // S→C 群聊消息推送
+    CMD_C2G_NOTIFY = 0x0022;
 
     // 消息拉取
-    CMD_PULL_REQ  = 0x0030;  // C→S 拉取离线消息请求
-    CMD_PULL_RESP = 0x0031;  // S→C 拉取离线消息响应
+    // C→S 拉取离线消息请求
+    CMD_PULL_REQ  = 0x0030;
+    // S→C 拉取离线消息响应
+    CMD_PULL_RESP = 0x0031;
 
     // 控制命令
-    CMD_CTRL_REQ    = 0x0040;  // C→S 控制命令请求
-    CMD_CTRL_RESP   = 0x0041;  // S→C 控制命令响应
-    CMD_CTRL_NOTIFY = 0x0042;  // S→C 控制命令推送
+    // C→S 控制命令请求
+    CMD_CTRL_REQ    = 0x0040;
+    // S→C 控制命令响应
+    CMD_CTRL_RESP   = 0x0041;
+    // S→C 控制命令推送
+    CMD_CTRL_NOTIFY = 0x0042;
 
     // 心跳与确认
-    CMD_PING       = 0x0050;  // C→S 心跳请求
-    CMD_PONG       = 0x0051;  // S→C 心跳响应
-    CMD_ACK_REQ    = 0x0052;  // ACK消息确认请求
-    CMD_ACK_RESP   = 0x0053;  // ACK消息确认响应
-    CMD_ACK_NOTIFY = 0x0054;  // ACK消息确认推送
+    // C→S 心跳请求
+    CMD_PING       = 0x0050;
+    // S→C 心跳响应
+    CMD_PONG       = 0x0051;
+    // ACK消息确认请求
+    CMD_ACK_REQ    = 0x0052;
+    // ACK消息确认响应
+    CMD_ACK_RESP   = 0x0053;
+    // ACK消息确认推送
+    CMD_ACK_NOTIFY = 0x0054;
 
     // 好友关系
-    CMD_FRIEND_SEARCH_REQ    = 0x0060;  // C→S 搜索用户请求
-    CMD_FRIEND_SEARCH_RESP   = 0x0061;  // S→C 搜索用户响应
-    CMD_FRIEND_ADD_REQ       = 0x0062;  // C→S 添加好友请求
-    CMD_FRIEND_ADD_RESP      = 0x0063;  // S→C 添加好友响应
-    CMD_FRIEND_ADD_NOTIFY    = 0x0064;  // S→C 好友申请推送
-    CMD_FRIEND_ACCEPT_REQ    = 0x0065;  // C→S 接受好友请求
-    CMD_FRIEND_ACCEPT_RESP   = 0x0066;  // S→C 接受好友响应
-    CMD_FRIEND_ACCEPT_NOTIFY = 0x0067;  // S→C 接受好友推送
-    CMD_FRIEND_DELETE_REQ    = 0x0068;  // C→S 删除好友请求
-    CMD_FRIEND_DELETE_RESP   = 0x0069;  // S→C 删除好友响应
-    CMD_FRIEND_DELETE_NOTIFY = 0x006A;  // S→C 删除好友推送
+    // C→S 搜索用户请求
+    CMD_FRIEND_SEARCH_REQ    = 0x0060;
+    // S→C 搜索用户响应
+    CMD_FRIEND_SEARCH_RESP   = 0x0061;
+    // C→S 添加好友请求
+    CMD_FRIEND_ADD_REQ       = 0x0062;
+    // S→C 添加好友响应
+    CMD_FRIEND_ADD_RESP      = 0x0063;
+    // S→C 好友申请推送
+    CMD_FRIEND_ADD_NOTIFY    = 0x0064;
+    // C→S 接受好友请求
+    CMD_FRIEND_ACCEPT_REQ    = 0x0065;
+    // S→C 接受好友响应
+    CMD_FRIEND_ACCEPT_RESP   = 0x0066;
+    // S→C 接受好友推送
+    CMD_FRIEND_ACCEPT_NOTIFY = 0x0067;
+    // C→S 删除好友请求
+    CMD_FRIEND_DELETE_REQ    = 0x0068;
+    // S→C 删除好友响应
+    CMD_FRIEND_DELETE_RESP   = 0x0069;
+    // S→C 删除好友推送
+    CMD_FRIEND_DELETE_NOTIFY = 0x006A;
 
     // 群管理操作
-    CMD_GROUP_CREATE_REQ    = 0x0070;  // C→S 创建群请求
-    CMD_GROUP_CREATE_RESP   = 0x0071;  // S→C 创建群响应
-    CMD_GROUP_INVITE_REQ    = 0x0072;  // C→S 邀请入群请求
-    CMD_GROUP_INVITE_RESP   = 0x0073;  // S→C 邀请入群响应
-    CMD_GROUP_GET_INFO_REQ  = 0x0086;  // C→S 获取群信息请求
-    CMD_GROUP_GET_INFO_RESP = 0x0087;  // S→C 获取群信息响应
-    CMD_GROUP_GET_MEMBERS_REQ  = 0x0088;  // C→S 获取群成员请求
-    CMD_GROUP_GET_MEMBERS_RESP = 0x0089;  // S→C 获取群成员响应
-    CMD_GROUP_GET_MY_GROUPS_REQ  = 0x0090;  // C→S 获取我的群列表请求
-    CMD_GROUP_GET_MY_GROUPS_RESP = 0x0091;  // S→C 获取我的群列表响应
-    CMD_GROUP_MEMBER_CHANGE_NOTIFY = 0x0093;  // S→C 成员变更推送
-    CMD_GROUP_PULL_MSG_REQ  = 0x0094;  // C→S 拉取群消息请求
-    CMD_GROUP_PULL_MSG_RESP = 0x0095;  // S→C 拉取群消息响应
-    CMD_GROUP_ACK_REQ       = 0x0096;  // C→S 群ACK请求
-    CMD_GROUP_ACK_RESP      = 0x0097;  // S→C 群ACK响应
-    CMD_GROUP_MSG_READ_REQ  = 0x0098;  // C→S 查询群消息已读用户列表
-    CMD_GROUP_MSG_READ_RESP = 0x0099;  // S→C 返回群消息已读用户列表
+    // C→S 创建群请求
+    CMD_GROUP_CREATE_REQ    = 0x0070;
+    // S→C 创建群响应
+    CMD_GROUP_CREATE_RESP   = 0x0071;
+    // C→S 邀请入群请求
+    CMD_GROUP_INVITE_REQ    = 0x0072;
+    // S→C 邀请入群响应
+    CMD_GROUP_INVITE_RESP   = 0x0073;
+    // C→S 获取群信息请求
+    CMD_GROUP_GET_INFO_REQ  = 0x0086;
+    // S→C 获取群信息响应
+    CMD_GROUP_GET_INFO_RESP = 0x0087;
+    // C→S 获取群成员请求
+    CMD_GROUP_GET_MEMBERS_REQ  = 0x0088;
+    // S→C 获取群成员响应
+    CMD_GROUP_GET_MEMBERS_RESP = 0x0089;
+    // C→S 获取我的群列表请求
+    CMD_GROUP_GET_MY_GROUPS_REQ  = 0x0090;
+    // S→C 获取我的群列表响应
+    CMD_GROUP_GET_MY_GROUPS_RESP = 0x0091;
+    // S→C 成员变更推送
+    CMD_GROUP_MEMBER_CHANGE_NOTIFY = 0x0093;
+    // C→S 拉取群消息请求
+    CMD_GROUP_PULL_MSG_REQ  = 0x0094;
+    // S→C 拉取群消息响应
+    CMD_GROUP_PULL_MSG_RESP = 0x0095;
+    // C→S 群ACK请求
+    CMD_GROUP_ACK_REQ       = 0x0096;
+    // S→C 群ACK响应
+    CMD_GROUP_ACK_RESP      = 0x0097;
+    // C→S 查询群消息已读用户列表
+    CMD_GROUP_MSG_READ_REQ  = 0x0098;
+    // S→C 返回群消息已读用户列表
+    CMD_GROUP_MSG_READ_RESP = 0x0099;
 
-    CMD_ERROR = 0xFFFF;  // S→C 通用错误响应
+    // S→C 通用错误响应
+    CMD_ERROR = 0xFFFF;
 }
 
 // ============================================================================
@@ -83,34 +132,49 @@ enum Cmd {
 // ============================================================================
 enum MsgType {
     MSG_TYPE_UNKNOWN = 0;
-    MSG_TYPE_TEXT    = 1;  // 纯文本
-    MSG_TYPE_IMAGE   = 2;  // 图片
-    MSG_TYPE_VOICE   = 3;  // 语音
-    MSG_TYPE_VIDEO   = 4;  // 视频
-    MSG_TYPE_FILE    = 5;  // 文件
-    MSG_TYPE_EMOJI   = 6;  // 表情
-    MSG_TYPE_SYSTEM  = 7;  // 系统消息
+    // 纯文本
+    MSG_TYPE_TEXT    = 1;
+    // 图片
+    MSG_TYPE_IMAGE   = 2;
+    // 语音
+    MSG_TYPE_VOICE   = 3;
+    // 视频
+    MSG_TYPE_VIDEO   = 4;
+    // 文件
+    MSG_TYPE_FILE    = 5;
+    // 表情
+    MSG_TYPE_EMOJI   = 6;
+    // 系统消息
+    MSG_TYPE_SYSTEM  = 7;
 }
 
 enum AckType {
-  RECEIVED = 0;  // 已收到
-  SEEN     = 1;  // 已读
+  // 已收到
+  RECEIVED = 0;
+  // 已读
+  SEEN     = 1;
 }
 
 // ============================================================================
 // 通用消息内容结构
 // ============================================================================
 message MessageContent {
-    MsgType msg_type          = 1;  // 消息类型
-    bytes content             = 2;  // 消息内容
-    int64 timestamp           = 3;  // 消息时间戳（Unix 毫秒）
-    map<string, string> ext   = 4;  // 扩展字段
+    // 消息类型
+    MsgType msg_type          = 1;
+    // 消息内容
+    bytes content             = 2;
+    // 消息时间戳（Unix 毫秒）
+    int64 timestamp           = 3;
+    // 扩展字段
+    map<string, string> ext   = 4;
 }
 
 // ============================================================================
 // 通用错误响应体
 // ============================================================================
 message ErrorBody {
-    int32 code    = 1;  // 错误码
-    string message = 2;  // 错误描述
+    // 错误码
+    int32 code    = 1;
+    // 错误描述
+    string message = 2;
 }

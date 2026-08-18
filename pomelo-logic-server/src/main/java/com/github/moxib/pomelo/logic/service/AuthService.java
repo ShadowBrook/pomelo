@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.logic.infrastructure.TokenService;
@@ -65,16 +64,13 @@ public class AuthService extends ServiceBase {
 
         LOG.info("登录成功: userId={} userName={} codec={}", userId, userName, codecId == 0 ? "PB" : "JSON");
 
-        Object respBody;
-        if (codecId == ProtobufCodec.CODEC_ID) {
-          respBody = AuthProto.AuthResp.newBuilder()
-            .setCode(0).setMessage("success").setUserId(id).build();
-        } else {
-          respBody = new JsonObject()
+        Object respBody = dualBody(codecId,
+          () -> AuthProto.AuthResp.newBuilder()
+            .setCode(0).setMessage("success").setUserId(id).build(),
+          () -> new JsonObject()
             .put("code", 0).put("message", "success")
             .put("userId", userId).put("userName", userName)
-            .put("nickname", nickname != null ? nickname : "");
-        }
+            .put("nickname", nickname != null ? nickname : ""));
 
         return Future.succeededFuture(buildResponse(message, CMD_AUTH_RESP_VALUE, respBody));
       });
@@ -94,9 +90,9 @@ public class AuthService extends ServiceBase {
       TokenService.get(vertx).blacklist(token);
     }
 
-    Object respBody = codecId == ProtobufCodec.CODEC_ID
-      ? AuthProto.LogoutResp.newBuilder().setCode(0).setMessage("登出成功").build()
-      : new JsonObject().put("code", 0).put("message", "登出成功");
+    Object respBody = dualBody(codecId,
+      () -> AuthProto.LogoutResp.newBuilder().setCode(0).setMessage("登出成功").build(),
+      () -> new JsonObject().put("code", 0).put("message", "登出成功"));
 
     return Future.succeededFuture(buildResponse(message, CMD_LOGOUT_RESP_VALUE, respBody));
   }

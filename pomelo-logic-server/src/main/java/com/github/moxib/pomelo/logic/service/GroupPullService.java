@@ -154,14 +154,11 @@ public class GroupPullService extends ServiceBase {
   }
 
   private ImMessage buildEmptyPullResp(ImMessage request, byte codecId) {
-    Object respBody;
-    if (codecId == ProtobufCodec.CODEC_ID) {
-      respBody = PullProto.PullResp.newBuilder()
-        .setCode(0).setMessage("success").setHasMore(false).build();
-    } else {
-      respBody = jsonBody().put("code", 0).put("message", "success")
-        .put("hasMore", false).put("messages", new JsonArray());
-    }
+    Object respBody = dualBody(codecId,
+      () -> PullProto.PullResp.newBuilder()
+        .setCode(0).setMessage("success").setHasMore(false).build(),
+      () -> jsonBody().put("code", 0).put("message", "success")
+        .put("hasMore", false).put("messages", new JsonArray()));
     return buildResponse(request, CMD_GROUP_PULL_MSG_RESP_VALUE, respBody);
   }
 }

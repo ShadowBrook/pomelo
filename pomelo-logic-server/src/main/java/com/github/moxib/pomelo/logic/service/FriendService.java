@@ -173,16 +173,13 @@ public class FriendService extends ServiceBase {
 
   private ImMessage buildFriendResp(ImMessage req, int respCmd, String msg) {
     byte codecId = req.getCodecId();
-    Object body;
-    if (codecId == ProtobufCodec.CODEC_ID) {
-      body = switch (respCmd) {
+    Object body = dualBody(codecId,
+      () -> switch (respCmd) {
         case CMD_FRIEND_ADD_RESP_VALUE -> RelationProto.FriendAddResp.newBuilder().setCode(0).setMessage(msg).build();
         case CMD_FRIEND_ACCEPT_RESP_VALUE -> RelationProto.FriendAcceptResp.newBuilder().setCode(0).setMessage(msg).build();
         default -> RelationProto.FriendDeleteResp.newBuilder().setCode(0).setMessage(msg).build();
-      };
-    } else {
-      body = jsonBody().put("code", 0).put("message", msg);
-    }
+      },
+      () -> jsonBody().put("code", 0).put("message", msg));
     return buildResponse(req, respCmd, body);
   }
 

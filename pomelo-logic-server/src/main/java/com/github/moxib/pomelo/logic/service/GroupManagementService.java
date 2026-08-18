@@ -106,14 +106,11 @@ public class GroupManagementService extends ServiceBase {
       .compose(v -> groupRepo.addMember(snowflake.nextId(), id, ownerNumericId, 2, now))
       .map(v -> {
         byte codecId = message.getCodecId();
-        Object respBody;
-        if (codecId == ProtobufCodec.CODEC_ID) {
-          respBody = GroupMgmtProto.CreateGroupResp.newBuilder()
-            .setCode(0).setMessage("success").setGroup(toProtoGroupInfo(group)).build();
-        } else {
-          respBody = jsonBody().put("code", 0).put("message", "success")
-            .put("group", toJsonGroupInfo(group));
-        }
+        Object respBody = dualBody(codecId,
+          () -> GroupMgmtProto.CreateGroupResp.newBuilder()
+            .setCode(0).setMessage("success").setGroup(toProtoGroupInfo(group)).build(),
+          () -> jsonBody().put("code", 0).put("message", "success")
+            .put("group", toJsonGroupInfo(group)));
         LOG.info("群创建成功: id={} name={} owner={}", id, name, userId);
         return buildResponse(message, CMD_GROUP_CREATE_RESP_VALUE, respBody);
       });
@@ -167,13 +164,10 @@ public class GroupManagementService extends ServiceBase {
             .map(v -> {
               pushMemberChangeNotify(numericGroupId, inviteeNumericId, operatorNumericId);
               byte codecId = message.getCodecId();
-              Object respBody;
-              if (codecId == ProtobufCodec.CODEC_ID) {
-                respBody = GroupMgmtProto.InviteToGroupResp.newBuilder()
-                  .setCode(0).setMessage("success").build();
-              } else {
-                respBody = jsonBody().put("code", 0).put("message", "success");
-              }
+              Object respBody = dualBody(codecId,
+                () -> GroupMgmtProto.InviteToGroupResp.newBuilder()
+                  .setCode(0).setMessage("success").build(),
+                () -> jsonBody().put("code", 0).put("message", "success"));
               LOG.info("成员已邀请: groupId={} invitee={}", groupId, inviteeId);
               return buildResponse(message, CMD_GROUP_INVITE_RESP_VALUE, respBody);
             });
@@ -231,14 +225,11 @@ public class GroupManagementService extends ServiceBase {
             ErrorCode.NOT_FOUND, "群不存在"));
         }
         byte codecId = message.getCodecId();
-        Object respBody;
-        if (codecId == ProtobufCodec.CODEC_ID) {
-          respBody = GroupMgmtProto.GetGroupInfoResp.newBuilder()
-            .setCode(0).setMessage("success").setGroup(toProtoGroupInfo(group)).build();
-        } else {
-          respBody = jsonBody().put("code", 0).put("message", "success")
-            .put("group", toJsonGroupInfo(group));
-        }
+        Object respBody = dualBody(codecId,
+          () -> GroupMgmtProto.GetGroupInfoResp.newBuilder()
+            .setCode(0).setMessage("success").setGroup(toProtoGroupInfo(group)).build(),
+          () -> jsonBody().put("code", 0).put("message", "success")
+            .put("group", toJsonGroupInfo(group)));
         return Future.succeededFuture(buildResponse(message, CMD_GROUP_GET_INFO_RESP_VALUE, respBody));
       });
   }

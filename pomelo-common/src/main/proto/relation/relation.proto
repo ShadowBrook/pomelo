@@ -9,7 +9,8 @@ option java_outer_classname = "RelationProto";
 // 好友搜索
 // ============================================================================
 message SearchUserReq {
-    string keyword = 1;  // 搜索关键词（userId 或 nickname）
+    // 搜索关键词（userId 或 nickname）
+    string keyword = 1;
 }
 
 message SearchUserResp {
@@ -29,8 +30,10 @@ message SearchUserResp {
 // 好友申请
 // ============================================================================
 message FriendAddReq {
-    int64 user_id   = 1;  // 发起方
-    int64 friend_id = 2;  // 目标用户
+    // 发起方
+    int64 user_id   = 1;
+    // 目标用户
+    int64 friend_id = 2;
 }
 
 message FriendAddResp {
@@ -39,7 +42,8 @@ message FriendAddResp {
 }
 
 message FriendAddNotify {
-    int64 user_id   = 1;  // 发起方（谁加你）
+    // 发起方（谁加你）
+    int64 user_id   = 1;
     string user_name = 2;
     string nickname  = 3;
     string avatar    = 4;
@@ -49,8 +53,10 @@ message FriendAddNotify {
 // 接受好友申请
 // ============================================================================
 message FriendAcceptReq {
-    int64 user_id   = 1;  // 接受方
-    int64 friend_id = 2;  // 发起申请方（接受谁的申请）
+    // 接受方
+    int64 user_id   = 1;
+    // 发起申请方（接受谁的申请）
+    int64 friend_id = 2;
 }
 
 message FriendAcceptResp {
@@ -59,7 +65,8 @@ message FriendAcceptResp {
 }
 
 message FriendAcceptNotify {
-    int64 user_id   = 1;  // 接受方（谁接受了你的申请）
+    // 接受方（谁接受了你的申请）
+    int64 user_id   = 1;
     string user_name = 2;
     string nickname  = 3;
     string avatar    = 4;
@@ -79,5 +86,6 @@ message FriendDeleteResp {
 }
 
 message FriendDeleteNotify {
-    int64 user_id = 1;  // 操作方（谁删了你）
+    // 操作方（谁删了你）
+    int64 user_id = 1;
 }
