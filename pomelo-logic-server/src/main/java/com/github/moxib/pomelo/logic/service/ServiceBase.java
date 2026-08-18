@@ -10,6 +10,7 @@ import io.vertx.core.json.JsonObject;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Service 基类 — 提供公共的编解码和响应构建方法。
@@ -68,6 +69,13 @@ public abstract class ServiceBase {
 
   protected JsonObject jsonBody() {
     return new JsonObject();
+  }
+
+  /**
+   * 按 codec 分派双格式响应体：Protobuf 用 protobufSupplier，JSON 用 jsonSupplier。
+   */
+  protected Object dualBody(byte codecId, Supplier<Object> protobufSupplier, Supplier<Object> jsonSupplier) {
+    return codecId == ProtobufCodec.CODEC_ID ? protobufSupplier.get() : jsonSupplier.get();
   }
 
   /**

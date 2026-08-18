@@ -67,13 +67,10 @@ public class GroupAckService extends ServiceBase {
           return groupRepo.updateLastReadSeq(numericGroupId, numericId, lastReadSeq)
             .map(v -> {
               byte codecId = message.getCodecId();
-              Object respBody;
-              if (codecId == ProtobufCodec.CODEC_ID) {
-                respBody = GroupMgmtProto.GroupAckResp.newBuilder()
-                  .setCode(0).setMessage("success").build();
-              } else {
-                respBody = jsonBody().put("code", 0).put("message", "success");
-              }
+              Object respBody = dualBody(codecId,
+                () -> GroupMgmtProto.GroupAckResp.newBuilder()
+                  .setCode(0).setMessage("success").build(),
+                () -> jsonBody().put("code", 0).put("message", "success"));
               return buildResponse(message, CMD_GROUP_ACK_RESP_VALUE, respBody);
             });
         });

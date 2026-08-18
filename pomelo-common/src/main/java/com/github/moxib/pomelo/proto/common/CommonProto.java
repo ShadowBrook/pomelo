@@ -33,6 +33,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 认证相关
+     * C→S 认证请求
      * </pre>
      *
      * <code>CMD_AUTH_REQ = 1;</code>
@@ -65,6 +66,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 单聊相关
+     * C→S 单聊发送请求
      * </pre>
      *
      * <code>CMD_C2C_REQ = 16;</code>
@@ -89,6 +91,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 群聊相关
+     * C→S 群聊发送请求
      * </pre>
      *
      * <code>CMD_C2G_REQ = 32;</code>
@@ -113,6 +116,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 消息拉取
+     * C→S 拉取离线消息请求
      * </pre>
      *
      * <code>CMD_PULL_REQ = 48;</code>
@@ -129,6 +133,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 控制命令
+     * C→S 控制命令请求
      * </pre>
      *
      * <code>CMD_CTRL_REQ = 64;</code>
@@ -153,6 +158,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 心跳与确认
+     * C→S 心跳请求
      * </pre>
      *
      * <code>CMD_PING = 80;</code>
@@ -193,6 +199,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 好友关系
+     * C→S 搜索用户请求
      * </pre>
      *
      * <code>CMD_FRIEND_SEARCH_REQ = 96;</code>
@@ -281,6 +288,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 群管理操作
+     * C→S 创建群请求
      * </pre>
      *
      * <code>CMD_GROUP_CREATE_REQ = 112;</code>
@@ -432,6 +440,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 认证相关
+     * C→S 认证请求
      * </pre>
      *
      * <code>CMD_AUTH_REQ = 1;</code>
@@ -464,6 +473,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 单聊相关
+     * C→S 单聊发送请求
      * </pre>
      *
      * <code>CMD_C2C_REQ = 16;</code>
@@ -488,6 +498,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 群聊相关
+     * C→S 群聊发送请求
      * </pre>
      *
      * <code>CMD_C2G_REQ = 32;</code>
@@ -512,6 +523,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 消息拉取
+     * C→S 拉取离线消息请求
      * </pre>
      *
      * <code>CMD_PULL_REQ = 48;</code>
@@ -528,6 +540,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 控制命令
+     * C→S 控制命令请求
      * </pre>
      *
      * <code>CMD_CTRL_REQ = 64;</code>
@@ -552,6 +565,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 心跳与确认
+     * C→S 心跳请求
      * </pre>
      *
      * <code>CMD_PING = 80;</code>
@@ -592,6 +606,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 好友关系
+     * C→S 搜索用户请求
      * </pre>
      *
      * <code>CMD_FRIEND_SEARCH_REQ = 96;</code>
@@ -680,6 +695,7 @@ public final class CommonProto {
     /**
      * <pre>
      * 群管理操作
+     * C→S 创建群请求
      * </pre>
      *
      * <code>CMD_GROUP_CREATE_REQ = 112;</code>

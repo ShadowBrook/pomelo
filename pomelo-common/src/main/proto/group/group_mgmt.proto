@@ -40,7 +40,8 @@ message GroupInfo {
 // ============================================================================
 message InviteToGroupReq {
     int64 group_id  = 1;
-    int64 user_id   = 2;   // 被邀请者 userId (Snowflake)
+    // 被邀请者 userId (Snowflake)
+    int64 user_id   = 2;
 }
 
 message InviteToGroupResp {
@@ -134,7 +135,8 @@ message GroupAckResp {
 // ============================================================================
 message GetGroupMsgReadStatusReq {
     int64 group_id   = 1;
-    int64 seq         = 2;   // 消息的 seq
+    // 消息的 seq
+    int64 seq         = 2;
 }
 
 message GroupMsgReader {

@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.logic.model.requests.CtrlRequest;
@@ -24,9 +23,9 @@ public class CtrlService extends ServiceBase {
       LOG.info("收到控制命令请求，ctrlType: {}", req.ctrlType());
 
       byte codecId = message.getCodecId();
-      Object respBody = codecId == ProtobufCodec.CODEC_ID
-        ? CtrlProto.CtrlResp.newBuilder().setCode(0).setMessage("success").build()
-        : jsonBody().put("code", 0).put("message", "success");
+      Object respBody = dualBody(codecId,
+        () -> CtrlProto.CtrlResp.newBuilder().setCode(0).setMessage("success").build(),
+        () -> jsonBody().put("code", 0).put("message", "success"));
 
       return Future.succeededFuture(buildResponse(message, CMD_CTRL_RESP_VALUE, respBody));
     } catch (Exception e) {

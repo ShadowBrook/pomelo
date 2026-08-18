@@ -211,21 +211,18 @@ public class C2GService extends ServiceBase {
   }
 
   private ImMessage buildC2GResponse(ImMessage request, byte codecId, C2GRespResult result) {
-    Object respBody;
-    if (codecId == ProtobufCodec.CODEC_ID) {
-      respBody = GroupProto.C2GResp.newBuilder()
+    Object respBody = dualBody(codecId,
+      () -> GroupProto.C2GResp.newBuilder()
         .setCode(result.code()).setMessage(result.message())
         .setMessageId(result.messageId()).setGroupId(result.groupId())
         .setServerTime(result.serverTime()).setSeq(result.seq())
-        .build();
-    } else {
-      respBody = new JsonObject()
+        .build(),
+      () -> new JsonObject()
         .put("code", result.code()).put("message", result.message())
         .put("messageId", String.valueOf(result.messageId()))
         .put("groupId", String.valueOf(result.groupId()))
         .put("serverTime", result.serverTime())
-        .put("seq", result.seq());
-    }
+        .put("seq", result.seq()));
     return buildResponse(request, CMD_C2G_RESP_VALUE, respBody);
   }
 

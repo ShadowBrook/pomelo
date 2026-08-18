@@ -72,28 +72,20 @@ public class C2CService extends ServiceBase {
         return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.NOT_FOUND, "接收者不存在"));
       }
 
-      final String fSenderUserName = senderUserName;
-      final String fSenderNickname = senderNickname;
-      final long fTimestamp = timestamp;
-      final long fClientMsgId = clientMsgId;
-      final int fMsgType = msgType;
-      final String fContent = content;
-      final byte fCodecId = codecId;
-
       C2CReqContext ctx = C2CReqContext.builder()
-        .messageId(fClientMsgId)
+        .messageId(clientMsgId)
         .senderId(senderId)
         .recipientId(recipientId)
-        .senderUserName(fSenderUserName)
-        .senderNickname(fSenderNickname)
-        .msgType(fMsgType)
-        .content(fContent)
-        .timestamp(fTimestamp)
-        .codecId(fCodecId)
+        .senderUserName(senderUserName)
+        .senderNickname(senderNickname)
+        .msgType(msgType)
+        .content(content)
+        .timestamp(timestamp)
+        .codecId(codecId)
         .build();
 
       return doSend(ctx)
-        .map(result -> buildC2CResponse(message, fCodecId, result));
+        .map(result -> buildC2CResponse(message, codecId, result));
     } catch (Exception e) {
       LOG.error("C2C 消息处理失败", e);
       return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.BAD_REQUEST, "消息格式错误：" + e.getMessage()));
@@ -190,12 +182,12 @@ public class C2CService extends ServiceBase {
   }
 
   private ImMessage buildC2CResponse(ImMessage request, byte codecId, C2CRespResult result) {
-    Object respBody = codecId == ProtobufCodec.CODEC_ID
-      ? ChatProto.C2CResp.newBuilder()
-          .setCode(result.getCode()).setMessage(result.getMessage())
-          .setMessageId(result.getMessageId()).setServerTime(result.getServerTime())
-          .setSeq(result.getSeq()).build()
-      : result;
+    Object respBody = dualBody(codecId,
+      () -> ChatProto.C2CResp.newBuilder()
+        .setCode(result.getCode()).setMessage(result.getMessage())
+        .setMessageId(result.getMessageId()).setServerTime(result.getServerTime())
+        .setSeq(result.getSeq()).build(),
+      () -> result);
     return buildResponse(request, CMD_C2C_RESP_VALUE, respBody);
   }
 

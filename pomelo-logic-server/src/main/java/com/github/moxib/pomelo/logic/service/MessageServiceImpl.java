@@ -1,18 +1,12 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.ProtobufCodec;
-import com.github.moxib.pomelo.common.ImMessage;
-import com.github.moxib.pomelo.proto.chat.ChatProto;
-import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.AckNotifyContext;
 import com.github.moxib.pomelo.logic.model.C2CReqContext;
 import com.github.moxib.pomelo.logic.model.C2CRespResult;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
-import io.vertx.core.json.JsonObject;
 
-import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -23,10 +17,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import static com.github.moxib.pomelo.common.ImMessage.MAGIC_NUMBER;
-import static com.github.moxib.pomelo.common.ImMessage.WIRE_PROTOCOL_VERSION;
 import static com.github.moxib.pomelo.proto.common.CommonProto.AckType;
-import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.CMD_C2C_NOTIFY_VALUE;
 
 /**
  * 消息业务逻辑实现（过渡版本 — SessionRegistry 依赖已移除，推送将在 Task 6 通过 EventBus publish 实现）。

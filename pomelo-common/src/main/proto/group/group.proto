@@ -11,25 +11,40 @@ import "common/common.proto";
 // 群聊相关消息体
 // ============================================================================
 message C2GReq {
-    int64 sender_id                  = 1;  // 发送者用户 ID (Snowflake)
-    int64 group_id                   = 2;  // 接受群 ID (Snowflake)
-    int64 message_id                 = 3;  // 消息 ID
-    im.common.MessageContent message = 4;  // 消息内容
+    // 发送者用户 ID (Snowflake)
+    int64 sender_id                  = 1;
+    // 接受群 ID (Snowflake)
+    int64 group_id                   = 2;
+    // 消息 ID
+    int64 message_id                 = 3;
+    // 消息内容
+    im.common.MessageContent message = 4;
 }
 
 message C2GResp {
-    int32 code         = 1;  // 响应码
-    string message     = 2;  // 响应消息
-    int64 message_id   = 3;  // 消息 ID
-    int64 group_id     = 4;  // 群 ID (Snowflake)
-    int64 server_time  = 5;  // 服务器时间
-    optional int64 seq = 6;  // 序列号
+    // 响应码
+    int32 code         = 1;
+    // 响应消息
+    string message     = 2;
+    // 消息 ID
+    int64 message_id   = 3;
+    // 群 ID (Snowflake)
+    int64 group_id     = 4;
+    // 服务器时间
+    int64 server_time  = 5;
+    // 序列号
+    optional int64 seq = 6;
 }
 
 message C2GNotify {
-    int64 sender_id                  = 1;  // 发送者用户 ID (Snowflake)
-    int64 group_id                   = 2;  // 接受群 ID (Snowflake)
-    im.common.MessageContent message = 3;  // 推送的消息内容
-    optional string name             = 4;  // 群名称
-    optional int64 seq               = 5;  // 序列号
+    // 发送者用户 ID (Snowflake)
+    int64 sender_id                  = 1;
+    // 接受群 ID (Snowflake)
+    int64 group_id                   = 2;
+    // 推送的消息内容
+    im.common.MessageContent message = 3;
+    // 群名称
+    optional string name             = 4;
+    // 序列号
+    optional int64 seq               = 5;
 }
