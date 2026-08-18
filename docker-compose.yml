@@ -6,7 +6,7 @@ services:
     container_name: pomelo
     ports:
       # HTTP API
-      - "8080:8080"
+      - "8888:8888"
       # WebSocket Gateway
       - "9001:9001"
       # TCP Gateway
