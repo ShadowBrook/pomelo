@@ -154,19 +154,22 @@ public class MediateManager {
     int chunk = sectionCount / n;
     int remainder = sectionCount % n;
     int cursor = 0;
+    // setId 边界用 long 计算：id 空间接近 2^31 时，最后一个 section 的 idBegin + size 可能超出 int
+    long setIdEnd = (long) setId.getIdBegin() + setId.getSize();
 
     List<RouterNode> nodeList = new ArrayList<>(n);
     for (int i = 0; i < n; i++) {
       int len = chunk + (i < remainder ? 1 : 0);
       int s0 = cursor;
-      int s1 = s0 + len;
-      // section [s0, s1) → id 范围 [setIdBegin + s0*SECTION_SIZE, ... )
-      int idBegin = setId.getIdBegin() + s0 * SeqSvrConstants.SECTION_SIZE;
-      int size = len * SeqSvrConstants.SECTION_SIZE;
+      cursor = s0 + len;
+      long idBeginLong = (long) setId.getIdBegin() + (long) s0 * SeqSvrConstants.SECTION_SIZE;
+      // size 截断到 setId 边界，避免最后一个 section 超出 id 空间导致 int 溢出
+      long sizeLong = Math.min((long) len * SeqSvrConstants.SECTION_SIZE, setIdEnd - idBeginLong);
+      int idBegin = (int) idBeginLong;
+      int size = (int) sizeLong;
       RouterNode node = alive.get(i).node;
       nodeList.add(new RouterNode(node.getNodeId(), node.getIp(), node.getPort(),
         Collections.singletonList(new RangeId(idBegin, size))));
-      cursor = s1;
     }
 
     return new Router(router.getVersion() + 1, nodeList);
