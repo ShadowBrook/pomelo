@@ -24,7 +24,9 @@ public class RangeId {
 
   /** 计算指定 id 属于该 Range 内的哪个 section */
   public SectionResult calcSectionID(int id) {
-    if (id < idBegin || id >= idBegin + size) {
+    // idBegin + size 可能超过 Integer.MAX_VALUE（id 空间接近 2^31 时），
+    // 必须用 long 运算避免溢出成负数导致归属判断恒为 notFound
+    if (id < idBegin || id >= (long) idBegin + size) {
       return SectionResult.notFound();
     }
     int idx = (id - idBegin) / SeqSvrConstants.SECTION_SIZE;
