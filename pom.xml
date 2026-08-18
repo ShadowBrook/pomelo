@@ -14,6 +14,7 @@
     <module>pomelo-gateway</module>
     <module>pomelo-logic-server</module>
     <module>pomelo-seqsvr</module>
+    <module>pomelo-benchmark</module>
   </modules>
 
   <properties>
