@@ -46,30 +46,29 @@ ERROR: Connection pool reached max wait queue size of 512
 | 登录 0/1000 | Vert.x 每次连接创建新 NetClient，并发 1000 时资源耗尽 | 共享单个 NetClient（Vert.x 推荐用法） | 登录 0 → **1000/1000**（3509 qps） |
 | 登录 Redis 排队 | Redis 连接池 `maxPoolSize=4` 过小 | 调大到 64 / maxWaitingHandlers 512 | 登录恢复 |
 | 加好友/发消息 500 | PG 连接池 `maxSize=10` 过小 | 调大到 64 / maxWaitQueueSize 512 | 加好友/接受好友 0 错误 |
+| 发消息 84% 失败 | Vert.x PgPool `maxWaitQueueSize=512` 过小，并发 750+ 时等待队列打满 | 调大到 5000 | 发消息 1000 并发 **0 错误**（qps 5357） |
 | 发消息 route outdated | `RangeId.calcSectionID` 的 `id >= idBegin + size` int 溢出（id 空间接近 2^31） | 改 long 运算 + `MediateManager.generateRouter` 同步修复 | 早期 10% 失败消除 |
 
 **配置修改**（`conf/config.yaml`，实际生效文件）：
 - `redis.maxPoolSize`: 4 → 64，`redis.maxWaitingHandlers`: 8 → 512
-- `database.pool.maxSize`: 10 → 64，`database.pool.maxWaitQueueSize`: 50 → 512
+- `database.pool.maxSize`: 10 → 64，`database.pool.maxWaitQueueSize`: 50 → 5000
 
 ## 优化建议
 
-### 发消息
-1. **降低发消息并发**：PG 池（64 连接）约支撑 ~20000 qps（0.3ms/条），发消息并发降到 300 可显著提升成功率
-2. **减少连接占用**：优化 `C2CService.doSend` 的 seqsvr 往返，缩短 PG 连接持有时间
-3. **调大 PG 池**：受 PostgreSQL `max_connections=100` 限制，当前 64 已接近上限
+### 发消息 ✅ 已解决（2026-08-20）
+根因是 Vert.x PgPool 的 `maxWaitQueueSize=512` 过小（`pgbench` 64 连接实测可支撑 7 万 tps，但 Vert.x 池并发 750+ 时等待队列打满）。调大到 5000 后，1000 并发发消息 100% 成功（qps 5357）。
 
 ### 注册 ✅ 已解决（2026-08-20）
 密码加密从 bcrypt 换成 Vert.x `HashingStrategy`（PBKDF2），注册 QPS 从 3 提升到 ~130（44 倍），单次哈希从 ~2.5s 降到 ~0.2s。**异步注册**仍可作为下一步优化（注册请求先返回，后台完成密码哈希）。
 
 ## 结论
 
-核心业务（登录 / 加好友 / 消息收发基础链路）在并发 1000 下均正常（3509 / 1257 / 1255 QPS，0 错误）。原始瓶颈两处：
+核心业务（登录 / 加好友 / 消息收发基础链路）在并发 1000 下均正常（3509 / 1257 / 1255 QPS，0 错误）。原始瓶颈两处均已解决：
 
 - ~~**注册**：bcrypt cost=12 的 CPU 密集度~~ ✅ 已修复（HashingStrategy / PBKDF2）
-- **发消息**：并发 1000 时 PG 连接池被整条发送链路打满（待优化）
+- ~~**发消息**：PG 连接池打满~~ ✅ 已修复（maxWaitQueueSize 512 → 5000）
 
-压测工具在此过程中发现并修复了 5 个独立缺陷（NetClient 共享、Redis/PG 连接池、seqsvr int 溢出、bcrypt 慢哈希）。
+压测工具在此过程中发现并修复了 6 个独立缺陷（NetClient 共享、Redis/PG 连接池、seqsvr int 溢出、bcrypt 慢哈希、PgPool maxWaitQueueSize 过小）。
 
 ## 相关文件
 
