@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic;
 
-import at.favre.lib.crypto.bcrypt.BCrypt;
 import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
@@ -12,6 +11,7 @@ import io.vertx.core.VerticleBase;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
+import io.vertx.ext.auth.hashing.HashingStrategy;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
@@ -21,7 +21,9 @@ import io.vertx.sqlclient.Tuple;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
 
 /**
@@ -59,8 +61,10 @@ public class ApiVerticle extends VerticleBase {
     WHERE me.id = $1 AND f.status = 0 ORDER BY f.created_at DESC
     """;
 
+  private final HashingStrategy strategy = HashingStrategy.load();
+  private final SecureRandom random = new SecureRandom();
+
   private int port;
-  private int bcryptCost;
   private SnowflakeIdGenerator snowflake;
 
   private HttpServer server;
@@ -70,7 +74,6 @@ public class ApiVerticle extends VerticleBase {
   @Override
   public Future<?> start() {
     this.port = ConfigHolder.getInt("api.http.port", 8888);
-    this.bcryptCost = ConfigHolder.getInt("bcrypt.cost", 12);
     this.snowflake = new SnowflakeIdGenerator(
       ConfigHolder.getInt("snowflake.workerId", 1));
     pgPool = PgPoolFactory.get(vertx);
@@ -115,7 +118,7 @@ public class ApiVerticle extends VerticleBase {
 
     long id = snowflake.nextId();
     String userId = String.valueOf(id);
-    String hash = BCrypt.withDefaults().hashToString(bcryptCost, password.toCharArray());
+    String hash = hashPassword(password);
     long now = System.currentTimeMillis();
 
     pgPool.preparedQuery(INSERT_USER_SQL).execute(Tuple.of(id, userName, nickname, avatar, hash, now))
@@ -144,7 +147,7 @@ public class ApiVerticle extends VerticleBase {
         if (rows.size() == 0) { fail(ctx, 401, "用户名不存在"); return; }
         Row r = rows.iterator().next();
         String hash = r.getString("password");
-        if (!BCrypt.verifyer().verify(password.toCharArray(), hash).verified) {
+        if (!strategy.verify(hash, password)) {
           fail(ctx, 401, "密码错误");
           return;
         }
@@ -296,4 +299,12 @@ public class ApiVerticle extends VerticleBase {
   }
 
   private boolean isBlank(String s) { return s == null || s.isBlank(); }
+
+  /** 用 Vert.x HashingStrategy（PBKDF2）哈希密码，返回自包含哈希串（含算法/参数/salt） */
+  private String hashPassword(String password) {
+    byte[] salt = new byte[32];
+    random.nextBytes(salt);
+    String saltStr = Base64.getEncoder().encodeToString(salt);
+    return strategy.hash("pbkdf2", null, saltStr, password);
+  }
 }

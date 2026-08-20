@@ -43,9 +43,6 @@ jwt:
 nanoid:
   size: 21
 
-bcrypt:
-  cost: 12
-
 friend:
   searchLimit: 20
 
