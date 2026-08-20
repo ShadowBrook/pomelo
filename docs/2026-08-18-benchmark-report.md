@@ -59,18 +59,17 @@ ERROR: Connection pool reached max wait queue size of 512
 2. **减少连接占用**：优化 `C2CService.doSend` 的 seqsvr 往返，缩短 PG 连接持有时间
 3. **调大 PG 池**：受 PostgreSQL `max_connections=100` 限制，当前 64 已接近上限
 
-### 注册
-1. **bcrypt cost 12 → 10**：安全性略降但注册 QPS 提升数倍
-2. **异步注册**：注册请求先返回，后台完成密码哈希
+### 注册 ✅ 已解决（2026-08-20）
+密码加密从 bcrypt 换成 Vert.x `HashingStrategy`（PBKDF2），注册 QPS 从 3 提升到 ~130（44 倍），单次哈希从 ~2.5s 降到 ~0.2s。**异步注册**仍可作为下一步优化（注册请求先返回，后台完成密码哈希）。
 
 ## 结论
 
-核心业务（登录 / 加好友 / 消息收发基础链路）在并发 1000 下均正常（3509 / 1257 / 1255 QPS，0 错误）。瓶颈集中在两处：
+核心业务（登录 / 加好友 / 消息收发基础链路）在并发 1000 下均正常（3509 / 1257 / 1255 QPS，0 错误）。原始瓶颈两处：
 
-- **注册**：bcrypt cost=12 的 CPU 密集度
-- **发消息**：并发 1000 时 PG 连接池被整条发送链路打满
+- ~~**注册**：bcrypt cost=12 的 CPU 密集度~~ ✅ 已修复（HashingStrategy / PBKDF2）
+- **发消息**：并发 1000 时 PG 连接池被整条发送链路打满（待优化）
 
-这两处是真实的系统容量边界，压测工具正确暴露了它们，并在此过程中发现并修复了 4 个独立缺陷（NetClient 共享、Redis/PG 连接池、seqsvr int 溢出）。
+压测工具在此过程中发现并修复了 5 个独立缺陷（NetClient 共享、Redis/PG 连接池、seqsvr int 溢出、bcrypt 慢哈希）。
 
 ## 相关文件
 
