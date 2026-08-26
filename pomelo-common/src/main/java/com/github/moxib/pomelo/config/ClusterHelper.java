@@ -220,4 +220,15 @@ public final class ClusterHelper {
   public static boolean isClustered() {
     return Boolean.getBoolean("vertx.cluster") || "true".equals(System.getenv("VERTX_CLUSTER"));
   }
+
+  /**
+   * 非集群模式下告警：session 路由 / 跨实例 push 依赖集群 EventBus，
+   * 非集群时 SessionRouteTable 会静默 no-op，多实例部署必须加 -Dvertx.cluster=true。
+   */
+  public static void warnIfNotClustered(Vertx vertx, String role) {
+    if (vertx != null && !vertx.isClustered()) {
+      LOG.warn("{} 以非集群模式启动：session 路由与跨实例 push 将退化（单进程广播 / 跨进程不可达），" +
+        "多实例部署请加 -Dvertx.cluster=true", role);
+    }
+  }
 }
