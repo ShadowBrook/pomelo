@@ -23,6 +23,7 @@ public class GatewayMain extends VerticleBase {
 
   @Override
   public Future<?> start() {
+    ClusterHelper.warnIfNotClustered(vertx, "Gateway");
     return ConfigHolder.load(vertx)
       .compose(v -> Future.all(
         vertx.deployVerticle(new TcpGatewayVerticle()),

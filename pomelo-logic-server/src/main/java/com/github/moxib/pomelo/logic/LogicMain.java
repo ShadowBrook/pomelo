@@ -26,6 +26,7 @@ public class LogicMain extends VerticleBase {
 
   @Override
   public Future<?> start() {
+    ClusterHelper.warnIfNotClustered(vertx, "Logic-Server");
     return ConfigHolder.load(vertx)
       .compose(v -> RedisFactory.get(vertx).connect())
       .compose(v -> WorkerIdResolver.resolve(vertx))
