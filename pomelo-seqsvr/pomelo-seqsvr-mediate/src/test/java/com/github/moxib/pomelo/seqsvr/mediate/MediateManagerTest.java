@@ -90,6 +90,29 @@ class MediateManagerTest {
     return false;
   }
 
+  /** 返回持有指定 section 索引的节点 id，无则 null。 */
+  private static String sectionOwner(Router router, int sectionIdx) {
+    int id = sectionIdx * SeqSvrConstants.SECTION_SIZE;
+    for (RouterNode node : router.getNodeList()) {
+      for (RangeId range : node.getSectionRanges()) {
+        if (range.calcSectionID(id).isFound()) {
+          return node.getNodeId();
+        }
+      }
+    }
+    return null;
+  }
+
+  /** 返回节点首个号段对应的 section 索引（测试 setId 从 0 开始）。 */
+  private static int firstSectionOf(Router router, String nodeId) {
+    for (RouterNode node : router.getNodeList()) {
+      if (node.getNodeId().equals(nodeId)) {
+        return node.getSectionRanges().get(0).getIdBegin() / SeqSvrConstants.SECTION_SIZE;
+      }
+    }
+    throw new AssertionError("node not found: " + nodeId);
+  }
+
   @Test
   @DisplayName("注册两个节点：路由表 2 节点、不重叠、覆盖全部分区")
   void testRegisterTwoNodesBalanced() {
@@ -144,5 +167,20 @@ class MediateManagerTest {
     assertEquals(1, fast.getNodeCount(), "失联节点应被移除");
     assertEquals(1, fast.getRouter().getNodeList().size());
     assertEquals("node-1", fast.getRouter().getNodeList().get(0).getNodeId());
+  }
+
+  @Test
+  @DisplayName("增量迁移：扩容只割存量节点尾部，不重排存量节点头部")
+  void testIncrementalKeepsExistingNodeHead() {
+    manager.register(node("node-1"));
+    Router twoNodes = manager.register(node("node-2"));
+    int node2Head = firstSectionOf(twoNodes, "node-2");
+
+    Router r = manager.register(node("node-3"));
+
+    assertEquals(node2Head, firstSectionOf(r, "node-2"),
+      "node-2 头部号段不因扩容而移位（增量迁移不重排存量节点头部）");
+    assertEquals(EXPECTED_SECTIONS, countSections(r));
+    assertFalse(rangesOverlap(r));
   }
 }

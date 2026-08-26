@@ -56,30 +56,33 @@ public class MediateVerticle extends VerticleBase {
     StoreAccessor store = StoreClients.create(vertx.eventBus(), storePrefix, storeReplicas, storeW, storeR);
     manager = new MediateManager(store, setId, heartbeatTimeoutMs);
 
-    vertx.eventBus().consumer(SeqSvrAddresses.MEDIATE_REGISTER, this::onRegister);
-    vertx.eventBus().consumer(SeqSvrAddresses.MEDIATE_UNREGISTER, this::onUnregister);
-    vertx.eventBus().consumer(SeqSvrAddresses.MEDIATE_HEARTBEAT, this::onHeartbeat);
-    vertx.eventBus().consumer(SeqSvrAddresses.MEDIATE_GET_ROUTER, this::onGetRouter);
+    return manager.init()
+      .compose(v -> {
+        vertx.eventBus().consumer(SeqSvrAddresses.MEDIATE_REGISTER, this::onRegister);
+        vertx.eventBus().consumer(SeqSvrAddresses.MEDIATE_UNREGISTER, this::onUnregister);
+        vertx.eventBus().consumer(SeqSvrAddresses.MEDIATE_HEARTBEAT, this::onHeartbeat);
+        vertx.eventBus().consumer(SeqSvrAddresses.MEDIATE_GET_ROUTER, this::onGetRouter);
 
-    timeoutCheckTimer = vertx.setPeriodic(checkIntervalMs, id -> manager.checkTimeouts(System.currentTimeMillis()));
+        timeoutCheckTimer = vertx.setPeriodic(checkIntervalMs, id -> manager.checkTimeouts(System.currentTimeMillis()));
 
-    // Admin HTTP（无 vertx-web，手动路由两个只读端点）
-    adminServer = vertx.createHttpServer();
-    adminServer.requestHandler(req -> {
-      String path = req.path();
-      if ("/router".equals(path)) {
-        req.response().putHeader("content-type", "application/json")
-          .end(JsonObject.mapFrom(manager.getRouter()).encode());
-      } else if ("/nodes".equals(path)) {
-        req.response().putHeader("content-type", "application/json")
-          .end(new JsonObject().put("nodes", manager.getNodeCount())
-            .put("lastSeen", manager.getLastSeen()).encode());
-      } else {
-        req.response().setStatusCode(404).end();
-      }
-    });
+        // Admin HTTP（无 vertx-web，手动路由两个只读端点）
+        adminServer = vertx.createHttpServer();
+        adminServer.requestHandler(req -> {
+          String path = req.path();
+          if ("/router".equals(path)) {
+            req.response().putHeader("content-type", "application/json")
+              .end(JsonObject.mapFrom(manager.getRouter()).encode());
+          } else if ("/nodes".equals(path)) {
+            req.response().putHeader("content-type", "application/json")
+              .end(new JsonObject().put("nodes", manager.getNodeCount())
+                .put("lastSeen", manager.getLastSeen()).encode());
+          } else {
+            req.response().setStatusCode(404).end();
+          }
+        });
 
-    return adminServer.listen(adminPort)
+        return adminServer.listen(adminPort);
+      })
       .map(v -> null)
       .onSuccess(v -> LOG.info("MediateVerticle started: setId=[{},{}), sections={}, adminPort={}",
         setIdBegin, setIdSize, manager.getSectionCount(), adminPort))
