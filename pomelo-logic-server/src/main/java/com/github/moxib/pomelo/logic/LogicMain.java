@@ -2,6 +2,9 @@ package com.github.moxib.pomelo.logic;
 
 import com.github.moxib.pomelo.config.ClusterHelper;
 import com.github.moxib.pomelo.config.ConfigHolder;
+import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
+import com.github.moxib.pomelo.logic.id.WorkerIdResolver;
+import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.Vertx;
@@ -24,10 +27,16 @@ public class LogicMain extends VerticleBase {
   @Override
   public Future<?> start() {
     return ConfigHolder.load(vertx)
-      .compose(v -> Future.all(
-        vertx.deployVerticle(new LogicVerticle()),
-        vertx.deployVerticle(new ApiVerticle())
-      ))
+      .compose(v -> RedisFactory.get(vertx).connect())
+      .compose(v -> WorkerIdResolver.resolve(vertx))
+      .compose(workerId -> {
+        SnowflakeIdGenerator snowflake = new SnowflakeIdGenerator(workerId);
+        LOG.info("workerId 已解析: {}", workerId);
+        return Future.all(
+          vertx.deployVerticle(new LogicVerticle(snowflake)),
+          vertx.deployVerticle(new ApiVerticle(snowflake))
+        );
+      })
       .mapEmpty();
   }
 

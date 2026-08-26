@@ -65,17 +65,19 @@ public class ApiVerticle extends VerticleBase {
   private final SecureRandom random = new SecureRandom();
 
   private int port;
-  private SnowflakeIdGenerator snowflake;
+  private final SnowflakeIdGenerator snowflake;
 
   private HttpServer server;
   private Pool pgPool;
   private SessionRouteTable routeTable;
 
+  public ApiVerticle(SnowflakeIdGenerator snowflake) {
+    this.snowflake = snowflake;
+  }
+
   @Override
   public Future<?> start() {
     this.port = ConfigHolder.getInt("api.http.port", 8888);
-    this.snowflake = new SnowflakeIdGenerator(
-      ConfigHolder.getInt("snowflake.workerId", 1));
     pgPool = PgPoolFactory.get(vertx);
     routeTable = new SessionRouteTable(vertx);
 

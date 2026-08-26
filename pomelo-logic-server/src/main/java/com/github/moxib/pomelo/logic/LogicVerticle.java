@@ -1,7 +1,6 @@
 package com.github.moxib.pomelo.logic;
 
 import com.github.moxib.pomelo.common.ImMessage;
-import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
@@ -38,14 +37,18 @@ public class LogicVerticle extends VerticleBase {
   private GroupPullService groupPullService;
   private GroupAckService groupAckService;
 
+  private final SnowflakeIdGenerator snowflake;
+
+  public LogicVerticle(SnowflakeIdGenerator snowflake) {
+    this.snowflake = snowflake;
+  }
+
   @Override
   public Future<?> start() {
     return RedisFactory.get(vertx).connect()
       .compose(v -> {
         var messageRepo = new PgMessageRepository(vertx);
         var seqClient = new SeqClientService(vertx);
-        var snowflake = new SnowflakeIdGenerator(
-          ConfigHolder.getInt("snowflake.workerId", 1));
         var routeTable = new SessionRouteTable(vertx);
 
         PushRouter pushRouter = new PushRouter(vertx);
