@@ -44,6 +44,10 @@ public class SeqAllocVerticle extends VerticleBase {
   private long checkLeaseTimer;
   private long heartbeatTimer = -1;
 
+  private RouterNode myNode;
+  private int heartbeatFailures = 0;
+  private boolean registering = false;
+
   public SeqAllocVerticle() {
     this.config = SeqAllocConfig.fromConfig();
   }
@@ -60,6 +64,7 @@ public class SeqAllocVerticle extends VerticleBase {
     RangeId fullRange = new RangeId(0, config.maxIdSize());
     RouterNode myNode = new RouterNode(nodeId, config.ip(), config.port(),
       Collections.singletonList(fullRange));
+    this.myNode = myNode;
 
     StoreAccessor store = StoreClients.create(vertx.eventBus(), config.storePrefix(),
       config.storeReplicas(), config.storeW(), config.storeR());
@@ -85,13 +90,11 @@ public class SeqAllocVerticle extends VerticleBase {
 
     // Mediate 模式：周期心跳 + 注册（失败自动重试，返回路由表立即应用）
     mediate = new MediateClient(vertx.eventBus(), config.mediatePrefix());
-    heartbeatTimer = vertx.setPeriodic(config.heartbeatMs(), id ->
-      mediate.heartbeat(nodeId, new JsonObject())
-        .onFailure(err -> LOG.debug("heartbeat failed: nodeId={}, cause={}", nodeId, err.getMessage())));
+    heartbeatTimer = vertx.setPeriodic(config.heartbeatMs(), id -> heartbeat());
 
     return initFuture
       .onSuccess(v -> {
-        registerWithMediateWithRetry(myNode, 0);
+        ensureRegistered();
         LOG.info("SeqAllocVerticle start initiated: nodeId={}, state={}",
           nodeId, allocManager.getState());
       })
@@ -103,16 +106,52 @@ public class SeqAllocVerticle extends VerticleBase {
   /** 注册失败后的重试间隔 */
   private static final long REGISTER_RETRY_MS = 5000;
 
+  /** 心跳连续失败达到该次数即触发重新注册 */
+  private static final int HEARTBEAT_FAILURE_THRESHOLD = 3;
+
   /**
-   * 注册到 Mediate；失败后定时重试，保证 Docker 启动乱序 / Mediate 重启后能自愈。
-   * 注册成功返回的路由表立即应用（无需等 4s 租约同步）。
+   * 周期心跳。失败或 Mediate 认为本节点未知（重启后丢失）达到阈值时触发重新注册。
    */
-  private void registerWithMediateWithRetry(RouterNode myNode, int attempt) {
-    if (mediate == null) {
+  private void heartbeat() {
+    mediate.heartbeat(config.nodeId(), new JsonObject())
+      .onSuccess(ok -> {
+        if (Boolean.TRUE.equals(ok)) {
+          heartbeatFailures = 0;
+        } else {
+          onHeartbeatLost("mediate 认为本节点未知（可能已重启）");
+        }
+      })
+      .onFailure(err -> onHeartbeatLost("mediate heartbeat 失败"));
+  }
+
+  private void onHeartbeatLost(String reason) {
+    heartbeatFailures++;
+    if (heartbeatFailures >= HEARTBEAT_FAILURE_THRESHOLD) {
+      heartbeatFailures = 0;
+      LOG.warn("{}，触发重新注册: nodeId={}", reason, config.nodeId());
+      ensureRegistered();
+    }
+  }
+
+  /**
+   * 确保本节点已注册到 Mediate。已有注册流程进行中时直接返回，避免并发重复注册。
+   */
+  private void ensureRegistered() {
+    if (mediate == null || registering) {
       return;
     }
+    registering = true;
+    registerWithMediateWithRetry(0);
+  }
+
+  /**
+   * 注册到 Mediate；失败后定时重试。注册成功返回的路由表立即应用（无需等 4s 租约同步）。
+   */
+  private void registerWithMediateWithRetry(int attempt) {
     mediate.register(myNode)
       .onSuccess(router -> {
+        registering = false;
+        heartbeatFailures = 0;
         allocManager.updateRouter(router);
         LOG.info("SeqAllocVerticle registered with Mediate: nodeId={}, routerVersion={}, state={}",
           config.nodeId(), router.getVersion(), allocManager.getState());
@@ -120,7 +159,7 @@ public class SeqAllocVerticle extends VerticleBase {
       .onFailure(err -> {
         LOG.warn("register with Mediate failed (attempt {}), retry in {}ms: nodeId={}, cause={}",
           attempt + 1, REGISTER_RETRY_MS, config.nodeId(), err.getMessage());
-        vertx.setTimer(REGISTER_RETRY_MS, id -> registerWithMediateWithRetry(myNode, attempt + 1));
+        vertx.setTimer(REGISTER_RETRY_MS, id -> registerWithMediateWithRetry(attempt + 1));
       });
   }
 
