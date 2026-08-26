@@ -5,12 +5,12 @@ import com.github.moxib.pomelo.seqsvr.proto.Router;
 import com.github.moxib.pomelo.seqsvr.proto.RouterNode;
 import com.github.moxib.pomelo.seqsvr.proto.SeqSvrConstants;
 import com.github.moxib.pomelo.seqsvr.rpc.StoreAccessor;
+import io.vertx.core.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +63,26 @@ public class MediateManager {
     this.sectionCount = setId.calcSetSectionSize();
     this.heartbeatTimeoutMs = heartbeatTimeoutMs;
     this.router = new Router(0, Collections.emptyList());
+  }
+
+  /**
+   * 启动时从 Store 载入上一版路由表，作为增量迁移的基准，避免重启后从零重排。
+   * 载入失败（Store 未就绪）时保持空路由表，由节点重新注册触发重建。
+   */
+  public Future<Void> init() {
+    return store.loadRouteTable()
+      .onSuccess(loaded -> {
+        if (loaded != null && !loaded.getNodeList().isEmpty()) {
+          this.router = loaded;
+          LOG.info("MediateManager loaded persisted router: version={}, nodes={}",
+            loaded.getVersion(), loaded.getNodeList().size());
+        }
+      })
+      .recover(err -> {
+        LOG.warn("load persisted router failed, starting with empty assignment: {}", err.getMessage());
+        return Future.succeededFuture();
+      })
+      .mapEmpty();
   }
 
   // ==================== 注册 / 心跳 / 下线 ====================
@@ -146,33 +166,146 @@ public class MediateManager {
       return new Router(0, Collections.emptyList());
     }
 
-    // 节点按 nodeId 排序，保证路由表确定性
-    List<NodeInfo> alive = new ArrayList<>(nodes.values());
-    alive.sort(Comparator.comparing(info -> info.node.getNodeId()));
+    // 存活节点按 nodeId 排序，保证路由表确定性
+    List<String> aliveIds = new ArrayList<>(nodes.keySet());
+    aliveIds.sort(String::compareTo);
 
-    int n = alive.size();
-    int chunk = sectionCount / n;
+    int n = aliveIds.size();
+    Map<String, List<Integer>> owned = currentOwnership(aliveIds);
+    List<Integer> free = freeSections(owned);
+
+    int base = sectionCount / n;
     int remainder = sectionCount % n;
-    int cursor = 0;
-    // setId 边界用 long 计算：id 空间接近 2^31 时，最后一个 section 的 idBegin + size 可能超出 int
-    long setIdEnd = (long) setId.getIdBegin() + setId.getSize();
-
-    List<RouterNode> nodeList = new ArrayList<>(n);
+    Map<String, Integer> target = new HashMap<>();
     for (int i = 0; i < n; i++) {
-      int len = chunk + (i < remainder ? 1 : 0);
-      int s0 = cursor;
-      cursor = s0 + len;
-      long idBeginLong = (long) setId.getIdBegin() + (long) s0 * SeqSvrConstants.SECTION_SIZE;
-      // size 截断到 setId 边界，避免最后一个 section 超出 id 空间导致 int 溢出
-      long sizeLong = Math.min((long) len * SeqSvrConstants.SECTION_SIZE, setIdEnd - idBeginLong);
-      int idBegin = (int) idBeginLong;
-      int size = (int) sizeLong;
-      RouterNode node = alive.get(i).node;
-      nodeList.add(new RouterNode(node.getNodeId(), node.getIp(), node.getPort(),
-        Collections.singletonList(new RangeId(idBegin, size))));
+      target.put(aliveIds.get(i), base + (i < remainder ? 1 : 0));
     }
 
+    balance(owned, free, target, aliveIds);
+
+    List<RouterNode> nodeList = new ArrayList<>(n);
+    for (String id : aliveIds) {
+      RouterNode node = nodes.get(id).node;
+      nodeList.add(new RouterNode(node.getNodeId(), node.getIp(), node.getPort(), toRanges(owned.get(id))));
+    }
     return new Router(router.getVersion() + 1, nodeList);
+  }
+
+  /**
+   * 当前存活节点各自持有的 section 索引（升序），来源 = 上一版路由表。
+   * 已下线节点持有的号段不在此列，会进入 free。
+   */
+  private Map<String, List<Integer>> currentOwnership(List<String> aliveIds) {
+    Map<String, List<Integer>> owned = new HashMap<>();
+    for (String id : aliveIds) {
+      owned.put(id, new ArrayList<>());
+    }
+    for (RouterNode rn : router.getNodeList()) {
+      if (!aliveIds.contains(rn.getNodeId())) {
+        continue;
+      }
+      List<Integer> secs = owned.get(rn.getNodeId());
+      for (RangeId range : rn.getSectionRanges()) {
+        int first = (range.getIdBegin() - setId.getIdBegin()) / SeqSvrConstants.SECTION_SIZE;
+        int count = range.calcSetSectionSize();
+        for (int s = first; s < first + count; s++) {
+          secs.add(s);
+        }
+      }
+      Collections.sort(secs);
+    }
+    return owned;
+  }
+
+  /**
+   * 未被任何存活节点持有的 section 索引（升序）——下线节点遗留或从未分配。
+   */
+  private List<Integer> freeSections(Map<String, List<Integer>> owned) {
+    boolean[] used = new boolean[sectionCount];
+    for (List<Integer> secs : owned.values()) {
+      for (int s : secs) {
+        used[s] = true;
+      }
+    }
+    List<Integer> free = new ArrayList<>();
+    for (int s = 0; s < sectionCount; s++) {
+      if (!used[s]) {
+        free.add(s);
+      }
+    }
+    return free;
+  }
+
+  /**
+   * 贪心迁移：超载节点从尾部割出 section 给欠载节点；欠载仍不足时从 free 补齐。
+   * 每次只移动最少的 section，避免存量节点之间无谓重排。
+   */
+  private void balance(Map<String, List<Integer>> owned, List<Integer> free,
+                       Map<String, Integer> target, List<String> aliveIds) {
+    while (true) {
+      String donor = null;
+      String receiver = null;
+      int maxSurplus = 0;
+      int maxDeficit = 0;
+      for (String id : aliveIds) {
+        int diff = owned.get(id).size() - target.get(id);
+        if (diff > maxSurplus) {
+          donor = id;
+          maxSurplus = diff;
+        }
+        if (-diff > maxDeficit) {
+          receiver = id;
+          maxDeficit = -diff;
+        }
+      }
+      if (maxSurplus == 0 && maxDeficit == 0) {
+        return;
+      }
+      if (donor != null && receiver != null) {
+        moveTail(owned.get(donor), owned.get(receiver), Math.min(maxSurplus, maxDeficit));
+      } else if (receiver != null) {
+        moveTail(free, owned.get(receiver), Math.min(maxDeficit, free.size()));
+      } else {
+        // 仅有超载节点（sum(target)==sectionCount 时不会出现），防御性结束
+        return;
+      }
+    }
+  }
+
+  /** 从 from 尾部移出 k 个元素追加到 to。 */
+  private void moveTail(List<Integer> from, List<Integer> to, int k) {
+    for (int i = 0; i < k; i++) {
+      to.add(from.remove(from.size() - 1));
+    }
+  }
+
+  /** 把升序 section 索引列表合并成连续的 RangeId。 */
+  private List<RangeId> toRanges(List<Integer> secs) {
+    if (secs.isEmpty()) {
+      return Collections.emptyList();
+    }
+    Collections.sort(secs);
+    long setIdBeginL = setId.getIdBegin();
+    long setIdEnd = setIdBeginL + setId.getSize();
+    List<RangeId> ranges = new ArrayList<>();
+    int start = secs.get(0);
+    int prev = start;
+    for (int i = 1; i < secs.size(); i++) {
+      int cur = secs.get(i);
+      if (cur != prev + 1) {
+        ranges.add(buildRange(setIdBeginL, setIdEnd, start, prev));
+        start = cur;
+      }
+      prev = cur;
+    }
+    ranges.add(buildRange(setIdBeginL, setIdEnd, start, prev));
+    return ranges;
+  }
+
+  private RangeId buildRange(long setIdBeginL, long setIdEnd, int startSection, int endSection) {
+    long idBegin = setIdBeginL + (long) startSection * SeqSvrConstants.SECTION_SIZE;
+    long idEnd = Math.min(setIdEnd, setIdBeginL + (long) (endSection + 1) * SeqSvrConstants.SECTION_SIZE);
+    return new RangeId((int) idBegin, (int) (idEnd - idBegin));
   }
 
   // ==================== Getters ====================
