@@ -175,26 +175,74 @@ generateIncrementalRouter(aliveNodes):
 - **为什么 max 而非 last-write-wins**：seq 单调递增，且租约保证「任意 section 任意时刻只有一个写者」（removed 立即卸载 / added pending 5s，见 §4.2）。副本间无并发写冲突，max = 真值。
 - **fail-safe 是设计的一部分**：2/3 副本挂时仲裁无法满足 → `checkLease()` 5s 后 `state=ERROR` 停发号，宁可停摆不冒 seq 复用。
 
-**部署要点（M=3）**
+**部署清单（M=3，W=2，R=2）**
 
-- 3 个 `StoreVerticle`，`replicaId=r1/r2/r3` 唯一，**`dataDir` 必须不同**——`StoreManager` 是 mmap 单文件，两个副本共用 dataDir 等于 map 同一个文件，是伪副本。
-- AllocSvr 与 MediateSvr 两侧都要设：
-  ```
-  seqsvr.store.replicas=seqsvr.store.r1,seqsvr.store.r2,seqsvr.store.r3
-  seqsvr.store.w=2
-  seqsvr.store.r=2
-  ```
+所有进程用 `-Dvertx.cluster=true` 加入同一 Redis 集群 EventBus。
+
+**1. 副本配置（每个 StoreSvr 一个）**
+
+| 副本 | `-Dseqsvr.store.replicaId` | `-Dseqsvr.dataDir`（必须互不相同） |
+|---|---|---|
+| r1 | `r1` | `data/seqsvr-r1` |
+| r2 | `r2` | `data/seqsvr-r2` |
+| r3 | `r3` | `data/seqsvr-r3` |
+
+`seqsvr.setIdBegin` / `seqsvr.setIdSize` 三个副本必须一致（默认 `0` / `PRODUCTION_MAX_ID_SIZE`）。
+
+**2. 客户端配置（AllocSvr 与 MediateSvr 两侧都要设）**
+
+```
+seqsvr.store.replicas=seqsvr.store.r1,seqsvr.store.r2,seqsvr.store.r3
+seqsvr.store.w=2
+seqsvr.store.r=2
+```
+
+**3. 启动顺序与命令**
+
+先起全部 StoreSvr，再起 MediateSvr，最后起 AllocSvr：
+
+```bash
+# 三个 Store 副本（三个终端 / 三个容器）
+mvn -pl pomelo-seqsvr/pomelo-seqsvr-store exec:java \
+  -Dexec.mainClass=com.github.moxib.pomelo.seqsvr.store.StoreMain \
+  -Dvertx.cluster=true -Dseqsvr.store.replicaId=r1 -Dseqsvr.dataDir=data/seqsvr-r1
+
+mvn -pl pomelo-seqsvr/pomelo-seqsvr-store exec:java \
+  -Dexec.mainClass=com.github.moxib.pomelo.seqsvr.store.StoreMain \
+  -Dvertx.cluster=true -Dseqsvr.store.replicaId=r2 -Dseqsvr.dataDir=data/seqsvr-r2
+
+mvn -pl pomelo-seqsvr/pomelo-seqsvr-store exec:java \
+  -Dexec.mainClass=com.github.moxib.pomelo.seqsvr.store.StoreMain \
+  -Dvertx.cluster=true -Dseqsvr.store.replicaId=r3 -Dseqsvr.dataDir=data/seqsvr-r3
+
+# MediateSvr
+mvn -pl pomelo-seqsvr/pomelo-seqsvr-mediate exec:java \
+  -Dexec.mainClass=com.github.moxib.pomelo.seqsvr.mediate.MediateMain \
+  -Dvertx.cluster=true \
+  -Dseqsvr.store.replicas=seqsvr.store.r1,seqsvr.store.r2,seqsvr.store.r3 \
+  -Dseqsvr.store.w=2 -Dseqsvr.store.r=2
+
+# AllocSvr（mediate.enabled=true 才会注册到 Mediate）
+mvn -pl pomelo-seqsvr/pomelo-seqsvr-server exec:java \
+  -Dexec.mainClass=com.github.moxib.pomelo.seqsvr.SeqAllocMain \
+  -Dvertx.cluster=true -Dseqsvr.nodeId=node-1 -Dseqsvr.mediate.enabled=true \
+  -Dseqsvr.store.replicas=seqsvr.store.r1,seqsvr.store.r2,seqsvr.store.r3 \
+  -Dseqsvr.store.w=2 -Dseqsvr.store.r=2
+```
 
 **footgun（必须约束）**：`StoreVerticle` 每个副本都注册共享地址 `seqsvr.store.*`。若某侧漏设 `replicas` 误走单副本 `EventBusStoreClient`，其写会经共享地址被 EventBus round-robin 到某个副本，只写 1 份，副本静默分叉且无人报错。缓解二选一：
 
 - 有副本运行时不下发共享 consumer（共享地址仅在单副本模式下注册）；或
 - 启动校验：`replicas` 非空则强制两侧都用 `ReplicatedStoreClient`，单副本 client 拒连多副本拓扑。
 
-**验证清单**
+**4. 混沌验证步骤**
 
-- 跑现有 `SeqSvrNrwIntegrationTest`。
-- 混沌三连：① kill 1 副本 → 仲裁仍满足，seq 单调不回退；② kill 2 副本 → AllocSvr 租约到期停发号（fail-safe 生效）；③ 恢复副本 → 租约恢复、重载 maxSeqs、继续发号。
-- 单写者假设回归：构造迁移窗口（removed/pending 交界），断言同一 section 无并发双写。
+先跑现有集成测试 `SeqSvrNrwIntegrationTest`（覆盖仲裁读写路径），再做以下手动演练：
+
+- **kill 1 副本**：`kill -9 <r3 的 pid>`，剩 r1/r2。预期：读 `R=2`、写 `W=2` 仍满足，压测发号 seq 单调不回退、无报错。
+- **kill 2 副本**：再 `kill -9 <r2 的 pid>`，仅剩 r1。预期：读仲裁 `R=2` 无法满足（只有 1 个存活），AllocSvr 租约同步失败，约 5s 后日志出现 `lease expired`、`state=ERROR` 停发号；确认**无 seq 复用**（宁可停摆）。
+- **恢复副本**：重启 r2、r3。预期：租约恢复，`loadMaxSeqsData` 重载，AllocSvr 回到 INITED 继续发号，且新发 seq 大于宕机前已发的最大值。
+- **单写者假设回归**：构造号段迁移窗口（扩容触发 removed 立即卸载 / added pending 5s），观察日志确认同一 section 无并发双写。
 
 **落地要点 / 权衡**
 
