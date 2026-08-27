@@ -123,6 +123,12 @@ enum Cmd {
     // S→C 返回群消息已读用户列表
     CMD_GROUP_MSG_READ_RESP = 0x0099;
 
+    // 媒体上传
+    // C→S 申请上传预签名
+    CMD_UPLOAD_REQ    = 0x00A0;
+    // S→C 返回上传预签名 URL
+    CMD_UPLOAD_RESP   = 0x00A1;
+
     // S→C 通用错误响应
     CMD_ERROR = 0xFFFF;
 }

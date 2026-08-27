@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package im.upload;
+
+option java_package = "com.github.moxib.pomelo.proto.upload";
+option java_outer_classname = "UploadProto";
+
+// ============================================================================
+// 媒体上传预签名
+// ============================================================================
+message UploadReq {
+    // 媒体类型（MsgType: 2=image 3=voice 4=video 5=file 6=emoji）
+    int32 media_type    = 1;
+    // 原始文件名（含扩展名）
+    string file_name    = 2;
+    // 文件大小（字节）
+    int64 size          = 3;
+    // MIME 类型（可选）
+    string content_type = 4;
+}
+
+message UploadResp {
+    // 响应码
+    int32 code           = 1;
+    // 响应消息
+    string message       = 2;
+    // 稳定 object key
+    string object_key    = 3;
+    // presigned PUT URL
+    string presigned_url = 4;
+    // 过期时间（Unix 毫秒）
+    int64 expire_at      = 5;
+}
