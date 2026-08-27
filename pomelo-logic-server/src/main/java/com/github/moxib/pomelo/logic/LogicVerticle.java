@@ -4,6 +4,7 @@ import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
+import com.github.moxib.pomelo.logic.infrastructure.MinioObjectPresigner;
 import com.github.moxib.pomelo.logic.infrastructure.PgGroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.PgMessageRepository;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
@@ -53,16 +54,19 @@ public class LogicVerticle extends VerticleBase {
 
         PushRouter pushRouter = new PushRouter(vertx);
 
-        c2cService = new C2CService(pushRouter, messageRepo, seqClient, snowflake, routeTable);
+        var presigner = new MinioObjectPresigner();
+        var mediaUrlSigner = new MinioMediaUrlSigner(presigner);
+
+        c2cService = new C2CService(pushRouter, messageRepo, seqClient, snowflake, routeTable, mediaUrlSigner);
         ackService = new AckService(pushRouter, messageRepo, routeTable);
         authService = new AuthService(vertx);
-        pullService = new PullService(messageRepo);
+        pullService = new PullService(messageRepo, mediaUrlSigner);
         ctrlService = new CtrlService();
         var groupRepo = new PgGroupRepository(vertx);
-        c2gService = new C2GService(vertx, pushRouter, groupRepo, seqClient, snowflake, routeTable);
+        c2gService = new C2GService(vertx, pushRouter, groupRepo, seqClient, snowflake, routeTable, mediaUrlSigner);
         friendService = new FriendService(vertx, pushRouter);
         groupService = new GroupManagementService(pushRouter, groupRepo, routeTable, snowflake, messageRepo);
-        groupPullService = new GroupPullService(groupRepo, messageRepo);
+        groupPullService = new GroupPullService(groupRepo, messageRepo, mediaUrlSigner);
         groupAckService = new GroupAckService(groupRepo, messageRepo);
 
         var bus = vertx.eventBus();

@@ -33,14 +33,17 @@ public class C2CService extends ServiceBase {
   private final SeqClientService seqClient;
   private final SnowflakeIdGenerator snowflake;
   private final SessionRouteTable routeTable;
+  private final MediaUrlSigner mediaUrlSigner;
 
   public C2CService(PushRouter pushRouter, MessageRepository messageRepo, SeqClientService seqClient,
-                    SnowflakeIdGenerator snowflake, SessionRouteTable routeTable) {
+                    SnowflakeIdGenerator snowflake, SessionRouteTable routeTable,
+                    MediaUrlSigner mediaUrlSigner) {
     this.pushRouter = pushRouter;
     this.messageRepo = messageRepo;
     this.seqClient = seqClient;
     this.snowflake = snowflake;
     this.routeTable = routeTable;
+    this.mediaUrlSigner = mediaUrlSigner;
   }
 
   public Future<ImMessage> process(ImMessage message) {
@@ -130,10 +133,11 @@ public class C2CService extends ServiceBase {
       .onSuccess(recipientCodec -> {
         byte[] body;
         byte pushCodec;
+        String signedContent = mediaUrlSigner.signContent(record.getMsgType(), record.getContent());
         if (recipientCodec == ProtobufCodec.CODEC_ID) {
           CommonProto.MessageContent.Builder msgContentBuilder = CommonProto.MessageContent.newBuilder()
             .setMsgTypeValue(record.getMsgType())
-            .setContent(ByteString.copyFromUtf8(record.getContent() != null ? record.getContent() : ""));
+            .setContent(ByteString.copyFromUtf8(signedContent != null ? signedContent : ""));
           if (senderUserName != null && !senderUserName.isEmpty()) {
             msgContentBuilder.putExt("senderUserName", senderUserName);
           }
@@ -161,7 +165,7 @@ public class C2CService extends ServiceBase {
           JsonObject jsonMsgContent = new JsonObject();
           json.put("message", jsonMsgContent);
           jsonMsgContent.put("msgType", record.getMsgType());
-          jsonMsgContent.put("content", record.getContent() != null ? record.getContent() : "");
+          jsonMsgContent.put("content", signedContent != null ? signedContent : "");
           json.put("id", String.valueOf(record.getId()));
           json.put("messageId", String.valueOf(record.getId()));
           json.put("createdAt", record.getCreatedAt());

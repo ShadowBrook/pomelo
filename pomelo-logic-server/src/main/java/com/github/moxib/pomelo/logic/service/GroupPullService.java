@@ -32,10 +32,13 @@ public class GroupPullService extends ServiceBase {
 
   private final GroupRepository groupRepo;
   private final MessageRepository messageRepo;
+  private final MediaUrlSigner mediaUrlSigner;
 
-  public GroupPullService(GroupRepository groupRepo, MessageRepository messageRepo) {
+  public GroupPullService(GroupRepository groupRepo, MessageRepository messageRepo,
+                          MediaUrlSigner mediaUrlSigner) {
     this.groupRepo = groupRepo;
     this.messageRepo = messageRepo;
+    this.mediaUrlSigner = mediaUrlSigner;
   }
 
   public Future<ImMessage> process(ImMessage message) {
@@ -109,9 +112,10 @@ public class GroupPullService extends ServiceBase {
         .setCode(0).setMessage("success").setHasMore(msgs.size() >= limit);
       for (GroupMsgWithSender m : msgs) {
         UserIdInfo senderInfo = idToInfo.get(m.getSenderNumericId());
+        String signedContent = mediaUrlSigner.signContent(m.getMsgType(), m.getContent());
         CommonProto.MessageContent.Builder mc = CommonProto.MessageContent.newBuilder()
           .setMsgTypeValue(m.getMsgType())
-          .setContent(ByteString.copyFromUtf8(m.getContent() != null ? m.getContent() : ""))
+          .setContent(ByteString.copyFromUtf8(signedContent != null ? signedContent : ""))
           .setTimestamp(m.getCreatedAt());
         mc.putExt("id", String.valueOf(m.getId()));
         mc.putExt("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(m.getSenderNumericId()));
@@ -140,7 +144,7 @@ public class GroupPullService extends ServiceBase {
         msg.put("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(m.getSenderNumericId()));
         msg.put("groupId", String.valueOf(m.getGroupId()));
         msg.put("msgType", m.getMsgType());
-        msg.put("content", m.getContent() != null ? m.getContent() : "");
+        msg.put("content", mediaUrlSigner.signContent(m.getMsgType(), m.getContent()));
         msg.put("seq", m.getSeq());
         msg.put("createdAt", m.getCreatedAt());
         if (senderInfo != null) {
