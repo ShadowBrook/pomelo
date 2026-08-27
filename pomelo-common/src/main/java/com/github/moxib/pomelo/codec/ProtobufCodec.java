@@ -10,6 +10,7 @@ import com.github.moxib.pomelo.proto.heartbeat.HeartbeatProto;
 import com.github.moxib.pomelo.proto.pull.PullProto;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
 import com.github.moxib.pomelo.proto.relation.RelationProto;
+import com.github.moxib.pomelo.proto.upload.UploadProto;
 import com.google.protobuf.Message;
 import com.google.protobuf.Parser;
 
@@ -119,6 +120,10 @@ public class ProtobufCodec<T> implements MessageCodec<T> {
     registerProto(CommonProto.Cmd.CMD_GROUP_ACK_RESP_VALUE, GroupMgmtProto.GroupAckResp.parser(), GroupMgmtProto.GroupAckResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_MSG_READ_REQ_VALUE, GroupMgmtProto.GetGroupMsgReadStatusReq.parser(), GroupMgmtProto.GetGroupMsgReadStatusReq.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_MSG_READ_RESP_VALUE, GroupMgmtProto.GetGroupMsgReadStatusResp.parser(), GroupMgmtProto.GetGroupMsgReadStatusResp.class);
+
+    // 媒体上传
+    registerProto(CommonProto.Cmd.CMD_UPLOAD_REQ_VALUE, UploadProto.UploadReq.parser(), UploadProto.UploadReq.class);
+    registerProto(CommonProto.Cmd.CMD_UPLOAD_RESP_VALUE, UploadProto.UploadResp.parser(), UploadProto.UploadResp.class);
   }
 
   /**
