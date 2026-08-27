@@ -48,3 +48,13 @@ friend:
 
 message:
   pullLimit: 50
+
+media:
+  endpoint: http://silo:9000
+  bucket: pomelo-media
+  accessKey: pomelo-admin
+  secretKey: pomelo-admin-password
+  putUrlTtlSeconds: 300
+  getUrlTtlSeconds: 604800
+  maxSizeBytes: 104857600
+  allowedExtensions: "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip"
