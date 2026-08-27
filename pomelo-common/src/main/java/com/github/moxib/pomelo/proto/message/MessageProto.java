@@ -414,6 +414,48 @@ public final class MessageProto {
      */
     com.github.moxib.pomelo.proto.ack.AckProto.AckNotifyOrBuilder getAckNotifyOrBuilder();
 
+    /**
+     * <pre>
+     * 媒体上传
+     * </pre>
+     *
+     * <code>.im.upload.UploadReq upload_req = 70;</code>
+     * @return Whether the uploadReq field is set.
+     */
+    boolean hasUploadReq();
+    /**
+     * <pre>
+     * 媒体上传
+     * </pre>
+     *
+     * <code>.im.upload.UploadReq upload_req = 70;</code>
+     * @return The uploadReq.
+     */
+    com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq getUploadReq();
+    /**
+     * <pre>
+     * 媒体上传
+     * </pre>
+     *
+     * <code>.im.upload.UploadReq upload_req = 70;</code>
+     */
+    com.github.moxib.pomelo.proto.upload.UploadProto.UploadReqOrBuilder getUploadReqOrBuilder();
+
+    /**
+     * <code>.im.upload.UploadResp upload_resp = 71;</code>
+     * @return Whether the uploadResp field is set.
+     */
+    boolean hasUploadResp();
+    /**
+     * <code>.im.upload.UploadResp upload_resp = 71;</code>
+     * @return The uploadResp.
+     */
+    com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp getUploadResp();
+    /**
+     * <code>.im.upload.UploadResp upload_resp = 71;</code>
+     */
+    com.github.moxib.pomelo.proto.upload.UploadProto.UploadRespOrBuilder getUploadRespOrBuilder();
+
     com.github.moxib.pomelo.proto.message.MessageProto.MsgBody.BodyCase getBodyCase();
   }
   /**
@@ -484,6 +526,8 @@ public final class MessageProto {
       ACK_REQ(62),
       ACK_RESP(63),
       ACK_NOTIFY(64),
+      UPLOAD_REQ(70),
+      UPLOAD_RESP(71),
       BODY_NOT_SET(0);
       private final int value;
       private BodyCase(int value) {
@@ -521,6 +565,8 @@ public final class MessageProto {
           case 62: return ACK_REQ;
           case 63: return ACK_RESP;
           case 64: return ACK_NOTIFY;
+          case 70: return UPLOAD_REQ;
+          case 71: return UPLOAD_RESP;
           case 0: return BODY_NOT_SET;
           default: return null;
         }
@@ -1258,6 +1304,80 @@ public final class MessageProto {
       return com.github.moxib.pomelo.proto.ack.AckProto.AckNotify.getDefaultInstance();
     }
 
+    public static final int UPLOAD_REQ_FIELD_NUMBER = 70;
+    /**
+     * <pre>
+     * 媒体上传
+     * </pre>
+     *
+     * <code>.im.upload.UploadReq upload_req = 70;</code>
+     * @return Whether the uploadReq field is set.
+     */
+    @java.lang.Override
+    public boolean hasUploadReq() {
+      return bodyCase_ == 70;
+    }
+    /**
+     * <pre>
+     * 媒体上传
+     * </pre>
+     *
+     * <code>.im.upload.UploadReq upload_req = 70;</code>
+     * @return The uploadReq.
+     */
+    @java.lang.Override
+    public com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq getUploadReq() {
+      if (bodyCase_ == 70) {
+         return (com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq) body_;
+      }
+      return com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.getDefaultInstance();
+    }
+    /**
+     * <pre>
+     * 媒体上传
+     * </pre>
+     *
+     * <code>.im.upload.UploadReq upload_req = 70;</code>
+     */
+    @java.lang.Override
+    public com.github.moxib.pomelo.proto.upload.UploadProto.UploadReqOrBuilder getUploadReqOrBuilder() {
+      if (bodyCase_ == 70) {
+         return (com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq) body_;
+      }
+      return com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.getDefaultInstance();
+    }
+
+    public static final int UPLOAD_RESP_FIELD_NUMBER = 71;
+    /**
+     * <code>.im.upload.UploadResp upload_resp = 71;</code>
+     * @return Whether the uploadResp field is set.
+     */
+    @java.lang.Override
+    public boolean hasUploadResp() {
+      return bodyCase_ == 71;
+    }
+    /**
+     * <code>.im.upload.UploadResp upload_resp = 71;</code>
+     * @return The uploadResp.
+     */
+    @java.lang.Override
+    public com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp getUploadResp() {
+      if (bodyCase_ == 71) {
+         return (com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp) body_;
+      }
+      return com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.getDefaultInstance();
+    }
+    /**
+     * <code>.im.upload.UploadResp upload_resp = 71;</code>
+     */
+    @java.lang.Override
+    public com.github.moxib.pomelo.proto.upload.UploadProto.UploadRespOrBuilder getUploadRespOrBuilder() {
+      if (bodyCase_ == 71) {
+         return (com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp) body_;
+      }
+      return com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.getDefaultInstance();
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -1334,6 +1454,12 @@ public final class MessageProto {
       }
       if (bodyCase_ == 64) {
         output.writeMessage(64, (com.github.moxib.pomelo.proto.ack.AckProto.AckNotify) body_);
+      }
+      if (bodyCase_ == 70) {
+        output.writeMessage(70, (com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq) body_);
+      }
+      if (bodyCase_ == 71) {
+        output.writeMessage(71, (com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp) body_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -1427,6 +1553,14 @@ public final class MessageProto {
       if (bodyCase_ == 64) {
         size += com.google.protobuf.CodedOutputStream
           .computeMessageSize(64, (com.github.moxib.pomelo.proto.ack.AckProto.AckNotify) body_);
+      }
+      if (bodyCase_ == 70) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(70, (com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq) body_);
+      }
+      if (bodyCase_ == 71) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeMessageSize(71, (com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp) body_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -1526,6 +1660,14 @@ public final class MessageProto {
           if (!getAckNotify()
               .equals(other.getAckNotify())) return false;
           break;
+        case 70:
+          if (!getUploadReq()
+              .equals(other.getUploadReq())) return false;
+          break;
+        case 71:
+          if (!getUploadResp()
+              .equals(other.getUploadResp())) return false;
+          break;
         case 0:
         default:
       }
@@ -1622,6 +1764,14 @@ public final class MessageProto {
         case 64:
           hash = (37 * hash) + ACK_NOTIFY_FIELD_NUMBER;
           hash = (53 * hash) + getAckNotify().hashCode();
+          break;
+        case 70:
+          hash = (37 * hash) + UPLOAD_REQ_FIELD_NUMBER;
+          hash = (53 * hash) + getUploadReq().hashCode();
+          break;
+        case 71:
+          hash = (37 * hash) + UPLOAD_RESP_FIELD_NUMBER;
+          hash = (53 * hash) + getUploadResp().hashCode();
           break;
         case 0:
         default:
@@ -1824,6 +1974,12 @@ public final class MessageProto {
         if (ackNotifyBuilder_ != null) {
           ackNotifyBuilder_.clear();
         }
+        if (uploadReqBuilder_ != null) {
+          uploadReqBuilder_.clear();
+        }
+        if (uploadRespBuilder_ != null) {
+          uploadRespBuilder_.clear();
+        }
         bodyCase_ = 0;
         body_ = null;
         return this;
@@ -1947,6 +2103,14 @@ public final class MessageProto {
         if (bodyCase_ == 64 &&
             ackNotifyBuilder_ != null) {
           result.body_ = ackNotifyBuilder_.build();
+        }
+        if (bodyCase_ == 70 &&
+            uploadReqBuilder_ != null) {
+          result.body_ = uploadReqBuilder_.build();
+        }
+        if (bodyCase_ == 71 &&
+            uploadRespBuilder_ != null) {
+          result.body_ = uploadRespBuilder_.build();
         }
       }
 
@@ -2076,6 +2240,14 @@ public final class MessageProto {
           }
           case ACK_NOTIFY: {
             mergeAckNotify(other.getAckNotify());
+            break;
+          }
+          case UPLOAD_REQ: {
+            mergeUploadReq(other.getUploadReq());
+            break;
+          }
+          case UPLOAD_RESP: {
+            mergeUploadResp(other.getUploadResp());
             break;
           }
           case BODY_NOT_SET: {
@@ -2253,6 +2425,20 @@ public final class MessageProto {
                 bodyCase_ = 64;
                 break;
               } // case 514
+              case 562: {
+                input.readMessage(
+                    getUploadReqFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                bodyCase_ = 70;
+                break;
+              } // case 562
+              case 570: {
+                input.readMessage(
+                    getUploadRespFieldBuilder().getBuilder(),
+                    extensionRegistry);
+                bodyCase_ = 71;
+                break;
+              } // case 570
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -5429,6 +5615,326 @@ public final class MessageProto {
         onChanged();
         return ackNotifyBuilder_;
       }
+
+      private com.google.protobuf.SingleFieldBuilderV3<
+          com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq, com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.Builder, com.github.moxib.pomelo.proto.upload.UploadProto.UploadReqOrBuilder> uploadReqBuilder_;
+      /**
+       * <pre>
+       * 媒体上传
+       * </pre>
+       *
+       * <code>.im.upload.UploadReq upload_req = 70;</code>
+       * @return Whether the uploadReq field is set.
+       */
+      @java.lang.Override
+      public boolean hasUploadReq() {
+        return bodyCase_ == 70;
+      }
+      /**
+       * <pre>
+       * 媒体上传
+       * </pre>
+       *
+       * <code>.im.upload.UploadReq upload_req = 70;</code>
+       * @return The uploadReq.
+       */
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq getUploadReq() {
+        if (uploadReqBuilder_ == null) {
+          if (bodyCase_ == 70) {
+            return (com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq) body_;
+          }
+          return com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.getDefaultInstance();
+        } else {
+          if (bodyCase_ == 70) {
+            return uploadReqBuilder_.getMessage();
+          }
+          return com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.getDefaultInstance();
+        }
+      }
+      /**
+       * <pre>
+       * 媒体上传
+       * </pre>
+       *
+       * <code>.im.upload.UploadReq upload_req = 70;</code>
+       */
+      public Builder setUploadReq(com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq value) {
+        if (uploadReqBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          body_ = value;
+          onChanged();
+        } else {
+          uploadReqBuilder_.setMessage(value);
+        }
+        bodyCase_ = 70;
+        return this;
+      }
+      /**
+       * <pre>
+       * 媒体上传
+       * </pre>
+       *
+       * <code>.im.upload.UploadReq upload_req = 70;</code>
+       */
+      public Builder setUploadReq(
+          com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.Builder builderForValue) {
+        if (uploadReqBuilder_ == null) {
+          body_ = builderForValue.build();
+          onChanged();
+        } else {
+          uploadReqBuilder_.setMessage(builderForValue.build());
+        }
+        bodyCase_ = 70;
+        return this;
+      }
+      /**
+       * <pre>
+       * 媒体上传
+       * </pre>
+       *
+       * <code>.im.upload.UploadReq upload_req = 70;</code>
+       */
+      public Builder mergeUploadReq(com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq value) {
+        if (uploadReqBuilder_ == null) {
+          if (bodyCase_ == 70 &&
+              body_ != com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.getDefaultInstance()) {
+            body_ = com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.newBuilder((com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq) body_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            body_ = value;
+          }
+          onChanged();
+        } else {
+          if (bodyCase_ == 70) {
+            uploadReqBuilder_.mergeFrom(value);
+          } else {
+            uploadReqBuilder_.setMessage(value);
+          }
+        }
+        bodyCase_ = 70;
+        return this;
+      }
+      /**
+       * <pre>
+       * 媒体上传
+       * </pre>
+       *
+       * <code>.im.upload.UploadReq upload_req = 70;</code>
+       */
+      public Builder clearUploadReq() {
+        if (uploadReqBuilder_ == null) {
+          if (bodyCase_ == 70) {
+            bodyCase_ = 0;
+            body_ = null;
+            onChanged();
+          }
+        } else {
+          if (bodyCase_ == 70) {
+            bodyCase_ = 0;
+            body_ = null;
+          }
+          uploadReqBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <pre>
+       * 媒体上传
+       * </pre>
+       *
+       * <code>.im.upload.UploadReq upload_req = 70;</code>
+       */
+      public com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.Builder getUploadReqBuilder() {
+        return getUploadReqFieldBuilder().getBuilder();
+      }
+      /**
+       * <pre>
+       * 媒体上传
+       * </pre>
+       *
+       * <code>.im.upload.UploadReq upload_req = 70;</code>
+       */
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.upload.UploadProto.UploadReqOrBuilder getUploadReqOrBuilder() {
+        if ((bodyCase_ == 70) && (uploadReqBuilder_ != null)) {
+          return uploadReqBuilder_.getMessageOrBuilder();
+        } else {
+          if (bodyCase_ == 70) {
+            return (com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq) body_;
+          }
+          return com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.getDefaultInstance();
+        }
+      }
+      /**
+       * <pre>
+       * 媒体上传
+       * </pre>
+       *
+       * <code>.im.upload.UploadReq upload_req = 70;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq, com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.Builder, com.github.moxib.pomelo.proto.upload.UploadProto.UploadReqOrBuilder> 
+          getUploadReqFieldBuilder() {
+        if (uploadReqBuilder_ == null) {
+          if (!(bodyCase_ == 70)) {
+            body_ = com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.getDefaultInstance();
+          }
+          uploadReqBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq, com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq.Builder, com.github.moxib.pomelo.proto.upload.UploadProto.UploadReqOrBuilder>(
+                  (com.github.moxib.pomelo.proto.upload.UploadProto.UploadReq) body_,
+                  getParentForChildren(),
+                  isClean());
+          body_ = null;
+        }
+        bodyCase_ = 70;
+        onChanged();
+        return uploadReqBuilder_;
+      }
+
+      private com.google.protobuf.SingleFieldBuilderV3<
+          com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp, com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.Builder, com.github.moxib.pomelo.proto.upload.UploadProto.UploadRespOrBuilder> uploadRespBuilder_;
+      /**
+       * <code>.im.upload.UploadResp upload_resp = 71;</code>
+       * @return Whether the uploadResp field is set.
+       */
+      @java.lang.Override
+      public boolean hasUploadResp() {
+        return bodyCase_ == 71;
+      }
+      /**
+       * <code>.im.upload.UploadResp upload_resp = 71;</code>
+       * @return The uploadResp.
+       */
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp getUploadResp() {
+        if (uploadRespBuilder_ == null) {
+          if (bodyCase_ == 71) {
+            return (com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp) body_;
+          }
+          return com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.getDefaultInstance();
+        } else {
+          if (bodyCase_ == 71) {
+            return uploadRespBuilder_.getMessage();
+          }
+          return com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.im.upload.UploadResp upload_resp = 71;</code>
+       */
+      public Builder setUploadResp(com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp value) {
+        if (uploadRespBuilder_ == null) {
+          if (value == null) {
+            throw new NullPointerException();
+          }
+          body_ = value;
+          onChanged();
+        } else {
+          uploadRespBuilder_.setMessage(value);
+        }
+        bodyCase_ = 71;
+        return this;
+      }
+      /**
+       * <code>.im.upload.UploadResp upload_resp = 71;</code>
+       */
+      public Builder setUploadResp(
+          com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.Builder builderForValue) {
+        if (uploadRespBuilder_ == null) {
+          body_ = builderForValue.build();
+          onChanged();
+        } else {
+          uploadRespBuilder_.setMessage(builderForValue.build());
+        }
+        bodyCase_ = 71;
+        return this;
+      }
+      /**
+       * <code>.im.upload.UploadResp upload_resp = 71;</code>
+       */
+      public Builder mergeUploadResp(com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp value) {
+        if (uploadRespBuilder_ == null) {
+          if (bodyCase_ == 71 &&
+              body_ != com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.getDefaultInstance()) {
+            body_ = com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.newBuilder((com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp) body_)
+                .mergeFrom(value).buildPartial();
+          } else {
+            body_ = value;
+          }
+          onChanged();
+        } else {
+          if (bodyCase_ == 71) {
+            uploadRespBuilder_.mergeFrom(value);
+          } else {
+            uploadRespBuilder_.setMessage(value);
+          }
+        }
+        bodyCase_ = 71;
+        return this;
+      }
+      /**
+       * <code>.im.upload.UploadResp upload_resp = 71;</code>
+       */
+      public Builder clearUploadResp() {
+        if (uploadRespBuilder_ == null) {
+          if (bodyCase_ == 71) {
+            bodyCase_ = 0;
+            body_ = null;
+            onChanged();
+          }
+        } else {
+          if (bodyCase_ == 71) {
+            bodyCase_ = 0;
+            body_ = null;
+          }
+          uploadRespBuilder_.clear();
+        }
+        return this;
+      }
+      /**
+       * <code>.im.upload.UploadResp upload_resp = 71;</code>
+       */
+      public com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.Builder getUploadRespBuilder() {
+        return getUploadRespFieldBuilder().getBuilder();
+      }
+      /**
+       * <code>.im.upload.UploadResp upload_resp = 71;</code>
+       */
+      @java.lang.Override
+      public com.github.moxib.pomelo.proto.upload.UploadProto.UploadRespOrBuilder getUploadRespOrBuilder() {
+        if ((bodyCase_ == 71) && (uploadRespBuilder_ != null)) {
+          return uploadRespBuilder_.getMessageOrBuilder();
+        } else {
+          if (bodyCase_ == 71) {
+            return (com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp) body_;
+          }
+          return com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.getDefaultInstance();
+        }
+      }
+      /**
+       * <code>.im.upload.UploadResp upload_resp = 71;</code>
+       */
+      private com.google.protobuf.SingleFieldBuilderV3<
+          com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp, com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.Builder, com.github.moxib.pomelo.proto.upload.UploadProto.UploadRespOrBuilder> 
+          getUploadRespFieldBuilder() {
+        if (uploadRespBuilder_ == null) {
+          if (!(bodyCase_ == 71)) {
+            body_ = com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.getDefaultInstance();
+          }
+          uploadRespBuilder_ = new com.google.protobuf.SingleFieldBuilderV3<
+              com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp, com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp.Builder, com.github.moxib.pomelo.proto.upload.UploadProto.UploadRespOrBuilder>(
+                  (com.github.moxib.pomelo.proto.upload.UploadProto.UploadResp) body_,
+                  getParentForChildren(),
+                  isClean());
+          body_ = null;
+        }
+        bodyCase_ = 71;
+        onChanged();
+        return uploadRespBuilder_;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -5511,29 +6017,32 @@ public final class MessageProto {
       "mon/common.proto\032\017auth/auth.proto\032\017chat/" +
       "chat.proto\032\021group/group.proto\032\017pull/pull" +
       ".proto\032\017ctrl/ctrl.proto\032\rack/ack.proto\032\031" +
-      "heartbeat/heartbeat.proto\"\274\006\n\007MsgBody\022\033\n" +
-      "\003cmd\030\001 \001(\0162\016.im.common.Cmd\022$\n\010auth_req\030\n" +
-      " \001(\0132\020.im.auth.AuthReqH\000\022&\n\tauth_resp\030\013 " +
-      "\001(\0132\021.im.auth.AuthRespH\000\022(\n\nlogout_req\030\014" +
-      " \001(\0132\022.im.auth.LogoutReqH\000\022*\n\013logout_res" +
-      "p\030\r \001(\0132\023.im.auth.LogoutRespH\000\022\"\n\007c2c_re" +
-      "q\030\024 \001(\0132\017.im.chat.C2CReqH\000\022$\n\010c2c_resp\030\025" +
-      " \001(\0132\020.im.chat.C2CRespH\000\022(\n\nc2c_notify\030\026" +
-      " \001(\0132\022.im.chat.C2CNotifyH\000\022#\n\007c2g_req\030\036 " +
-      "\001(\0132\020.im.group.C2GReqH\000\022%\n\010c2g_resp\030\037 \001(" +
-      "\0132\021.im.group.C2GRespH\000\022)\n\nc2g_notify\030  \001" +
-      "(\0132\023.im.group.C2GNotifyH\000\022$\n\010pull_req\030( " +
-      "\001(\0132\020.im.pull.PullReqH\000\022&\n\tpull_resp\030) \001" +
-      "(\0132\021.im.pull.PullRespH\000\022$\n\010ctrl_req\0302 \001(" +
-      "\0132\020.im.ctrl.CtrlReqH\000\022&\n\tctrl_resp\0303 \001(\013" +
-      "2\021.im.ctrl.CtrlRespH\000\022(\n\tctrl_push\0304 \001(\013" +
-      "2\023.im.ctrl.CtrlNotifyH\000\022\"\n\004ping\030< \001(\0132\022." +
-      "im.heartbeat.PingH\000\022\"\n\004pong\030= \001(\0132\022.im.h" +
-      "eartbeat.PongH\000\022!\n\007ack_req\030> \001(\0132\016.im.ac" +
-      "k.AckReqH\000\022#\n\010ack_resp\030? \001(\0132\017.im.ack.Ac" +
-      "kRespH\000\022\'\n\nack_notify\030@ \001(\0132\021.im.ack.Ack" +
-      "NotifyH\000B\006\n\004bodyB5\n%com.github.moxib.pom" +
-      "elo.proto.messageB\014MessageProtob\006proto3"
+      "heartbeat/heartbeat.proto\032\023upload/upload" +
+      ".proto\"\226\007\n\007MsgBody\022\033\n\003cmd\030\001 \001(\0162\016.im.com" +
+      "mon.Cmd\022$\n\010auth_req\030\n \001(\0132\020.im.auth.Auth" +
+      "ReqH\000\022&\n\tauth_resp\030\013 \001(\0132\021.im.auth.AuthR" +
+      "espH\000\022(\n\nlogout_req\030\014 \001(\0132\022.im.auth.Logo" +
+      "utReqH\000\022*\n\013logout_resp\030\r \001(\0132\023.im.auth.L" +
+      "ogoutRespH\000\022\"\n\007c2c_req\030\024 \001(\0132\017.im.chat.C" +
+      "2CReqH\000\022$\n\010c2c_resp\030\025 \001(\0132\020.im.chat.C2CR" +
+      "espH\000\022(\n\nc2c_notify\030\026 \001(\0132\022.im.chat.C2CN" +
+      "otifyH\000\022#\n\007c2g_req\030\036 \001(\0132\020.im.group.C2GR" +
+      "eqH\000\022%\n\010c2g_resp\030\037 \001(\0132\021.im.group.C2GRes" +
+      "pH\000\022)\n\nc2g_notify\030  \001(\0132\023.im.group.C2GNo" +
+      "tifyH\000\022$\n\010pull_req\030( \001(\0132\020.im.pull.PullR" +
+      "eqH\000\022&\n\tpull_resp\030) \001(\0132\021.im.pull.PullRe" +
+      "spH\000\022$\n\010ctrl_req\0302 \001(\0132\020.im.ctrl.CtrlReq" +
+      "H\000\022&\n\tctrl_resp\0303 \001(\0132\021.im.ctrl.CtrlResp" +
+      "H\000\022(\n\tctrl_push\0304 \001(\0132\023.im.ctrl.CtrlNoti" +
+      "fyH\000\022\"\n\004ping\030< \001(\0132\022.im.heartbeat.PingH\000" +
+      "\022\"\n\004pong\030= \001(\0132\022.im.heartbeat.PongH\000\022!\n\007" +
+      "ack_req\030> \001(\0132\016.im.ack.AckReqH\000\022#\n\010ack_r" +
+      "esp\030? \001(\0132\017.im.ack.AckRespH\000\022\'\n\nack_noti" +
+      "fy\030@ \001(\0132\021.im.ack.AckNotifyH\000\022*\n\nupload_" +
+      "req\030F \001(\0132\024.im.upload.UploadReqH\000\022,\n\013upl" +
+      "oad_resp\030G \001(\0132\025.im.upload.UploadRespH\000B" +
+      "\006\n\004bodyB5\n%com.github.moxib.pomelo.proto" +
+      ".messageB\014MessageProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -5546,13 +6055,14 @@ public final class MessageProto {
           com.github.moxib.pomelo.proto.ctrl.CtrlProto.getDescriptor(),
           com.github.moxib.pomelo.proto.ack.AckProto.getDescriptor(),
           com.github.moxib.pomelo.proto.heartbeat.HeartbeatProto.getDescriptor(),
+          com.github.moxib.pomelo.proto.upload.UploadProto.getDescriptor(),
         });
     internal_static_im_message_MsgBody_descriptor =
       getDescriptor().getMessageTypes().get(0);
     internal_static_im_message_MsgBody_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_message_MsgBody_descriptor,
-        new java.lang.String[] { "Cmd", "AuthReq", "AuthResp", "LogoutReq", "LogoutResp", "C2CReq", "C2CResp", "C2CNotify", "C2GReq", "C2GResp", "C2GNotify", "PullReq", "PullResp", "CtrlReq", "CtrlResp", "CtrlPush", "Ping", "Pong", "AckReq", "AckResp", "AckNotify", "Body", });
+        new java.lang.String[] { "Cmd", "AuthReq", "AuthResp", "LogoutReq", "LogoutResp", "C2CReq", "C2CResp", "C2CNotify", "C2GReq", "C2GResp", "C2GNotify", "PullReq", "PullResp", "CtrlReq", "CtrlResp", "CtrlPush", "Ping", "Pong", "AckReq", "AckResp", "AckNotify", "UploadReq", "UploadResp", "Body", });
     com.github.moxib.pomelo.proto.common.CommonProto.getDescriptor();
     com.github.moxib.pomelo.proto.auth.AuthProto.getDescriptor();
     com.github.moxib.pomelo.proto.chat.ChatProto.getDescriptor();
@@ -5561,6 +6071,7 @@ public final class MessageProto {
     com.github.moxib.pomelo.proto.ctrl.CtrlProto.getDescriptor();
     com.github.moxib.pomelo.proto.ack.AckProto.getDescriptor();
     com.github.moxib.pomelo.proto.heartbeat.HeartbeatProto.getDescriptor();
+    com.github.moxib.pomelo.proto.upload.UploadProto.getDescriptor();
   }
 
   // @@protoc_insertion_point(outer_class_scope)
