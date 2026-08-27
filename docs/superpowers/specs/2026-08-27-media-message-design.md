@@ -130,7 +130,7 @@ public interface MediaUrlSigner {
 
 实现 `MinioMediaUrlSigner`（依赖 S3 presigner + `media.*` 配置），同步方法：
 
-- `key` → `url`（presigned GET，TTL `media.getUrlTtlSeconds`，默认 86400 = 24h）
+- `key` → `url`（presigned GET，TTL `media.getUrlTtlSeconds`，默认 604800 = 7 天，S3 presigned 上限）
 - `thumb` → `thumbUrl`（同样 presigned GET，可选）
 
 ### 7.2 注入点（8 处，4 服务 × PB/JSON 双分支）
@@ -146,9 +146,15 @@ public interface MediaUrlSigner {
 
 `C2CService` / `C2GService` / `PullService` / `GroupPullService` 构造函数新增 `MediaUrlSigner` 依赖，`LogicVerticle` 统一实例化并注入。
 
-### 7.3 URL 过期
+### 7.3 URL 过期与客户端契约
 
 presigned GET 有 TTL。历史消息的 url 过期后，客户端**重新拉取**（PULL / GROUP_PULL）即可获得新签名 URL；`key` 永久有效，不影响刷新。
+
+客户端契约：
+
+- 媒体下载过一次后**本地缓存**，历史回显优先读缓存，不重复走网络。
+- 只有「首次查看某条媒体」才需要可用 url；url 过期时重新 PULL 刷新。
+- 服务端每次下发（notify / pull）的 `url` 都是当场签好的最新链接，客户端无需自行用 `key` 换 url。
 
 ## 8. 数据模型
 
@@ -191,7 +197,7 @@ media:
   accessKey: pomelo-admin
   secretKey: pomelo-admin-password
   putUrlTtlSeconds: 300               # presigned PUT 有效期
-  getUrlTtlSeconds: 86400             # presigned GET 有效期
+  getUrlTtlSeconds: 604800            # presigned GET 有效期（7 天，S3 presigned 上限）
   maxSizeBytes: 104857600             # 单文件上限 100MB
   allowedExtensions: [jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip]
 ```
@@ -228,3 +234,4 @@ media:
 - 表情包目录、表情语义映射
 - 对象生命周期（过期清理）、CDN 加速、秒传
 - 消息撤回/已读后清理媒体
+- 轻量重签命令（客户端已持有 key、url 过期时按批 key 换新 url，替代整页 PULL）
