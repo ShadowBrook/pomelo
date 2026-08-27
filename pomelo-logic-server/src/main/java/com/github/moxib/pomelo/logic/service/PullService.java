@@ -31,10 +31,12 @@ public class PullService extends ServiceBase {
   private static final Logger LOG = LoggerFactory.getLogger(PullService.class);
 
   private final MessageRepository messageRepo;
+  private final MediaUrlSigner mediaUrlSigner;
   private final int defaultPullLimit;
 
-  public PullService(MessageRepository messageRepo) {
+  public PullService(MessageRepository messageRepo, MediaUrlSigner mediaUrlSigner) {
     this.messageRepo = messageRepo;
+    this.mediaUrlSigner = mediaUrlSigner;
     this.defaultPullLimit = ConfigHolder.getInt("message.pullLimit", 50);
   }
 
@@ -107,9 +109,10 @@ public class PullService extends ServiceBase {
         for (MessageRecord r : records) {
           UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
           UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());
+          String signedContent = mediaUrlSigner.signContent(r.getMsgType(), r.getContent());
           CommonProto.MessageContent.Builder mc = CommonProto.MessageContent.newBuilder()
             .setMsgTypeValue(r.getMsgType())
-            .setContent(ByteString.copyFromUtf8(r.getContent() != null ? r.getContent() : ""))
+            .setContent(ByteString.copyFromUtf8(signedContent != null ? signedContent : ""))
             .setTimestamp(r.getCreatedAt());
           mc.putExt("id", String.valueOf(r.getId()));
           mc.putExt("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(r.getSenderId()));
@@ -147,7 +150,7 @@ public class PullService extends ServiceBase {
             msg.put("senderNickname", senderInfo.nickname());
           }
           msg.put("msgType", r.getMsgType());
-          msg.put("content", r.getContent() != null ? r.getContent() : "");
+          msg.put("content", mediaUrlSigner.signContent(r.getMsgType(), r.getContent()));
           msg.put("seq", r.getSeq());
           msg.put("createdAt", r.getCreatedAt());
         }

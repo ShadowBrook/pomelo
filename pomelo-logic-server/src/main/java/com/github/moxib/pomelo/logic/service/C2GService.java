@@ -35,16 +35,18 @@ public class C2GService extends ServiceBase {
   private final SeqClientService seqClient;
   private final SnowflakeIdGenerator snowflake;
   private final SessionRouteTable routeTable;
+  private final MediaUrlSigner mediaUrlSigner;
 
   public C2GService(Vertx vertx, PushRouter pushRouter, GroupRepository groupRepo,
                     SeqClientService seqClient, SnowflakeIdGenerator snowflake,
-                    SessionRouteTable routeTable) {
+                    SessionRouteTable routeTable, MediaUrlSigner mediaUrlSigner) {
     this.pushRouter = pushRouter;
     this.groupRepo = groupRepo;
     this.memberCtxCache = new GroupMemberContextCache(vertx, groupRepo);
     this.seqClient = seqClient;
     this.snowflake = snowflake;
     this.routeTable = routeTable;
+    this.mediaUrlSigner = mediaUrlSigner;
   }
 
   public Future<ImMessage> process(ImMessage message) {
@@ -159,6 +161,7 @@ public class C2GService extends ServiceBase {
 
   private void pushToGroupMembers(GroupMsgContext ctx, long internalGroupId, long seq, long snowflakeId, long senderNumericId) {
     groupRepo.findMembers(internalGroupId).onSuccess(members -> {
+      String signedContent = mediaUrlSigner.signContent(ctx.getMsgType(), ctx.getContent());
       int pushCount = 0;
       for (GroupMemberRecord member : members) {
         if (member.getUserId() == senderNumericId) {
@@ -172,7 +175,7 @@ public class C2GService extends ServiceBase {
             if (recipientCodec == ProtobufCodec.CODEC_ID) {
               CommonProto.MessageContent msgContent = CommonProto.MessageContent.newBuilder()
                 .setMsgTypeValue(ctx.getMsgType())
-                .setContent(ByteString.copyFromUtf8(ctx.getContent() != null ? ctx.getContent() : ""))
+                .setContent(ByteString.copyFromUtf8(signedContent != null ? signedContent : ""))
                 .build();
               GroupProto.C2GNotify notify = GroupProto.C2GNotify.newBuilder()
                 .setSenderId(ctx.getSenderUserId())
@@ -192,7 +195,7 @@ public class C2GService extends ServiceBase {
               if (ctx.getSenderNickname() != null) json.put("senderNickname", ctx.getSenderNickname());
               JsonObject jsonMsg = new JsonObject();
               jsonMsg.put("msgType", ctx.getMsgType());
-              jsonMsg.put("content", ctx.getContent() != null ? ctx.getContent() : "");
+              jsonMsg.put("content", signedContent != null ? signedContent : "");
               json.put("message", jsonMsg);
               json.put("id", String.valueOf(snowflakeId));
               json.put("seq", seq);
