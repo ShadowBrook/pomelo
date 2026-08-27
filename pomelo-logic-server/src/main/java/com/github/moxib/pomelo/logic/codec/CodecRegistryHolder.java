@@ -8,6 +8,7 @@ import com.github.moxib.pomelo.logic.model.requests.FriendOpRequest;
 import com.github.moxib.pomelo.logic.model.requests.LoginRequest;
 import com.github.moxib.pomelo.logic.model.requests.PullRequest;
 import com.github.moxib.pomelo.logic.model.requests.SearchRequest;
+import com.github.moxib.pomelo.logic.model.requests.UploadRequest;
 import com.github.moxib.pomelo.proto.ack.AckProto;
 import com.github.moxib.pomelo.proto.auth.AuthProto;
 import com.github.moxib.pomelo.proto.chat.ChatProto;
@@ -16,6 +17,7 @@ import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
 import com.github.moxib.pomelo.proto.group.GroupProto;
 import com.github.moxib.pomelo.proto.pull.PullProto;
 import com.github.moxib.pomelo.proto.relation.RelationProto;
+import com.github.moxib.pomelo.proto.upload.UploadProto;
 import io.vertx.core.json.JsonObject;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
@@ -104,6 +106,11 @@ public final class CodecRegistryHolder {
       GroupMgmtProto.GetMyGroupsReq.parser(), req -> null, Object.class);
     r.registerProtobuf(CMD_GROUP_MSG_READ_REQ_VALUE,
       GroupMgmtProto.GetGroupMsgReadStatusReq.parser(), req -> null, Object.class);
+
+    // 媒体上传预签名
+    r.registerProtobuf(CMD_UPLOAD_REQ_VALUE, UploadProto.UploadReq.parser(),
+      UploadRequest::fromProto, UploadRequest.class);
+    r.registerJson(CMD_UPLOAD_REQ_VALUE, UploadRequest.class);
 
     return r;
   }
