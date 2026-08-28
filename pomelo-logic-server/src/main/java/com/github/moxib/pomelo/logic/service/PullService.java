@@ -150,7 +150,8 @@ public class PullService extends ServiceBase {
             msg.put("senderNickname", senderInfo.nickname());
           }
           msg.put("msgType", r.getMsgType());
-          msg.put("content", mediaUrlSigner.signContent(r.getMsgType(), r.getContent()));
+          String signedContent = mediaUrlSigner.signContent(r.getMsgType(), r.getContent());
+          msg.put("content", signedContent != null ? signedContent : "");
           msg.put("seq", r.getSeq());
           msg.put("createdAt", r.getCreatedAt());
         }

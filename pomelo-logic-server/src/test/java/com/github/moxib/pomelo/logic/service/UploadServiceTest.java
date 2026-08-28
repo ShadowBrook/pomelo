@@ -77,4 +77,10 @@ class UploadServiceTest {
     ImMessage resp = process(jsonReq("{\"mediaType\":2,\"fileName\":\"a.jpg\",\"size\":100}", null));
     assertNotEquals(0, respBody(resp).getInteger("code"));
   }
+
+  @Test
+  void rejectsPathTraversalUserId() throws Exception {
+    ImMessage resp = process(jsonReq("{\"mediaType\":2,\"fileName\":\"a.jpg\",\"size\":100}", "foo/../bar"));
+    assertNotEquals(0, respBody(resp).getInteger("code"));
+  }
 }
