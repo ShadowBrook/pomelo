@@ -1,26 +1,19 @@
 package com.github.moxib.pomelo.logic.infrastructure;
 
 import com.github.moxib.pomelo.config.ConfigHolder;
-import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
-import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
-import software.amazon.awssdk.regions.Region;
-import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedGetObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+import io.minio.GetPresignedObjectUrlArgs;
+import io.minio.Http.Method;
+import io.minio.MinioClient;
 
-import java.net.URI;
 import java.time.Duration;
 
 /**
  * MinIO / S3 兼容对象存储的预签名实现。
- * presign 为本地 HMAC 运算，无网络往返；path-style 访问是 MinIO 必需。
+ * presign 为本地 HMAC 运算，无网络往返；通过官方 MinIO SDK（io.minio）生成。
  */
 public class MinioObjectPresigner implements ObjectPresigner {
 
-  private final S3Presigner presigner;
+  private final MinioClient client;
   private final String bucket;
   private final Duration putTtl;
   private final Duration getTtl;
@@ -39,31 +32,44 @@ public class MinioObjectPresigner implements ObjectPresigner {
     this.bucket = bucket;
     this.putTtl = Duration.ofSeconds(putTtlSeconds);
     this.getTtl = Duration.ofSeconds(getTtlSeconds);
-    this.presigner = S3Presigner.builder()
-      .region(Region.US_EAST_1)
-      .endpointOverride(URI.create(endpoint))
-      .credentialsProvider(StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey)))
-      .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
+    this.client = MinioClient.builder()
+      .endpoint(endpoint)
+      .credentials(accessKey, secretKey)
       .build();
   }
 
   @Override
   public String presignPut(String objectKey, String contentType) {
-    PresignedPutObjectRequest req = presigner.presignPutObject(b -> b
-      .putObjectRequest(PutObjectRequest.builder()
-        .bucket(bucket)
-        .key(objectKey)
-        .contentType(contentType != null ? contentType : "application/octet-stream")
-        .build())
-      .signatureDuration(putTtl));
-    return req.url().toString();
+    // MinIO SDK 预签名不把 content-type 计入签名头；保留参数以符合接口契约和业务校验语义
+    try {
+      return client.getPresignedObjectUrl(
+        GetPresignedObjectUrlArgs.builder()
+          .method(Method.PUT)
+          .bucket(bucket)
+          .object(objectKey)
+          .expiry(boundedSeconds(putTtl))
+          .build());
+    } catch (Exception e) {
+      throw new IllegalStateException("生成预签名 PUT URL 失败: " + objectKey, e);
+    }
   }
 
   @Override
   public String presignGet(String objectKey) {
-    PresignedGetObjectRequest req = presigner.presignGetObject(b -> b
-      .getObjectRequest(GetObjectRequest.builder().bucket(bucket).key(objectKey).build())
-      .signatureDuration(getTtl));
-    return req.url().toString();
+    try {
+      return client.getPresignedObjectUrl(
+        GetPresignedObjectUrlArgs.builder()
+          .method(Method.GET)
+          .bucket(bucket)
+          .object(objectKey)
+          .expiry(boundedSeconds(getTtl))
+          .build());
+    } catch (Exception e) {
+      throw new IllegalStateException("生成预签名 GET URL 失败: " + objectKey, e);
+    }
+  }
+
+  private static int boundedSeconds(Duration ttl) {
+    return (int) Math.min(ttl.toSeconds(), 604800L);
   }
 }
