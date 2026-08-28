@@ -100,13 +100,13 @@ message UploadResp {
    - 从 session 取 userId（gateway 已 enrich），未认证则报错
    - 校验 `media_type ∈ {2..6}`、`size ≤ media.maxSizeBytes`、扩展名白名单
    - objectKey = `{type}/{userId}/{yyyyMMdd}/{snowflakeId}.{ext}`（Snowflake 保证不可预测）
-   - 用 S3 presigner 生成 presigned PUT URL（TTL `media.putUrlTtlSeconds`）
+   - 用 MinIO SDK 生成 presigned PUT URL（TTL `media.putUrlTtlSeconds`）
 4. SDK 收到 `objectKey` + `presigned_url`，直接 `HTTP PUT` 字节到 MinIO。
 5. SDK 构造 `content` JSON（key + 元数据），走正常 C2C / C2G 消息发送。
 
-### 5.3 S3 SDK
+### 5.3 MinIO SDK
 
-`pomelo-logic-server` 引入 `software.amazon.awssdk:s3`（含 `S3Presigner`），endpoint 指向 `media.endpoint`（如 `http://silo:9000`）。presign 为本地 HMAC 运算，无网络往返。
+`pomelo-logic-server` 引入官方 `io.minio:minio`（含 `MinioClient`），endpoint 指向 `media.endpoint`（如 `http://silo:9000`）。presign 为本地 HMAC 运算，无网络往返。
 
 ## 6. 发送与落库（读侧签名前）
 
@@ -128,9 +128,9 @@ public interface MediaUrlSigner {
 }
 ```
 
-实现 `MinioMediaUrlSigner`（依赖 S3 presigner + `media.*` 配置），同步方法：
+实现 `MinioMediaUrlSigner`（依赖 MinIO SDK presigner + `media.*` 配置），同步方法：
 
-- `key` → `url`（presigned GET，TTL `media.getUrlTtlSeconds`，默认 604800 = 7 天，S3 presigned 上限）
+- `key` → `url`（presigned GET，TTL `media.getUrlTtlSeconds`，默认 604800 = 7 天，MinIO presigned 上限）
 - `thumb` → `thumbUrl`（同样 presigned GET，可选）
 
 ### 7.2 注入点（8 处，4 服务 × PB/JSON 双分支）
@@ -181,11 +181,11 @@ presigned GET 有 TTL。历史消息的 url 过期后，客户端**重新拉取*
 | common | `ProtobufCodec` | 注册 upload parser |
 | gateway | `MessageDispatcher` | 路由 + upload |
 | logic | 新增 `UploadService` | presigned PUT 签发 + 校验 |
-| logic | 新增 `infrastructure/MinioPresigner` | 封装 S3 presigner（put/get） |
+| logic | 新增 `infrastructure/MinioObjectPresigner` | 封装 MinIO SDK presigner（put/get） |
 | logic | 新增 `MediaUrlSigner` 接口 + `MinioMediaUrlSigner` 实现 | 读侧签名 |
 | logic | `C2CService` / `C2GService` / `PullService` / `GroupPullService` | 注入 signer，8 处替换 |
 | logic | `LogicVerticle` | 组装新依赖 |
-| logic | `pom.xml` | 加 `software.amazon.awssdk:s3` |
+| logic | `pom.xml` | 加 `io.minio:minio` |
 | conf | `conf/config.yaml` | 加 `media.*` |
 
 ## 11. 配置项
@@ -197,7 +197,7 @@ media:
   accessKey: pomelo-admin
   secretKey: pomelo-admin-password
   putUrlTtlSeconds: 300               # presigned PUT 有效期
-  getUrlTtlSeconds: 604800            # presigned GET 有效期（7 天，S3 presigned 上限）
+  getUrlTtlSeconds: 604800            # presigned GET 有效期（7 天，MinIO presigned 上限）
   maxSizeBytes: 104857600             # 单文件上限 100MB
   allowedExtensions: [jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip]
 ```
