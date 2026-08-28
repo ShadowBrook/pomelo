@@ -300,6 +300,7 @@ public class MessageDispatcher {
     if (cmd == CMD_LOGOUT_REQ_VALUE)       return "logic.auth";
     if (cmd == CMD_CTRL_REQ_VALUE)         return "logic.ctrl";
     if (cmd == CMD_ACK_REQ_VALUE)          return "logic.ack";
+    if (cmd == CMD_UPLOAD_REQ_VALUE)       return "logic.upload";
     if (cmd == CMD_PULL_REQ_VALUE)         return "logic.pull";
     if (cmd == CMD_FRIEND_SEARCH_REQ_VALUE) return "logic.friend";
     if (cmd == CMD_FRIEND_ADD_REQ_VALUE)    return "logic.friend";

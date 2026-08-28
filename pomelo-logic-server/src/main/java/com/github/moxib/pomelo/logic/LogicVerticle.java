@@ -37,6 +37,7 @@ public class LogicVerticle extends VerticleBase {
   private GroupManagementService groupService;
   private GroupPullService groupPullService;
   private GroupAckService groupAckService;
+  private UploadService uploadService;
 
   private final SnowflakeIdGenerator snowflake;
 
@@ -56,6 +57,7 @@ public class LogicVerticle extends VerticleBase {
 
         var presigner = new MinioObjectPresigner();
         var mediaUrlSigner = new MinioMediaUrlSigner(presigner);
+        uploadService = new UploadService(presigner, snowflake);
 
         c2cService = new C2CService(pushRouter, messageRepo, seqClient, snowflake, routeTable, mediaUrlSigner);
         ackService = new AckService(pushRouter, messageRepo, routeTable);
@@ -73,6 +75,7 @@ public class LogicVerticle extends VerticleBase {
         bus.consumer("logic.c2c",     (Message<Buffer> msg) -> dispatch(msg, c2cService::process));
         bus.consumer("logic.ack",     (Message<Buffer> msg) -> dispatch(msg, ackService::process));
         bus.consumer("logic.auth",    (Message<Buffer> msg) -> dispatch(msg, authService::process));
+        bus.consumer("logic.upload",  (Message<Buffer> msg) -> dispatch(msg, uploadService::process));
         bus.consumer("logic.pull",    (Message<Buffer> msg) -> dispatch(msg, pullService::process));
         bus.consumer("logic.ctrl",    (Message<Buffer> msg) -> dispatch(msg, ctrlService::process));
         bus.consumer("logic.c2g",     (Message<Buffer> msg) -> dispatch(msg, c2gService::process));
