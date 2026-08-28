@@ -6,6 +6,7 @@ import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
 import com.github.moxib.pomelo.model.PushEnvelope;
+import com.github.moxib.pomelo.proto.chat.ChatProto;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import io.vertx.core.Future;
@@ -16,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
@@ -125,5 +127,46 @@ class C2CServiceTest {
 
     assertEquals(200L, capturedSeqId.get(),
       "消息落库的 seq 应取收件人 id（recipientId），而非发送者 id（senderId）");
+  }
+
+  @Test
+  @DisplayName("媒体消息 notify 时 content 被签名")
+  void imageNotifyContentIsSigned() throws Exception {
+    CountDownLatch pushed = new CountDownLatch(1);
+    AtomicReference<PushEnvelope> captured = new AtomicReference<>();
+    PushRouter capturingPush = new PushRouter(vertx) {
+      @Override
+      public void push(PushEnvelope env) {
+        captured.set(env);
+        pushed.countDown();
+      }
+    };
+    SeqClientService seqClient = new SeqClientService(vertx) {
+      @Override
+      public Future<Long> fetchNextSequence(long id) { return Future.succeededFuture(42L); }
+    };
+    C2CService service = new C2CService(capturingPush, stubRepo(), seqClient,
+      new SnowflakeIdGenerator(1), new SessionRouteTable(vertx), (msgType, content) -> content + "?signed");
+
+    byte[] body = new JsonObject()
+      .put("senderId", "100")
+      .put("recipientId", "200")
+      .put("message", new JsonObject().put("msgType", 2).put("content", "{\"key\":\"image/100/x.jpg\"}"))
+      .put("messageId", 1L)
+      .put("timestamp", System.currentTimeMillis())
+      .toBuffer().getBytes();
+    ImMessage req = ImMessage.builder()
+      .magic(ImMessage.MAGIC_NUMBER).version(ImMessage.WIRE_PROTOCOL_VERSION)
+      .codecId((byte) 1).cmd(CommonProto.Cmd.CMD_C2C_REQ_VALUE)
+      .messageId("m-1").body(body).varHeaders(new HashMap<>()).build();
+
+    CountDownLatch done = new CountDownLatch(1);
+    service.process(req).onComplete(ar -> done.countDown());
+    assertTrue(done.await(10, TimeUnit.SECONDS));
+    assertTrue(pushed.await(10, TimeUnit.SECONDS), "notify 应被推送");
+
+    ChatProto.C2CNotify notify = ChatProto.C2CNotify.parseFrom(captured.get().getBody());
+    String content = notify.getMessage().getContent().toStringUtf8();
+    assertTrue(content.endsWith("?signed"), "notify content 应被签名: " + content);
   }
 }

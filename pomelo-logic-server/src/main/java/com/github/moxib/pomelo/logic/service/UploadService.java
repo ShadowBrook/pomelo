@@ -52,7 +52,7 @@ public class UploadService extends ServiceBase {
   public Future<ImMessage> process(ImMessage message) {
     try {
       String userId = getUserIdFromHeaders(message);
-      if (userId == null || userId.isEmpty()) {
+      if (userId == null || !userId.matches("\\d{1,20}")) {
         return Future.succeededFuture(buildErrorResp(message, CMD_UPLOAD_RESP_VALUE, ErrorCode.UNAUTHORIZED, "未认证用户"));
       }
       UploadRequest req = decode(message, UploadRequest.class);

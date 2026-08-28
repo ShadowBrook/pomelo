@@ -144,7 +144,8 @@ public class GroupPullService extends ServiceBase {
         msg.put("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(m.getSenderNumericId()));
         msg.put("groupId", String.valueOf(m.getGroupId()));
         msg.put("msgType", m.getMsgType());
-        msg.put("content", mediaUrlSigner.signContent(m.getMsgType(), m.getContent()));
+        String signedContent = mediaUrlSigner.signContent(m.getMsgType(), m.getContent());
+        msg.put("content", signedContent != null ? signedContent : "");
         msg.put("seq", m.getSeq());
         msg.put("createdAt", m.getCreatedAt());
         if (senderInfo != null) {
