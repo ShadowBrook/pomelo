@@ -24,7 +24,7 @@ public class UploadService extends ServiceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(UploadService.class);
 
-  private static final String DEFAULT_EXTENSIONS = "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip";
+  private static final String DEFAULT_EXTENSIONS = "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip,webm,ogg";
 
   private final ObjectPresigner presigner;
   private final SnowflakeIdGenerator snowflake;

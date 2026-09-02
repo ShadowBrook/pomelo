@@ -50,11 +50,14 @@ message:
   pullLimit: 50
 
 media:
+  # 服务端内部访问 MinIO 的地址（容器部署用 docker 内部 DNS）
   endpoint: http://silo:9000
+  # 浏览器可达的地址，作为 presigned URL 的 host（开发机跑前端用 localhost 映射端口；生产换成公网/CDN 域名）
+  publicEndpoint: http://localhost:9002
   bucket: pomelo-media
   accessKey: pomelo-admin
   secretKey: pomelo-admin-password
   putUrlTtlSeconds: 300
   getUrlTtlSeconds: 604800
   maxSizeBytes: 104857600
-  allowedExtensions: "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip"
+  allowedExtensions: "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip,webm,ogg"
