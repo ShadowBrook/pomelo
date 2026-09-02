@@ -20,6 +20,7 @@ public class MinioObjectPresigner implements ObjectPresigner {
 
   public MinioObjectPresigner() {
     this(ConfigHolder.getString("media.endpoint", "http://silo:9000"),
+         ConfigHolder.getString("media.publicEndpoint", ""),
          ConfigHolder.getString("media.bucket", "pomelo-media"),
          ConfigHolder.getString("media.accessKey", "pomelo-admin"),
          ConfigHolder.getString("media.secretKey", "pomelo-admin-password"),
@@ -29,11 +30,22 @@ public class MinioObjectPresigner implements ObjectPresigner {
 
   public MinioObjectPresigner(String endpoint, String bucket, String accessKey, String secretKey,
                               int putTtlSeconds, int getTtlSeconds) {
+    this(endpoint, endpoint, bucket, accessKey, secretKey, putTtlSeconds, getTtlSeconds);
+  }
+
+  public MinioObjectPresigner(String endpoint, String publicEndpoint, String bucket,
+                              String accessKey, String secretKey,
+                              int putTtlSeconds, int getTtlSeconds) {
     this.bucket = bucket;
     this.putTtl = Duration.ofSeconds(putTtlSeconds);
     this.getTtl = Duration.ofSeconds(getTtlSeconds);
+    // 显式指定 region：MinIO SDK 在 region 未设置时会向 endpoint 发起网络请求查询 bucket 区域，
+    // 而 publicEndpoint（浏览器可达地址）在服务端容器内可能不可达。设了 region 后 presign 纯本地 HMAC。
+    // MinIO 默认 region 即 us-east-1。
+    String signEndpoint = (publicEndpoint == null || publicEndpoint.isBlank()) ? endpoint : publicEndpoint;
     this.client = MinioClient.builder()
-      .endpoint(endpoint)
+      .endpoint(signEndpoint)
+      .region("us-east-1")
       .credentials(accessKey, secretKey)
       .build();
   }
