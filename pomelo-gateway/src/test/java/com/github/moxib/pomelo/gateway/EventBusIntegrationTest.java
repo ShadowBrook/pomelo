@@ -1,8 +1,8 @@
 package com.github.moxib.pomelo.gateway;
 
+import com.github.moxib.pomelo.model.PushCodec;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.junit5.VertxExtension;
 import io.vertx.junit5.VertxTestContext;
 import org.junit.jupiter.api.Test;
@@ -36,14 +36,12 @@ class EventBusIntegrationTest {
   }
 
   @Test
-  void testPushEnvelopeJsonRoundTrip(Vertx vertx, VertxTestContext ctx) {
-    PushEnvelope original = new PushEnvelope("user-abc", CMD_PONG_VALUE, new byte[]{1, 2, 3}, (byte) 0);
-    JsonObject json = JsonObject.mapFrom(original);
-    PushEnvelope restored = json.mapTo(PushEnvelope.class);
+  void testPushCodecRoundTrip(Vertx vertx, VertxTestContext ctx) {
+    PushEnvelope original = new PushEnvelope("user-abc", CMD_PONG_VALUE, new byte[]{1, 2, 3});
+    PushEnvelope restored = PushCodec.decode(PushCodec.encode(original));
 
     assertEquals(original.getTargetUserId(), restored.getTargetUserId());
     assertEquals(original.getCmd(), restored.getCmd());
-    assertEquals(original.getCodecId(), restored.getCodecId());
     assertArrayEquals(original.getBody(), restored.getBody());
     ctx.completeNow();
   }

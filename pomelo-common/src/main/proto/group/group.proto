@@ -47,4 +47,6 @@ message C2GNotify {
     optional string name             = 4;
     // 序列号
     optional int64 seq               = 5;
+    // 消息 ID (Snowflake，客户端用于去重/排序/ACK)
+    optional int64 message_id        = 6;
 }

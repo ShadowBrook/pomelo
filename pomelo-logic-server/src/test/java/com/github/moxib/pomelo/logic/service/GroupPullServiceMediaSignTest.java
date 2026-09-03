@@ -11,11 +11,10 @@ import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
 import com.github.moxib.pomelo.logic.model.UserIdInfo;
 import com.github.moxib.pomelo.proto.common.CommonProto;
+import com.github.moxib.pomelo.proto.pull.PullProto;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,18 +64,19 @@ class GroupPullServiceMediaSignTest {
     MediaUrlSigner signer = (msgType, content) -> content + "?signed";
     GroupPullService service = new GroupPullService(stubGroupRepo, stubMsgRepo, signer);
 
-    byte[] body = new JsonObject().put("groupId", "100").put("cursor", 0L).put("limit", 10).put("isBackward", false)
-      .toBuffer().getBytes();
+    PullProto.PullGroupMsgReq body = PullProto.PullGroupMsgReq.newBuilder()
+      .setGroupId(100L).setCursor(0L).setLimit(10).setIsBackward(false).build();
     Map<String, String> headers = new HashMap<>();
     headers.put("userId", "10");
     ImMessage req = ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER).version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId((byte) 1).cmd(CommonProto.Cmd.CMD_GROUP_PULL_MSG_REQ_VALUE)
-      .messageId("g-1").body(body).varHeaders(headers).build();
+      .codecId((byte) 0).cmd(CommonProto.Cmd.CMD_GROUP_PULL_MSG_REQ_VALUE)
+      .messageId("g-1").body(body.toByteArray()).varHeaders(headers).build();
 
     ImMessage resp = service.process(req).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
-    JsonObject json = new JsonObject(new String(resp.getBody(), StandardCharsets.UTF_8));
-    String content = json.getJsonArray("messages").getJsonObject(0).getString("content");
+    PullProto.PullResp pull = PullProto.PullResp.parseFrom(resp.getBody());
+    assertEquals(1, pull.getMessagesCount());
+    String content = pull.getMessages(0).getContent().toStringUtf8();
     assertTrue(content.endsWith("?signed"), "群拉取消息 content 应被签名: " + content);
   }
 }

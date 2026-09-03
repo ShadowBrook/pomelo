@@ -22,13 +22,11 @@ public final class SessionRouteTable {
   private static final Logger LOG = LoggerFactory.getLogger(SessionRouteTable.class);
 
   private static final String MAP_NAME = "__pomelo.session-routes";
-  private static final String CODEC_MAP_NAME = "__pomelo.user-codecs";
   private static final String LIVE_NODES_MAP = "__pomelo.live-gateways";
 
   private final Vertx vertx;
   private final String nodeId;
   private volatile AsyncMap<String, String> map;
-  private volatile AsyncMap<String, String> codecMap;
   private volatile AsyncMap<String, String> liveNodesMap;
 
   public SessionRouteTable(Vertx vertx) {
@@ -116,36 +114,6 @@ public final class SessionRouteTable {
       f.onFailure(e -> LOG.warn("Failed to register route: {} → {}", userId, nodeId, e));
       return f;
     });
-  }
-
-  // ---- codec 存储（供 logic-server 推送时查接收方 codec） ----
-
-  private Future<AsyncMap<String, String>> getCodecMap() {
-    if (codecMap != null) {
-      return Future.succeededFuture(codecMap);
-    }
-    return vertx.sharedData().<String, String>getClusterWideMap(CODEC_MAP_NAME)
-      .onSuccess(m -> codecMap = m);
-  }
-
-  /**
-   * 用户上线：写入 codec（platform 参数为多端预留，当前 key = userId）。
-   * 多端时改为 {@code userId + ":" + platform} 即可支持不同端不同协议。
-   */
-  public Future<Void> setCodec(String userId, String platform, byte codecId) {
-    if (!vertx.isClustered()) {
-      return Future.succeededFuture();
-    }
-    return getCodecMap().compose(m -> m.put(userId, String.valueOf(codecId)));
-  }
-
-  /** 查询用户 codec。未找到时返回 0（默认 PB） */
-  public Future<Byte> resolveCodec(String userId) {
-    if (!vertx.isClustered() || userId == null) {
-      return Future.succeededFuture((byte) 0);
-    }
-    return getCodecMap().compose(m -> m.get(userId))
-      .map(s -> s != null ? Byte.parseByte(s) : (byte) 0);
   }
 
   // ---- 路由条目 ----

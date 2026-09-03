@@ -14,7 +14,6 @@ public class C2CReqContext {
   private final int msgType;
   private final String content;
   private final long timestamp;
-  private final byte codecId;
 
   private C2CReqContext(Builder builder) {
     this.messageId = builder.messageId;
@@ -25,7 +24,6 @@ public class C2CReqContext {
     this.msgType = builder.msgType;
     this.content = builder.content;
     this.timestamp = builder.timestamp;
-    this.codecId = builder.codecId;
   }
 
   public static Builder builder() { return new Builder(); }
@@ -38,7 +36,6 @@ public class C2CReqContext {
   public int getMsgType() { return msgType; }
   public String getContent() { return content; }
   public long getTimestamp() { return timestamp; }
-  public byte getCodecId() { return codecId; }
 
   public static class Builder {
     private long messageId;
@@ -49,7 +46,6 @@ public class C2CReqContext {
     private int msgType;
     private String content;
     private long timestamp;
-    private byte codecId;
 
     public Builder messageId(long messageId) { this.messageId = messageId; return this; }
     public Builder senderId(long senderId) { this.senderId = senderId; return this; }
@@ -59,7 +55,6 @@ public class C2CReqContext {
     public Builder msgType(int msgType) { this.msgType = msgType; return this; }
     public Builder content(String content) { this.content = content; return this; }
     public Builder timestamp(long timestamp) { this.timestamp = timestamp; return this; }
-    public Builder codecId(byte codecId) { this.codecId = codecId; return this; }
 
     public C2CReqContext build() { return new C2CReqContext(this); }
   }

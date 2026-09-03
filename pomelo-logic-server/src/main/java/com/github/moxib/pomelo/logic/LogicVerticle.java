@@ -1,7 +1,6 @@
 package com.github.moxib.pomelo.logic;
 
 import com.github.moxib.pomelo.common.ImMessage;
-import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.MinioObjectPresigner;
@@ -51,7 +50,6 @@ public class LogicVerticle extends VerticleBase {
       .compose(v -> {
         var messageRepo = new PgMessageRepository(vertx);
         var seqClient = new SeqClientService(vertx);
-        var routeTable = new SessionRouteTable(vertx);
 
         PushRouter pushRouter = new PushRouter(vertx);
 
@@ -59,15 +57,15 @@ public class LogicVerticle extends VerticleBase {
         var mediaUrlSigner = new MinioMediaUrlSigner(presigner);
         uploadService = new UploadService(presigner, snowflake);
 
-        c2cService = new C2CService(pushRouter, messageRepo, seqClient, snowflake, routeTable, mediaUrlSigner);
-        ackService = new AckService(pushRouter, messageRepo, routeTable);
+        c2cService = new C2CService(pushRouter, messageRepo, seqClient, snowflake, mediaUrlSigner);
+        ackService = new AckService(pushRouter, messageRepo);
         authService = new AuthService(vertx);
         pullService = new PullService(messageRepo, mediaUrlSigner);
         ctrlService = new CtrlService();
         var groupRepo = new PgGroupRepository(vertx);
-        c2gService = new C2GService(vertx, pushRouter, groupRepo, seqClient, snowflake, routeTable, mediaUrlSigner);
+        c2gService = new C2GService(vertx, pushRouter, groupRepo, seqClient, snowflake, mediaUrlSigner);
         friendService = new FriendService(vertx, pushRouter);
-        groupService = new GroupManagementService(pushRouter, groupRepo, routeTable, snowflake, messageRepo);
+        groupService = new GroupManagementService(pushRouter, groupRepo, snowflake, messageRepo);
         groupPullService = new GroupPullService(groupRepo, messageRepo, mediaUrlSigner);
         groupAckService = new GroupAckService(groupRepo, messageRepo);
 

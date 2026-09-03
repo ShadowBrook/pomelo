@@ -1,13 +1,12 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
+import com.github.moxib.pomelo.logic.model.requests.GroupAckRequest;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,19 +30,13 @@ public class GroupAckService extends ServiceBase {
           ErrorCode.UNAUTHORIZED, "未认证用户"));
       }
 
-      String bodyStr = getBodyAsString(message);
-      if (bodyStr == null) {
-        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
-          ErrorCode.BAD_REQUEST, "body 不能为空"));
-      }
-      JsonObject body = new JsonObject(bodyStr);
-      String groupId = body.getString("groupId");
-      long lastReadSeq = body.getLong("lastReadSeq", 0L);
-
-      if (groupId == null || groupId.isEmpty()) {
+      GroupAckRequest req = decode(message, GroupAckRequest.class);
+      if (req == null || req.groupId() == null || req.groupId().isEmpty()) {
         return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_ACK_RESP_VALUE,
           ErrorCode.BAD_REQUEST, "groupId 不能为空"));
       }
+      String groupId = req.groupId();
+      long lastReadSeq = req.lastReadSeq();
 
       long numericId = Long.parseLong(userId);
       if (numericId == 0) {
@@ -65,14 +58,9 @@ public class GroupAckService extends ServiceBase {
               ErrorCode.UNAUTHORIZED, "你不是该群成员"));
           }
           return groupRepo.updateLastReadSeq(numericGroupId, numericId, lastReadSeq)
-            .map(v -> {
-              byte codecId = message.getCodecId();
-              Object respBody = dualBody(codecId,
-                () -> GroupMgmtProto.GroupAckResp.newBuilder()
-                  .setCode(0).setMessage("success").build(),
-                () -> jsonBody().put("code", 0).put("message", "success"));
-              return buildResponse(message, CMD_GROUP_ACK_RESP_VALUE, respBody);
-            });
+            .map(v -> buildResponse(message, CMD_GROUP_ACK_RESP_VALUE,
+              GroupMgmtProto.GroupAckResp.newBuilder()
+                .setCode(0).setMessage("success").build()));
         });
       });
     } catch (Exception e) {

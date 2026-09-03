@@ -1,9 +1,13 @@
 package com.github.moxib.pomelo.benchmark;
 
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.proto.auth.AuthProto;
+import com.github.moxib.pomelo.proto.chat.ChatProto;
+import com.github.moxib.pomelo.proto.common.CommonProto;
+import com.github.moxib.pomelo.proto.relation.RelationProto;
+import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import io.vertx.core.net.NetClient;
 import io.vertx.core.net.NetSocket;
 import io.vertx.core.parsetools.RecordParser;
@@ -19,10 +23,9 @@ import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
  * TCP IM 客户端 — 复用 ImMessage 序列化，走真实 TCP 网关。
  * 粘包处理与 TcpGatewayVerticle 对称（4 字节长度前缀 + wire body）。
  * 共享单个 NetClient（Vert.x 推荐复用，避免每次连接创建实例导致并发资源耗尽）。
+ * 请求 body 一律为 Protobuf（codecId 冻结为 0）。
  */
 public class ImClient {
-
-  private static final byte JSON_CODEC_ID = 1;
 
   private final NetSocket socket;
   private final Map<String, CompletableFuture<ImMessage>> pending = new ConcurrentHashMap<>();
@@ -67,15 +70,15 @@ public class ImClient {
     }
   }
 
-  Future<ImMessage> request(int cmd, JsonObject body, Map<String, String> headers) {
+  Future<ImMessage> request(int cmd, com.google.protobuf.Message body, Map<String, String> headers) {
     String messageId = "bench-" + UUID.randomUUID();
     ImMessage msg = ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER)
       .version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId(JSON_CODEC_ID)
+      .codecId((byte) 0)
       .cmd(cmd)
       .messageId(messageId)
-      .body(body.toBuffer().getBytes())
+      .body(body.toByteArray())
       .varHeaders(headers)
       .build();
     CompletableFuture<ImMessage> future = new CompletableFuture<>();
@@ -85,32 +88,37 @@ public class ImClient {
   }
 
   Future<ImMessage> login(String token, String userId, String userName) {
-    JsonObject body = new JsonObject()
-      .put("token", token)
-      .put("userId", userId)
-      .put("userName", userName)
-      .put("deviceId", "bench")
-      .put("platform", "bench")
-      .put("appVersion", "1.0.0");
-    return request(CMD_AUTH_REQ_VALUE, body, Map.of("userId", userId));
+    AuthProto.AuthReq body = AuthProto.AuthReq.newBuilder()
+      .setToken(token)
+      .setDeviceId("bench")
+      .setPlatform("bench")
+      .setAppVersion("1.0.0")
+      .build();
+    return request(CMD_AUTH_REQ_VALUE, body, Map.of());
   }
 
   Future<ImMessage> addFriend(String selfId, String friendId) {
-    JsonObject body = new JsonObject().put("userId", selfId).put("friendId", friendId);
+    RelationProto.FriendAddReq body = RelationProto.FriendAddReq.newBuilder()
+      .setUserId(Long.parseLong(selfId)).setFriendId(Long.parseLong(friendId)).build();
     return request(CMD_FRIEND_ADD_REQ_VALUE, body, Map.of("userId", selfId));
   }
 
   Future<ImMessage> acceptFriend(String selfId, String friendId) {
-    JsonObject body = new JsonObject().put("userId", selfId).put("friendId", friendId);
+    RelationProto.FriendAcceptReq body = RelationProto.FriendAcceptReq.newBuilder()
+      .setUserId(Long.parseLong(selfId)).setFriendId(Long.parseLong(friendId)).build();
     return request(CMD_FRIEND_ACCEPT_REQ_VALUE, body, Map.of("userId", selfId));
   }
 
   Future<ImMessage> sendMessage(String selfId, String selfName, String peerId, String content) {
-    JsonObject message = new JsonObject().put("msgType", 1).put("content", content);
-    JsonObject body = new JsonObject()
-      .put("senderId", selfId)
-      .put("recipientId", peerId)
-      .put("message", message);
+    CommonProto.MessageContent message = CommonProto.MessageContent.newBuilder()
+      .setMsgTypeValue(1)
+      .setContent(ByteString.copyFromUtf8(content))
+      .build();
+    ChatProto.C2CReq body = ChatProto.C2CReq.newBuilder()
+      .setSenderId(Long.parseLong(selfId))
+      .setRecipientId(Long.parseLong(peerId))
+      .setMessage(message)
+      .build();
     Map<String, String> headers = Map.of(
       "userId", selfId,
       "userName", selfName,

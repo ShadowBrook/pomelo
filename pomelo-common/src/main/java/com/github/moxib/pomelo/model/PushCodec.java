@@ -8,10 +8,11 @@ import java.nio.charset.StandardCharsets;
  * Push 消息二进制编解码。
  *
  * 格式（大端）:
- *   targetUserIdLen(2) | targetUserId(var) | cmd(4) | codecId(1)
+ *   targetUserIdLen(2) | targetUserId(var) | cmd(4)
  *   | bodyLen(4) | body(var)
  *
  * 在 EventBus 上以 Buffer 传输，利用 Vert.x 内置 Buffer MessageCodec。
+ * body 一律为 Protobuf 编码，不再携带 codecId 字节。
  */
 public final class PushCodec {
 
@@ -22,11 +23,10 @@ public final class PushCodec {
       ? env.getTargetUserId().getBytes(StandardCharsets.UTF_8) : new byte[0];
     byte[] body = env.getBody() != null ? env.getBody() : new byte[0];
 
-    Buffer buf = Buffer.buffer(2 + uid.length + 4 + 1 + 4 + body.length);
+    Buffer buf = Buffer.buffer(2 + uid.length + 4 + 4 + body.length);
     buf.appendUnsignedShort(uid.length);
     if (uid.length > 0) buf.appendBytes(uid);
     buf.appendInt(env.getCmd());
-    buf.appendByte(env.getCodecId());
     buf.appendInt(body.length);
     if (body.length > 0) buf.appendBytes(body);
     return buf;
@@ -38,14 +38,12 @@ public final class PushCodec {
     String targetUserId = uidLen > 0 ? buf.getString(pos, pos + uidLen) : null;
     pos += uidLen;
     int cmd = buf.getInt(pos); pos += 4;
-    byte codecId = buf.getByte(pos); pos += 1;
     int bodyLen = buf.getInt(pos); pos += 4;
     byte[] body = bodyLen > 0 ? buf.getBytes(pos, pos + bodyLen) : null;
 
     PushEnvelope env = new PushEnvelope();
     env.setTargetUserId(targetUserId);
     env.setCmd(cmd);
-    env.setCodecId(codecId);
     env.setBody(body);
     return env;
   }

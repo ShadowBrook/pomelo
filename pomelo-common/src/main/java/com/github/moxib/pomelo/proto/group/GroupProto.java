@@ -2170,6 +2170,25 @@ public final class GroupProto {
      * @return The seq.
      */
     long getSeq();
+
+    /**
+     * <pre>
+     * 消息 ID (Snowflake，客户端用于去重/排序/ACK)
+     * </pre>
+     *
+     * <code>optional int64 message_id = 6;</code>
+     * @return Whether the messageId field is set.
+     */
+    boolean hasMessageId();
+    /**
+     * <pre>
+     * 消息 ID (Snowflake，客户端用于去重/排序/ACK)
+     * </pre>
+     *
+     * <code>optional int64 message_id = 6;</code>
+     * @return The messageId.
+     */
+    long getMessageId();
   }
   /**
    * Protobuf type {@code im.group.C2GNotify}
@@ -2362,6 +2381,33 @@ public final class GroupProto {
       return seq_;
     }
 
+    public static final int MESSAGE_ID_FIELD_NUMBER = 6;
+    private long messageId_ = 0L;
+    /**
+     * <pre>
+     * 消息 ID (Snowflake，客户端用于去重/排序/ACK)
+     * </pre>
+     *
+     * <code>optional int64 message_id = 6;</code>
+     * @return Whether the messageId field is set.
+     */
+    @java.lang.Override
+    public boolean hasMessageId() {
+      return ((bitField0_ & 0x00000008) != 0);
+    }
+    /**
+     * <pre>
+     * 消息 ID (Snowflake，客户端用于去重/排序/ACK)
+     * </pre>
+     *
+     * <code>optional int64 message_id = 6;</code>
+     * @return The messageId.
+     */
+    @java.lang.Override
+    public long getMessageId() {
+      return messageId_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -2391,6 +2437,9 @@ public final class GroupProto {
       if (((bitField0_ & 0x00000004) != 0)) {
         output.writeInt64(5, seq_);
       }
+      if (((bitField0_ & 0x00000008) != 0)) {
+        output.writeInt64(6, messageId_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -2418,6 +2467,10 @@ public final class GroupProto {
       if (((bitField0_ & 0x00000004) != 0)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(5, seq_);
+      }
+      if (((bitField0_ & 0x00000008) != 0)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(6, messageId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -2453,6 +2506,11 @@ public final class GroupProto {
         if (getSeq()
             != other.getSeq()) return false;
       }
+      if (hasMessageId() != other.hasMessageId()) return false;
+      if (hasMessageId()) {
+        if (getMessageId()
+            != other.getMessageId()) return false;
+      }
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -2482,6 +2540,11 @@ public final class GroupProto {
         hash = (37 * hash) + SEQ_FIELD_NUMBER;
         hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
             getSeq());
+      }
+      if (hasMessageId()) {
+        hash = (37 * hash) + MESSAGE_ID_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getMessageId());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -2629,6 +2692,7 @@ public final class GroupProto {
         }
         name_ = "";
         seq_ = 0L;
+        messageId_ = 0L;
         return this;
       }
 
@@ -2682,6 +2746,10 @@ public final class GroupProto {
         if (((from_bitField0_ & 0x00000010) != 0)) {
           result.seq_ = seq_;
           to_bitField0_ |= 0x00000004;
+        }
+        if (((from_bitField0_ & 0x00000020) != 0)) {
+          result.messageId_ = messageId_;
+          to_bitField0_ |= 0x00000008;
         }
         result.bitField0_ |= to_bitField0_;
       }
@@ -2747,6 +2815,9 @@ public final class GroupProto {
         if (other.hasSeq()) {
           setSeq(other.getSeq());
         }
+        if (other.hasMessageId()) {
+          setMessageId(other.getMessageId());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
@@ -2800,6 +2871,11 @@ public final class GroupProto {
                 bitField0_ |= 0x00000010;
                 break;
               } // case 40
+              case 48: {
+                messageId_ = input.readInt64();
+                bitField0_ |= 0x00000020;
+                break;
+              } // case 48
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -3220,6 +3296,62 @@ public final class GroupProto {
         onChanged();
         return this;
       }
+
+      private long messageId_ ;
+      /**
+       * <pre>
+       * 消息 ID (Snowflake，客户端用于去重/排序/ACK)
+       * </pre>
+       *
+       * <code>optional int64 message_id = 6;</code>
+       * @return Whether the messageId field is set.
+       */
+      @java.lang.Override
+      public boolean hasMessageId() {
+        return ((bitField0_ & 0x00000020) != 0);
+      }
+      /**
+       * <pre>
+       * 消息 ID (Snowflake，客户端用于去重/排序/ACK)
+       * </pre>
+       *
+       * <code>optional int64 message_id = 6;</code>
+       * @return The messageId.
+       */
+      @java.lang.Override
+      public long getMessageId() {
+        return messageId_;
+      }
+      /**
+       * <pre>
+       * 消息 ID (Snowflake，客户端用于去重/排序/ACK)
+       * </pre>
+       *
+       * <code>optional int64 message_id = 6;</code>
+       * @param value The messageId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setMessageId(long value) {
+
+        messageId_ = value;
+        bitField0_ |= 0x00000020;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 消息 ID (Snowflake，客户端用于去重/排序/ACK)
+       * </pre>
+       *
+       * <code>optional int64 message_id = 6;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearMessageId() {
+        bitField0_ = (bitField0_ & ~0x00000020);
+        messageId_ = 0L;
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -3315,10 +3447,11 @@ public final class GroupProto {
       "t\"}\n\007C2GResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 " +
       "\001(\t\022\022\n\nmessage_id\030\003 \001(\003\022\020\n\010group_id\030\004 \001(" +
       "\003\022\023\n\013server_time\030\005 \001(\003\022\020\n\003seq\030\006 \001(\003H\000\210\001\001" +
-      "B\006\n\004_seq\"\222\001\n\tC2GNotify\022\021\n\tsender_id\030\001 \001(" +
+      "B\006\n\004_seq\"\272\001\n\tC2GNotify\022\021\n\tsender_id\030\001 \001(" +
       "\003\022\020\n\010group_id\030\002 \001(\003\022*\n\007message\030\003 \001(\0132\031.i" +
       "m.common.MessageContent\022\021\n\004name\030\004 \001(\tH\000\210" +
-      "\001\001\022\020\n\003seq\030\005 \001(\003H\001\210\001\001B\007\n\005_nameB\006\n\004_seqB1\n" +
+      "\001\001\022\020\n\003seq\030\005 \001(\003H\001\210\001\001\022\027\n\nmessage_id\030\006 \001(\003" +
+      "H\002\210\001\001B\007\n\005_nameB\006\n\004_seqB\r\n\013_message_idB1\n" +
       "#com.github.moxib.pomelo.proto.groupB\nGr" +
       "oupProtob\006proto3"
     };
@@ -3344,7 +3477,7 @@ public final class GroupProto {
     internal_static_im_group_C2GNotify_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_C2GNotify_descriptor,
-        new java.lang.String[] { "SenderId", "GroupId", "Message", "Name", "Seq", });
+        new java.lang.String[] { "SenderId", "GroupId", "Message", "Name", "Seq", "MessageId", });
     com.github.moxib.pomelo.proto.common.CommonProto.getDescriptor();
   }
 

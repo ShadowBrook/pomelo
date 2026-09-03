@@ -7,7 +7,6 @@ import com.github.moxib.pomelo.logic.model.requests.LoginRequest;
 import com.github.moxib.pomelo.proto.auth.AuthProto;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,18 +58,11 @@ public class AuthService extends ServiceBase {
         // 优先使用 numeric id claim（Snowflake），兼容旧 token 中 sub 为 NanoID 的情况
         String userId = id != 0 ? String.valueOf(id) : claims.getString("sub");
         String userName = claims.getString("userName");
-        String nickname = claims.getString("nickname");
-        byte codecId = message.getCodecId();
 
-        LOG.info("登录成功: userId={} userName={} codec={}", userId, userName, codecId == 0 ? "PB" : "JSON");
+        LOG.info("登录成功: userId={} userName={}", userId, userName);
 
-        Object respBody = dualBody(codecId,
-          () -> AuthProto.AuthResp.newBuilder()
-            .setCode(0).setMessage("success").setUserId(id).build(),
-          () -> new JsonObject()
-            .put("code", 0).put("message", "success")
-            .put("userId", userId).put("userName", userName)
-            .put("nickname", nickname != null ? nickname : ""));
+        AuthProto.AuthResp respBody = AuthProto.AuthResp.newBuilder()
+          .setCode(0).setMessage("success").setUserId(id).build();
 
         return Future.succeededFuture(buildResponse(message, CMD_AUTH_RESP_VALUE, respBody));
       });
@@ -79,10 +71,8 @@ public class AuthService extends ServiceBase {
 
   private Future<ImMessage> handleLogout(ImMessage message) {
     String userId = getUserIdFromHeaders(message);
-    if (userId == null) userId = getBodyAsString(message);
     LOG.info("登出请求: userId={}", userId);
 
-    byte codecId = message.getCodecId();
     String token = null;
     Map<String, String> headers = message.getVarHeaders();
     if (headers != null) token = headers.get("token");
@@ -90,9 +80,8 @@ public class AuthService extends ServiceBase {
       TokenService.get(vertx).blacklist(token);
     }
 
-    Object respBody = dualBody(codecId,
-      () -> AuthProto.LogoutResp.newBuilder().setCode(0).setMessage("登出成功").build(),
-      () -> new JsonObject().put("code", 0).put("message", "登出成功"));
+    AuthProto.LogoutResp respBody = AuthProto.LogoutResp.newBuilder()
+      .setCode(0).setMessage("登出成功").build();
 
     return Future.succeededFuture(buildResponse(message, CMD_LOGOUT_RESP_VALUE, respBody));
   }

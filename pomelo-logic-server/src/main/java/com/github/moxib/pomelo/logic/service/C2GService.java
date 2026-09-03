@@ -1,15 +1,14 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
-import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.GroupMemberContextCache;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
 import com.github.moxib.pomelo.logic.model.GroupMsgContext;
+import com.github.moxib.pomelo.logic.model.requests.C2GRequest;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.proto.group.GroupProto;
@@ -17,7 +16,6 @@ import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,51 +32,40 @@ public class C2GService extends ServiceBase {
   private final GroupMemberContextCache memberCtxCache;
   private final SeqClientService seqClient;
   private final SnowflakeIdGenerator snowflake;
-  private final SessionRouteTable routeTable;
   private final MediaUrlSigner mediaUrlSigner;
 
   public C2GService(Vertx vertx, PushRouter pushRouter, GroupRepository groupRepo,
                     SeqClientService seqClient, SnowflakeIdGenerator snowflake,
-                    SessionRouteTable routeTable, MediaUrlSigner mediaUrlSigner) {
+                    MediaUrlSigner mediaUrlSigner) {
     this.pushRouter = pushRouter;
     this.groupRepo = groupRepo;
     this.memberCtxCache = new GroupMemberContextCache(vertx, groupRepo);
     this.seqClient = seqClient;
     this.snowflake = snowflake;
-    this.routeTable = routeTable;
     this.mediaUrlSigner = mediaUrlSigner;
   }
 
   public Future<ImMessage> process(ImMessage message) {
     try {
-      byte codecId = message.getCodecId();
-
       Map<String, String> varHeaders = message.getVarHeaders();
       String senderUserId = varHeaders != null ? varHeaders.get("userId") : null;
       String senderUserName = varHeaders != null ? varHeaders.get("userName") : null;
       String senderNickname = varHeaders != null ? varHeaders.get("nickname") : null;
 
-      String bodyStr = getBodyAsString(message);
-      if (bodyStr == null) {
-        return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
-          ErrorCode.BAD_REQUEST, "body 不能为空"));
-      }
-      JsonObject body = new JsonObject(bodyStr);
-      String groupId = body.getString("groupId");
-      if (groupId == null || groupId.isEmpty()) {
+      C2GRequest req = decode(message, C2GRequest.class);
+      if (req == null || req.groupId() == null || req.groupId().isEmpty()) {
         return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
           ErrorCode.BAD_REQUEST, "groupId 不能为空"));
       }
-
-      JsonObject msgObj = body.getJsonObject("message");
-      if (msgObj == null) {
+      String groupId = req.groupId();
+      C2GRequest.MessageBody msg = req.message();
+      if (msg == null) {
         return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
           ErrorCode.BAD_REQUEST, "message 不能为空"));
       }
-
-      String content = msgObj.getString("content", "");
-      int msgType = msgObj.getInteger("msgType", 1);
-      long clientMsgId = body.getLong("messageId", 0L);
+      String content = msg.content();
+      int msgType = msg.msgType();
+      long clientMsgId = req.messageId() != 0 ? req.messageId() : 0;
       if (clientMsgId == 0) {
         try { clientMsgId = Long.parseLong(message.getMessageId()); }
         catch (NumberFormatException e) { clientMsgId = System.currentTimeMillis(); }
@@ -102,7 +89,6 @@ public class C2GService extends ServiceBase {
       final String fContent = content;
       final int fMsgType = msgType;
       final long fClientMsgId = clientMsgId;
-      final byte fCodecId = codecId;
 
       // Caffeine 缓存群上下文（5s TTL），未命中时单次 DB 查询
       return memberCtxCache.get(numericGroupId, senderNumericId).compose(gctx -> {
@@ -129,11 +115,10 @@ public class C2GService extends ServiceBase {
           .msgType(fMsgType)
           .content(fContent)
           .timestamp(System.currentTimeMillis())
-          .codecId(fCodecId)
           .build();
 
         return doSend(ctx, senderNumericId, numericGroupId)
-          .map(result -> buildC2GResponse(message, fCodecId, result));
+          .map(result -> buildC2GResponse(message, result));
       });
     } catch (Exception e) {
       LOG.error("C2G 消息处理失败", e);
@@ -161,51 +146,15 @@ public class C2GService extends ServiceBase {
 
   private void pushToGroupMembers(GroupMsgContext ctx, long internalGroupId, long seq, long snowflakeId, long senderNumericId) {
     groupRepo.findMembers(internalGroupId).onSuccess(members -> {
-      String signedContent = mediaUrlSigner.signContent(ctx.getMsgType(), ctx.getContent());
+      byte[] body = buildC2GNotifyBody(ctx, seq, snowflakeId);
       int pushCount = 0;
       for (GroupMemberRecord member : members) {
         if (member.getUserId() == senderNumericId) {
           continue;
         }
         String targetUserId = String.valueOf(member.getUserId());
-        routeTable.resolveCodec(targetUserId)
-          .onSuccess(recipientCodec -> {
-            byte[] pbBody;
-            byte pushCodec;
-            if (recipientCodec == ProtobufCodec.CODEC_ID) {
-              CommonProto.MessageContent msgContent = CommonProto.MessageContent.newBuilder()
-                .setMsgTypeValue(ctx.getMsgType())
-                .setContent(ByteString.copyFromUtf8(signedContent != null ? signedContent : ""))
-                .build();
-              GroupProto.C2GNotify notify = GroupProto.C2GNotify.newBuilder()
-                .setSenderId(ctx.getSenderUserId())
-                .setGroupId(ctx.getGroupId())
-                .setMessage(msgContent)
-                .setName(ctx.getGroupName() != null ? ctx.getGroupName() : "")
-                .setSeq(seq)
-                .build();
-              pbBody = notify.toByteArray();
-              pushCodec = 0;
-            } else {
-              JsonObject json = new JsonObject();
-              json.put("senderId", String.valueOf(ctx.getSenderUserId()));
-              json.put("groupId", String.valueOf(ctx.getGroupId()));
-              if (ctx.getGroupName() != null) json.put("name", ctx.getGroupName());
-              if (ctx.getSenderUserName() != null) json.put("senderUserName", ctx.getSenderUserName());
-              if (ctx.getSenderNickname() != null) json.put("senderNickname", ctx.getSenderNickname());
-              JsonObject jsonMsg = new JsonObject();
-              jsonMsg.put("msgType", ctx.getMsgType());
-              jsonMsg.put("content", signedContent != null ? signedContent : "");
-              json.put("message", jsonMsg);
-              json.put("id", String.valueOf(snowflakeId));
-              json.put("seq", seq);
-              json.put("createdAt", System.currentTimeMillis());
-              pbBody = json.toBuffer().getBytes();
-              pushCodec = 1;
-            }
-            PushEnvelope env = new PushEnvelope(targetUserId, CMD_C2G_NOTIFY_VALUE, pbBody, pushCodec);
-            pushRouter.push(env);
-          });
+        PushEnvelope env = new PushEnvelope(targetUserId, CMD_C2G_NOTIFY_VALUE, body);
+        pushRouter.push(env);
         pushCount++;
       }
       LOG.debug("C2GNotify 推送完成: groupId={} memberCount={} seq={}",
@@ -213,19 +162,35 @@ public class C2GService extends ServiceBase {
     }).onFailure(e -> LOG.warn("获取群成员失败 groupId={}: {}", ctx.getGroupId(), e.getMessage()));
   }
 
-  private ImMessage buildC2GResponse(ImMessage request, byte codecId, C2GRespResult result) {
-    Object respBody = dualBody(codecId,
-      () -> GroupProto.C2GResp.newBuilder()
-        .setCode(result.code()).setMessage(result.message())
-        .setMessageId(result.messageId()).setGroupId(result.groupId())
-        .setServerTime(result.serverTime()).setSeq(result.seq())
-        .build(),
-      () -> new JsonObject()
-        .put("code", result.code()).put("message", result.message())
-        .put("messageId", String.valueOf(result.messageId()))
-        .put("groupId", String.valueOf(result.groupId()))
-        .put("serverTime", result.serverTime())
-        .put("seq", result.seq()));
+  private byte[] buildC2GNotifyBody(GroupMsgContext ctx, long seq, long snowflakeId) {
+    String signedContent = mediaUrlSigner.signContent(ctx.getMsgType(), ctx.getContent());
+    CommonProto.MessageContent.Builder msgContentBuilder = CommonProto.MessageContent.newBuilder()
+      .setMsgTypeValue(ctx.getMsgType())
+      .setContent(ByteString.copyFromUtf8(signedContent != null ? signedContent : ""))
+      .setTimestamp(ctx.getTimestamp());
+    if (ctx.getSenderUserName() != null && !ctx.getSenderUserName().isEmpty()) {
+      msgContentBuilder.putExt("senderUserName", ctx.getSenderUserName());
+    }
+    if (ctx.getSenderNickname() != null && !ctx.getSenderNickname().isEmpty()) {
+      msgContentBuilder.putExt("senderNickname", ctx.getSenderNickname());
+    }
+    return GroupProto.C2GNotify.newBuilder()
+      .setSenderId(ctx.getSenderUserId())
+      .setGroupId(ctx.getGroupId())
+      .setMessage(msgContentBuilder)
+      .setName(ctx.getGroupName() != null ? ctx.getGroupName() : "")
+      .setSeq(seq)
+      .setMessageId(snowflakeId)
+      .build()
+      .toByteArray();
+  }
+
+  private ImMessage buildC2GResponse(ImMessage request, C2GRespResult result) {
+    GroupProto.C2GResp respBody = GroupProto.C2GResp.newBuilder()
+      .setCode(result.code()).setMessage(result.message())
+      .setMessageId(result.messageId()).setGroupId(result.groupId())
+      .setServerTime(result.serverTime()).setSeq(result.seq())
+      .build();
     return buildResponse(request, CMD_C2G_RESP_VALUE, respBody);
   }
 
