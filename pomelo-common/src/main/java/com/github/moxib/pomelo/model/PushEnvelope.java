@@ -5,24 +5,22 @@ package com.github.moxib.pomelo.model;
  * 在 EventBus 上以 {@link PushCodec} 二进制编码传输，各 Gateway 节点收到后
  * 根据 targetUserId 查本地 SessionRegistry 投递。
  *
- * body 为推送体字节，codecId 标识其编码格式。
- * 推送前已按接收方 codec 构建，Gateway 直接投递无需转换。
+ * body 为推送体字节，一律为 Protobuf 编码（codecId 冻结为 0），
+ * Gateway 直接投递无需转换。
  */
 public class PushEnvelope {
 
   private String targetUserId;
   private int cmd;
   private byte[] body;
-  private byte codecId;
   private String correlationMsgId;
 
   public PushEnvelope() {}
 
-  public PushEnvelope(String targetUserId, int cmd, byte[] body, byte codecId) {
+  public PushEnvelope(String targetUserId, int cmd, byte[] body) {
     this.targetUserId = targetUserId;
     this.cmd = cmd;
     this.body = body;
-    this.codecId = codecId;
   }
 
   public String getTargetUserId() { return targetUserId; }
@@ -33,9 +31,6 @@ public class PushEnvelope {
 
   public byte[] getBody() { return body; }
   public void setBody(byte[] body) { this.body = body; }
-
-  public byte getCodecId() { return codecId; }
-  public void setCodecId(byte codecId) { this.codecId = codecId; }
 
   public String getCorrelationMsgId() { return correlationMsgId; }
   public void setCorrelationMsgId(String correlationMsgId) { this.correlationMsgId = correlationMsgId; }

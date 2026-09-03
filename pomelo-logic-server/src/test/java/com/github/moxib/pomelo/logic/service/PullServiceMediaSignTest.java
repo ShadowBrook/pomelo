@@ -5,11 +5,10 @@ import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
 import com.github.moxib.pomelo.logic.model.UserIdInfo;
 import com.github.moxib.pomelo.proto.common.CommonProto;
+import com.github.moxib.pomelo.proto.pull.PullProto;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,16 +45,18 @@ class PullServiceMediaSignTest {
     MediaUrlSigner signer = (msgType, content) -> content + "?signed";
     PullService service = new PullService(stubRepo, signer);
 
-    byte[] body = new JsonObject().put("userId", "20").put("seq", 0L).put("limit", 10)
-      .toBuffer().getBytes();
+    PullProto.PullReq body = PullProto.PullReq.newBuilder().setLimit(10).setSeq(0).build();
+    Map<String, String> headers = new HashMap<>();
+    headers.put("userId", "20");
     ImMessage req = ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER).version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId((byte) 1).cmd(CommonProto.Cmd.CMD_PULL_REQ_VALUE)
-      .messageId("p-1").body(body).varHeaders(new HashMap<>()).build();
+      .codecId((byte) 0).cmd(CommonProto.Cmd.CMD_PULL_REQ_VALUE)
+      .messageId("p-1").body(body.toByteArray()).varHeaders(headers).build();
 
     ImMessage resp = service.process(req).toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
-    JsonObject json = new JsonObject(new String(resp.getBody(), StandardCharsets.UTF_8));
-    String content = json.getJsonArray("messages").getJsonObject(0).getString("content");
+    PullProto.PullResp pull = PullProto.PullResp.parseFrom(resp.getBody());
+    assertEquals(1, pull.getMessagesCount());
+    String content = pull.getMessages(0).getContent().toStringUtf8();
     assertTrue(content.endsWith("?signed"), "拉取消息 content 应被签名: " + content);
   }
 }

@@ -99,7 +99,7 @@ public class TcpGatewayVerticleTest {
         // 构建心跳消息
         ImMessage heartbeatRequest = ImMessage.builder()
           .version((byte) 1)
-          .codecId((byte) 1)
+          .codecId((byte) 0)
           // 心跳 cmd
           .cmd((byte) 0x01)
           .messageId("heartbeat-001")
@@ -155,7 +155,7 @@ public class TcpGatewayVerticleTest {
         // 构建登录请求
         ImMessage loginRequest = ImMessage.builder()
           .version((byte) 1)
-          .codecId((byte) 1)
+          .codecId((byte) 0)
           // 登录 cmd
           .cmd((byte) 0x02)
           .messageId("login-001")
@@ -208,7 +208,7 @@ public class TcpGatewayVerticleTest {
         // 构建聊天消息
         ImMessage chatRequest = ImMessage.builder()
           .version((byte) 1)
-          .codecId((byte) 1)
+          .codecId((byte) 0)
           // 聊天消息 cmd
           .cmd((byte) 0x10)
           .messageId("chat-001")
@@ -261,7 +261,7 @@ public class TcpGatewayVerticleTest {
         // 构建未知 cmd 的消息
         ImMessage unknownRequest = ImMessage.builder()
           .version((byte) 1)
-          .codecId((byte) 1)
+          .codecId((byte) 0)
           // 未知的 cmd
           .cmd((byte) 0x99)
           .messageId("unknown-001")
@@ -313,7 +313,7 @@ public class TcpGatewayVerticleTest {
         // 构建两个心跳消息
         ImMessage heartbeat1 = ImMessage.builder()
           .version((byte) 1)
-          .codecId((byte) 1)
+          .codecId((byte) 0)
           .cmd((byte) 0x01)
           .messageId("heartbeat-stick-001")
           .body("ping1".getBytes(StandardCharsets.UTF_8))
@@ -321,7 +321,7 @@ public class TcpGatewayVerticleTest {
 
         ImMessage heartbeat2 = ImMessage.builder()
           .version((byte) 1)
-          .codecId((byte) 1)
+          .codecId((byte) 0)
           .cmd((byte) 0x01)
           .messageId("heartbeat-stick-002")
           .body("ping2".getBytes(StandardCharsets.UTF_8))

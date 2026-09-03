@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.ConfigHolder;
@@ -12,8 +11,6 @@ import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.proto.pull.PullProto;
 import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,67 +95,31 @@ public class PullService extends ServiceBase {
 
   private ImMessage buildPullResp(ImMessage request, List<MessageRecord> records, int limit,
                                    Map<Long, UserIdInfo> idToInfo) {
-    byte codecId = request.getCodecId();
-    Object respBody;
-
-    if (codecId == ProtobufCodec.CODEC_ID) {
-      PullProto.PullResp.Builder resp = PullProto.PullResp.newBuilder()
-        .setCode(0).setMessage("success")
-        .setHasMore(records != null && records.size() >= limit);
-      if (records != null) {
-        for (MessageRecord r : records) {
-          UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
-          UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());
-          String signedContent = mediaUrlSigner.signContent(r.getMsgType(), r.getContent());
-          CommonProto.MessageContent.Builder mc = CommonProto.MessageContent.newBuilder()
-            .setMsgTypeValue(r.getMsgType())
-            .setContent(ByteString.copyFromUtf8(signedContent != null ? signedContent : ""))
-            .setTimestamp(r.getCreatedAt());
-          mc.putExt("id", String.valueOf(r.getId()));
-          mc.putExt("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(r.getSenderId()));
-          mc.putExt("recipientId", recipientInfo != null ? recipientInfo.userId() : String.valueOf(r.getRecipientId()));
-          if (senderInfo != null && senderInfo.userName() != null) {
-            mc.putExt("senderUserName", senderInfo.userName());
-          }
-          if (senderInfo != null && senderInfo.nickname() != null) {
-            mc.putExt("senderNickname", senderInfo.nickname());
-          }
-          mc.putExt("seq", String.valueOf(r.getSeq()));
-          resp.addMessages(mc);
+    PullProto.PullResp.Builder resp = PullProto.PullResp.newBuilder()
+      .setCode(0).setMessage("success")
+      .setHasMore(records != null && records.size() >= limit);
+    if (records != null) {
+      for (MessageRecord r : records) {
+        UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
+        UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());
+        String signedContent = mediaUrlSigner.signContent(r.getMsgType(), r.getContent());
+        CommonProto.MessageContent.Builder mc = CommonProto.MessageContent.newBuilder()
+          .setMsgTypeValue(r.getMsgType())
+          .setContent(ByteString.copyFromUtf8(signedContent != null ? signedContent : ""))
+          .setTimestamp(r.getCreatedAt());
+        mc.putExt("id", String.valueOf(r.getId()));
+        mc.putExt("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(r.getSenderId()));
+        mc.putExt("recipientId", recipientInfo != null ? recipientInfo.userId() : String.valueOf(r.getRecipientId()));
+        if (senderInfo != null && senderInfo.userName() != null) {
+          mc.putExt("senderUserName", senderInfo.userName());
         }
-      }
-      respBody = resp.build();
-    } else {
-      JsonObject json = jsonBody();
-      json.put("code", 0).put("message", "success");
-      json.put("hasMore", records != null && records.size() >= limit);
-      if (records != null && !records.isEmpty()) {
-        JsonArray arr = new JsonArray();
-        json.put("messages", arr);
-        for (MessageRecord r : records) {
-          JsonObject msg = new JsonObject();
-          arr.add(msg);
-          msg.put("id", String.valueOf(r.getId()));
-          UserIdInfo senderInfo = idToInfo.get(r.getSenderId());
-          UserIdInfo recipientInfo = idToInfo.get(r.getRecipientId());
-          msg.put("senderId", senderInfo != null ? senderInfo.userId() : String.valueOf(r.getSenderId()));
-          msg.put("recipientId", recipientInfo != null ? recipientInfo.userId() : String.valueOf(r.getRecipientId()));
-          if (senderInfo != null && senderInfo.userName() != null) {
-            msg.put("senderUserName", senderInfo.userName());
-          }
-          if (senderInfo != null && senderInfo.nickname() != null) {
-            msg.put("senderNickname", senderInfo.nickname());
-          }
-          msg.put("msgType", r.getMsgType());
-          String signedContent = mediaUrlSigner.signContent(r.getMsgType(), r.getContent());
-          msg.put("content", signedContent != null ? signedContent : "");
-          msg.put("seq", r.getSeq());
-          msg.put("createdAt", r.getCreatedAt());
+        if (senderInfo != null && senderInfo.nickname() != null) {
+          mc.putExt("senderNickname", senderInfo.nickname());
         }
+        mc.putExt("seq", String.valueOf(r.getSeq()));
+        resp.addMessages(mc);
       }
-      respBody = json;
     }
-
-    return buildResponse(request, CMD_PULL_RESP_VALUE, respBody);
+    return buildResponse(request, CMD_PULL_RESP_VALUE, resp.build());
   }
 }

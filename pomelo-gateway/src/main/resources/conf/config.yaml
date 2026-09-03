@@ -7,6 +7,7 @@ gateway:
     port: 9000
   websocket:
     port: 9001
+    perMessageDeflate: true
 
 redis:
   uri: "redis://localhost:6379"

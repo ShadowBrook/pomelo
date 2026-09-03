@@ -22,10 +22,8 @@ public class CtrlService extends ServiceBase {
       CtrlRequest req = decode(message, CtrlRequest.class);
       LOG.info("收到控制命令请求，ctrlType: {}", req.ctrlType());
 
-      byte codecId = message.getCodecId();
-      Object respBody = dualBody(codecId,
-        () -> CtrlProto.CtrlResp.newBuilder().setCode(0).setMessage("success").build(),
-        () -> jsonBody().put("code", 0).put("message", "success"));
+      CtrlProto.CtrlResp respBody = CtrlProto.CtrlResp.newBuilder()
+        .setCode(0).setMessage("success").build();
 
       return Future.succeededFuture(buildResponse(message, CMD_CTRL_RESP_VALUE, respBody));
     } catch (Exception e) {

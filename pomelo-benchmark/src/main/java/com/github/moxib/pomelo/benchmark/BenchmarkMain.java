@@ -1,16 +1,19 @@
 package com.github.moxib.pomelo.benchmark;
 
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.proto.auth.AuthProto;
+import com.github.moxib.pomelo.proto.chat.ChatProto;
+import com.github.moxib.pomelo.proto.relation.RelationProto;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 /**
  * 压力测试主入口 — 编排三阶段：注册用户 → 加好友（申请+接受）→ 发单聊消息。
@@ -211,8 +214,14 @@ public class BenchmarkMain {
 
   private static int respCode(ImMessage resp) {
     try {
-      JsonObject body = new JsonObject(new String(resp.getBody(), StandardCharsets.UTF_8));
-      return body.getInteger("code", -1);
+      byte[] body = resp.getBody();
+      return switch (resp.getCmd()) {
+        case CMD_AUTH_RESP_VALUE -> AuthProto.AuthResp.parseFrom(body).getCode();
+        case CMD_FRIEND_ADD_RESP_VALUE -> RelationProto.FriendAddResp.parseFrom(body).getCode();
+        case CMD_FRIEND_ACCEPT_RESP_VALUE -> RelationProto.FriendAcceptResp.parseFrom(body).getCode();
+        case CMD_C2C_RESP_VALUE -> ChatProto.C2CResp.parseFrom(body).getCode();
+        default -> -1;
+      };
     } catch (Exception e) {
       return -1;
     }

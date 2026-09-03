@@ -1,9 +1,7 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
-import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.C2CReqContext;
@@ -16,7 +14,6 @@ import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,23 +29,19 @@ public class C2CService extends ServiceBase {
   private final MessageRepository messageRepo;
   private final SeqClientService seqClient;
   private final SnowflakeIdGenerator snowflake;
-  private final SessionRouteTable routeTable;
   private final MediaUrlSigner mediaUrlSigner;
 
   public C2CService(PushRouter pushRouter, MessageRepository messageRepo, SeqClientService seqClient,
-                    SnowflakeIdGenerator snowflake, SessionRouteTable routeTable,
-                    MediaUrlSigner mediaUrlSigner) {
+                    SnowflakeIdGenerator snowflake, MediaUrlSigner mediaUrlSigner) {
     this.pushRouter = pushRouter;
     this.messageRepo = messageRepo;
     this.seqClient = seqClient;
     this.snowflake = snowflake;
-    this.routeTable = routeTable;
     this.mediaUrlSigner = mediaUrlSigner;
   }
 
   public Future<ImMessage> process(ImMessage message) {
     try {
-      byte codecId = message.getCodecId();
       C2CRequest req = decode(message, C2CRequest.class);
       C2CRequest.MessageBody msg = req.message();
       String senderUserId = extractSenderUserId(message, req.senderId());
@@ -84,11 +77,10 @@ public class C2CService extends ServiceBase {
         .msgType(msgType)
         .content(content)
         .timestamp(timestamp)
-        .codecId(codecId)
         .build();
 
       return doSend(ctx)
-        .map(result -> buildC2CResponse(message, codecId, result));
+        .map(result -> buildC2CResponse(message, result));
     } catch (Exception e) {
       LOG.error("C2C 消息处理失败", e);
       return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.BAD_REQUEST, "消息格式错误：" + e.getMessage()));
@@ -129,69 +121,40 @@ public class C2CService extends ServiceBase {
 
   private void publishC2CNotify(MessageRecord record, String senderUserName, String senderNickname) {
     String recipientUserId = String.valueOf(record.getRecipientId());
-    routeTable.resolveCodec(recipientUserId)
-      .onSuccess(recipientCodec -> {
-        byte[] body;
-        byte pushCodec;
-        String signedContent = mediaUrlSigner.signContent(record.getMsgType(), record.getContent());
-        if (recipientCodec == ProtobufCodec.CODEC_ID) {
-          CommonProto.MessageContent.Builder msgContentBuilder = CommonProto.MessageContent.newBuilder()
-            .setMsgTypeValue(record.getMsgType())
-            .setContent(ByteString.copyFromUtf8(signedContent != null ? signedContent : ""));
-          if (senderUserName != null && !senderUserName.isEmpty()) {
-            msgContentBuilder.putExt("senderUserName", senderUserName);
-          }
-          if (senderNickname != null && !senderNickname.isEmpty()) {
-            msgContentBuilder.putExt("senderNickname", senderNickname);
-          }
-          CommonProto.MessageContent msgContent = msgContentBuilder.build();
-          ChatProto.C2CNotify notify = ChatProto.C2CNotify.newBuilder()
-            .setSenderId(record.getSenderId())
-            .setRecipientId(record.getRecipientId())
-            .setMessage(msgContent)
-            .setSeq(record.getSeq())
-            .setMessageId(record.getId())
-            .build();
-          body = notify.toByteArray();
-          pushCodec = 0;
-        } else {
-          JsonObject json = new JsonObject();
-          json.put("senderId", String.valueOf(record.getSenderId()));
-          json.put("recipientId", String.valueOf(record.getRecipientId()));
-          if (senderUserName != null) json.put("senderUserName", senderUserName);
-          if (senderNickname != null) json.put("senderNickname", senderNickname);
-          json.put("conversationId", record.getConversationId());
-          json.put("seq", record.getSeq());
-          JsonObject jsonMsgContent = new JsonObject();
-          json.put("message", jsonMsgContent);
-          jsonMsgContent.put("msgType", record.getMsgType());
-          jsonMsgContent.put("content", signedContent != null ? signedContent : "");
-          json.put("id", String.valueOf(record.getId()));
-          json.put("messageId", String.valueOf(record.getId()));
-          json.put("createdAt", record.getCreatedAt());
-          body = json.toBuffer().getBytes();
-          pushCodec = 1;
-        }
-        PushEnvelope env = new PushEnvelope(
-          recipientUserId,
-          CMD_C2C_NOTIFY_VALUE,
-          body,
-          pushCodec
-        );
-        pushRouter.push(env);
-        LOG.debug("C2CNotify pushed: recipientId={} msgId={} seq={} codec={}",
-          record.getRecipientId(), record.getId(), record.getSeq(), pushCodec);
-      })
-      .onFailure(e -> LOG.warn("Failed to resolve codec for {}, fallback to PB push", recipientUserId, e));
+    byte[] body = buildC2CNotifyBody(record, senderUserName, senderNickname);
+    PushEnvelope env = new PushEnvelope(recipientUserId, CMD_C2C_NOTIFY_VALUE, body);
+    pushRouter.push(env);
+    LOG.debug("C2CNotify pushed: recipientId={} msgId={} seq={}",
+      record.getRecipientId(), record.getId(), record.getSeq());
   }
 
-  private ImMessage buildC2CResponse(ImMessage request, byte codecId, C2CRespResult result) {
-    Object respBody = dualBody(codecId,
-      () -> ChatProto.C2CResp.newBuilder()
-        .setCode(result.getCode()).setMessage(result.getMessage())
-        .setMessageId(result.getMessageId()).setServerTime(result.getServerTime())
-        .setSeq(result.getSeq()).build(),
-      () -> result);
+  private byte[] buildC2CNotifyBody(MessageRecord record, String senderUserName, String senderNickname) {
+    String signedContent = mediaUrlSigner.signContent(record.getMsgType(), record.getContent());
+    CommonProto.MessageContent.Builder msgContentBuilder = CommonProto.MessageContent.newBuilder()
+      .setMsgTypeValue(record.getMsgType())
+      .setContent(ByteString.copyFromUtf8(signedContent != null ? signedContent : ""))
+      .setTimestamp(record.getCreatedAt());
+    if (senderUserName != null && !senderUserName.isEmpty()) {
+      msgContentBuilder.putExt("senderUserName", senderUserName);
+    }
+    if (senderNickname != null && !senderNickname.isEmpty()) {
+      msgContentBuilder.putExt("senderNickname", senderNickname);
+    }
+    ChatProto.C2CNotify notify = ChatProto.C2CNotify.newBuilder()
+      .setSenderId(record.getSenderId())
+      .setRecipientId(record.getRecipientId())
+      .setMessage(msgContentBuilder)
+      .setSeq(record.getSeq())
+      .setMessageId(record.getId())
+      .build();
+    return notify.toByteArray();
+  }
+
+  private ImMessage buildC2CResponse(ImMessage request, C2CRespResult result) {
+    ChatProto.C2CResp respBody = ChatProto.C2CResp.newBuilder()
+      .setCode(result.getCode()).setMessage(result.getMessage())
+      .setMessageId(result.getMessageId()).setServerTime(result.getServerTime())
+      .setSeq(result.getSeq()).build();
     return buildResponse(request, CMD_C2C_RESP_VALUE, respBody);
   }
 

@@ -9,7 +9,6 @@ import com.github.moxib.pomelo.logic.model.requests.UploadRequest;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.proto.upload.UploadProto;
 import io.vertx.core.Future;
-import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,13 +115,9 @@ public class UploadService extends ServiceBase {
 
   private ImMessage buildUploadResp(ImMessage request, int code, String msg,
                                     String objectKey, String presignedUrl, long expireAt) {
-    byte codecId = request.getCodecId();
-    Object respBody = dualBody(codecId,
-      () -> UploadProto.UploadResp.newBuilder()
-        .setCode(code).setMessage(msg)
-        .setObjectKey(objectKey).setPresignedUrl(presignedUrl).setExpireAt(expireAt).build(),
-      () -> new JsonObject().put("code", code).put("message", msg)
-        .put("objectKey", objectKey).put("presignedUrl", presignedUrl).put("expireAt", expireAt));
+    UploadProto.UploadResp respBody = UploadProto.UploadResp.newBuilder()
+      .setCode(code).setMessage(msg)
+      .setObjectKey(objectKey).setPresignedUrl(presignedUrl).setExpireAt(expireAt).build();
     return buildResponse(request, CMD_UPLOAD_RESP_VALUE, respBody);
   }
 }

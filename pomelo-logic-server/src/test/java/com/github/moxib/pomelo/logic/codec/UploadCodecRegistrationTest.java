@@ -10,9 +10,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class UploadCodecRegistrationTest {
 
   @Test
-  void uploadReqCodecIsRegisteredForPbAndJson() {
+  void uploadReqCodecIsRegistered() {
     assertNotNull(CodecRegistryHolder.REGISTRY.getCodec(CommonProto.Cmd.CMD_UPLOAD_REQ_VALUE, 0));
-    assertNotNull(CodecRegistryHolder.REGISTRY.getCodec(CommonProto.Cmd.CMD_UPLOAD_REQ_VALUE, 1));
   }
 
   @Test

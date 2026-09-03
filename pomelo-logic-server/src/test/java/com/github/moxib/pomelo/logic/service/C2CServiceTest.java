@@ -1,17 +1,17 @@
 package com.github.moxib.pomelo.logic.service;
 
 import com.github.moxib.pomelo.common.ImMessage;
-import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
+import com.github.moxib.pomelo.logic.model.UserIdInfo;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.chat.ChatProto;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
+import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -70,10 +70,35 @@ class C2CServiceTest {
       @Override public Future<List<MessageRecord>> pullConversation(String conversationId, long beforeTime, int limit) {
         return Future.succeededFuture(List.of());
       }
-      @Override public Future<Map<Long, com.github.moxib.pomelo.logic.model.UserIdInfo>> findUserIdsByIds(List<Long> ids) {
+      @Override public Future<Map<Long, UserIdInfo>> findUserIdsByIds(List<Long> ids) {
         return Future.succeededFuture(Map.of());
       }
     };
+  }
+
+  /** 构造 Protobuf C2CReq（codecId 冻结为 0） */
+  private static ImMessage pbC2CReq(long senderId, long recipientId, int msgType, String content) {
+    CommonProto.MessageContent message = CommonProto.MessageContent.newBuilder()
+      .setMsgTypeValue(msgType)
+      .setContent(ByteString.copyFromUtf8(content))
+      .setTimestamp(System.currentTimeMillis())
+      .build();
+    byte[] body = ChatProto.C2CReq.newBuilder()
+      .setSenderId(senderId)
+      .setRecipientId(recipientId)
+      .setMessageId(1L)
+      .setMessage(message)
+      .build()
+      .toByteArray();
+    return ImMessage.builder()
+      .magic(ImMessage.MAGIC_NUMBER)
+      .version(ImMessage.WIRE_PROTOCOL_VERSION)
+      .codecId((byte) 0)
+      .cmd(CommonProto.Cmd.CMD_C2C_REQ_VALUE)
+      .messageId("m-1")
+      .body(body)
+      .varHeaders(new HashMap<>())
+      .build();
   }
 
   @Test
@@ -96,25 +121,9 @@ class C2CServiceTest {
     };
 
     C2CService service = new C2CService(noopPush, stubRepo(), seqClient,
-      new SnowflakeIdGenerator(1), new SessionRouteTable(vertx), (msgType, content) -> content);
+      new SnowflakeIdGenerator(1), (msgType, content) -> content);
 
-    // 构造 JSON C2CReq：senderId=100, recipientId=200（数字 id，resolveId 直接 parse）
-    byte[] body = new JsonObject()
-      .put("senderId", "100")
-      .put("recipientId", "200")
-      .put("message", new JsonObject().put("msgType", 1).put("content", "hello"))
-      .put("messageId", 1L)
-      .put("timestamp", System.currentTimeMillis())
-      .toBuffer().getBytes();
-    ImMessage req = ImMessage.builder()
-      .magic(ImMessage.MAGIC_NUMBER)
-      .version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId((byte) 1)   // JSON
-      .cmd(CommonProto.Cmd.CMD_C2C_REQ_VALUE)
-      .messageId("m-1")
-      .body(body)
-      .varHeaders(new java.util.HashMap<>())
-      .build();
+    ImMessage req = pbC2CReq(100L, 200L, 1, "hello");
 
     CountDownLatch done = new CountDownLatch(1);
     AtomicReference<Throwable> err = new AtomicReference<>();
@@ -146,19 +155,9 @@ class C2CServiceTest {
       public Future<Long> fetchNextSequence(long id) { return Future.succeededFuture(42L); }
     };
     C2CService service = new C2CService(capturingPush, stubRepo(), seqClient,
-      new SnowflakeIdGenerator(1), new SessionRouteTable(vertx), (msgType, content) -> content + "?signed");
+      new SnowflakeIdGenerator(1), (msgType, content) -> content + "?signed");
 
-    byte[] body = new JsonObject()
-      .put("senderId", "100")
-      .put("recipientId", "200")
-      .put("message", new JsonObject().put("msgType", 2).put("content", "{\"key\":\"image/100/x.jpg\"}"))
-      .put("messageId", 1L)
-      .put("timestamp", System.currentTimeMillis())
-      .toBuffer().getBytes();
-    ImMessage req = ImMessage.builder()
-      .magic(ImMessage.MAGIC_NUMBER).version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId((byte) 1).cmd(CommonProto.Cmd.CMD_C2C_REQ_VALUE)
-      .messageId("m-1").body(body).varHeaders(new HashMap<>()).build();
+    ImMessage req = pbC2CReq(100L, 200L, 2, "{\"key\":\"image/100/x.jpg\"}");
 
     CountDownLatch done = new CountDownLatch(1);
     service.process(req).onComplete(ar -> done.countDown());

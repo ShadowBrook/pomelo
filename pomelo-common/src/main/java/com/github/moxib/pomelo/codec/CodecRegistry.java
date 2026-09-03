@@ -9,14 +9,13 @@ import java.util.function.Function;
 
 /**
  * 编解码器注册表。
- * 通过 cmd + codecId 路由到具体的编解码器。
- * PB 路径（codecId=0）自动从 ProtobufCodec 静态注册表 fallback。
+ * 后端已全面切换到 Protobuf 单编解码（codecId 冻结为 0），此处仅注册/查询 Protobuf 编解码器。
  */
 public class CodecRegistry {
 
     /**
      * 内部 Key: cmd#codecId
-     * 例如：1#1 表示 cmd=1, codecId=1(JSON)
+     * Protobuf 编解码器统一以 codecId=0 作为 key。
      */
     private final Map<String, MessageCodec<?>> codecs = new ConcurrentHashMap<>();
 
@@ -39,22 +38,18 @@ public class CodecRegistry {
     }
 
     /**
-     * 获取编解码器。
-     * codecId == 0 时优先查注册表（有 DTO 映射则用），否则 fallback 到 ProtobufCodec 静态注册表。
-     * codecId == 1 时从注册表查 JSON 编解码器。
+     * 获取编解码器（Protobuf-only）。
+     * codecId 入参仅保留签名兼容（wire 上 codecId 已冻结为 0），查找时一律走 codecId=0，
+     * 有 DTO 映射则用之，否则 fallback 到 ProtobufCodec 静态注册表。
      */
     @SuppressWarnings("unchecked")
     public <T> MessageCodec<T> getCodec(int cmd, int codecId) {
-        String key = buildKey(cmd, codecId);
-        MessageCodec<?> codec = codecs.get(key);
+        MessageCodec<?> codec = codecs.get(buildKey(cmd, ProtobufCodec.CODEC_ID));
         if (codec != null) {
             return (MessageCodec<T>) codec;
         }
         // PB fallback：无 DTO 映射时返回原始 ProtobufCodec
-        if (codecId == ProtobufCodec.CODEC_ID) {
-            return (MessageCodec<T>) ProtobufCodec.getCodec(cmd);
-        }
-        return null;
+        return (MessageCodec<T>) ProtobufCodec.getCodec(cmd);
     }
 
     /**
@@ -62,13 +57,6 @@ public class CodecRegistry {
      */
     public <T extends Message> ProtobufCodec<T> getProtobufCodec(int cmd) {
         return ProtobufCodec.getCodec(cmd);
-    }
-
-    /**
-     * 注册 JSON 编解码器
-     */
-    public void registerJson(int cmd, Class<?> messageType) {
-        register(cmd, new JsonCodec<>(messageType));
     }
 
     /**

@@ -9,6 +9,7 @@ import io.vertx.core.Future;
 import io.vertx.core.Handler;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.ServerWebSocket;
 import java.net.SocketException;
 import org.slf4j.Logger;
@@ -33,7 +34,13 @@ public class WsGatewayVerticle extends VerticleBase {
     this.sessionRegistry = new SessionRegistry();
     this.dispatcher = new MessageDispatcher(vertx, sessionRegistry, heartbeatTimeoutMs);
 
-    wsServer = vertx.createHttpServer();
+    // WebSocket 开启 permessage-deflate（RFC 7692）：
+    // 浏览器在握手时自动协商，payload 在传输层压缩、应用层透明。
+    // 对 JSON body 这类高重复键文本收益最大，且不改变现有二进制帧协议。
+    boolean perMessageDeflate = ConfigHolder.getBoolean("gateway.websocket.perMessageDeflate", true);
+    HttpServerOptions serverOptions = new HttpServerOptions()
+      .setPerMessageWebSocketCompressionSupported(perMessageDeflate);
+    wsServer = vertx.createHttpServer(serverOptions);
     return wsServer.webSocketHandler(getServerHandler()).listen(wsPort)
       .onSuccess(ar -> LOG.info("WebSocket 服务器已启动，监听端口：{}", wsPort))
       .onFailure(throwable -> LOG.error("WebSocket 服务器启动失败", throwable));

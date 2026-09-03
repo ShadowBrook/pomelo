@@ -13,7 +13,6 @@ import com.github.moxib.pomelo.proto.common.CommonProto;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,23 +91,19 @@ public class MessageDispatcher {
     return ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER)
       .version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId(request.getCodecId())
+      .codecId((byte) 0)
       .cmd(CMD_PONG_VALUE)
       .messageId(request.getMessageId())
       .build();
   }
 
-  /** 解析 push 并投递给本地连接的用户 */
+  /** 解析 push 并投递给本地连接的用户（EventBus 上 push 以 PushCodec Buffer 传输） */
   private void deliverPush(Object msgBody) {
-    PushEnvelope env;
-    if (msgBody instanceof Buffer buf) {
-      env = PushCodec.decode(buf);
-    } else if (msgBody instanceof JsonObject json) {
-      env = json.mapTo(PushEnvelope.class);
-    } else {
+    if (!(msgBody instanceof Buffer buf)) {
       LOG.warn("Unknown push body type: {}", msgBody.getClass().getName());
       return;
     }
+    PushEnvelope env = PushCodec.decode(buf);
     deliverToConnection(env);
   }
 
@@ -122,7 +117,7 @@ public class MessageDispatcher {
     ImMessage imMsg = ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER)
       .version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId(env.getCodecId())
+      .codecId((byte) 0)
       .cmd(env.getCmd())
       .messageId(env.getCorrelationMsgId() != null ? env.getCorrelationMsgId() : "")
       .body(env.getBody())
@@ -216,45 +211,36 @@ public class MessageDispatcher {
         }
         String userName = claims.getString("userName", "");
         String nickname = claims.getString("nickname", "");
-        String platform = claims.getString("platform", "");
-        byte codecId = request.getCodecId();
-        sessionRegistry.register(userId, id, connection, codecId, userName, nickname, null);
+        sessionRegistry.register(userId, id, connection, userName, nickname, null);
         routeTable.register(userId);
-        routeTable.setCodec(userId, platform, codecId);
         sessionRegistry.startHeartbeatTimer(vertx, userId, heartbeatTimeoutMs);
         LOG.info("Session 已注册: userId={} id={}", userId, id);
       })
       .onFailure(e -> LOG.warn("Token 解析失败，无法注册 session: {}", e.getMessage()));
   }
 
-  /** 判断 AUTH_RESP 是否成功（code == 0） */
+  /** 判断 AUTH_RESP 是否成功（code == 0），body 一律按 Protobuf 解析 */
   private boolean isAuthSuccess(ImMessage response) {
     byte[] body = response.getBody();
     if (body == null || body.length == 0) {
       return false;
     }
     try {
-      if (response.getCodecId() == ProtobufCodec.CODEC_ID) {
-        return ((AuthProto.AuthResp) ProtobufCodec.getCodec(CMD_AUTH_RESP_VALUE).decode(body)).getCode() == 0;
-      }
-      return new JsonObject(new String(body, StandardCharsets.UTF_8)).getInteger("code", -1) == 0;
+      return ((AuthProto.AuthResp) ProtobufCodec.getCodec(CMD_AUTH_RESP_VALUE).decode(body)).getCode() == 0;
     } catch (Exception e) {
       LOG.warn("AUTH_RESP 解析失败: {}", e.getMessage());
       return false;
     }
   }
 
-  /** 从 AUTH_REQ 请求提取 token（PB/JSON 双 codec） */
+  /** 从 AUTH_REQ 请求提取 token（body 一律按 Protobuf 解析） */
   private String extractToken(ImMessage request) {
     byte[] body = request.getBody();
     if (body == null || body.length == 0) {
       return null;
     }
     try {
-      if (request.getCodecId() == ProtobufCodec.CODEC_ID) {
-        return ((AuthProto.AuthReq) ProtobufCodec.getCodec(CMD_AUTH_REQ_VALUE).decode(body)).getToken();
-      }
-      return new JsonObject(new String(body, StandardCharsets.UTF_8)).getString("token");
+      return ((AuthProto.AuthReq) ProtobufCodec.getCodec(CMD_AUTH_REQ_VALUE).decode(body)).getToken();
     } catch (Exception e) {
       LOG.warn("AUTH_REQ token 提取失败: {}", e.getMessage());
       return null;
@@ -311,35 +297,21 @@ public class MessageDispatcher {
 
   private void handleUnknownCmd(Connection connection, ImMessage request) {
     String msg = "Unknown cmd: 0x" + Integer.toHexString(request.getCmd());
-    byte codecId = request.getCodecId();
-    byte[] body;
-    if (codecId == 0) {
-      body = CommonProto.ErrorBody.newBuilder()
-        .setCode(ErrorCode.UNKNOWN_CMD.getCode()).setMessage(msg).build().toByteArray();
-    } else {
-      body = new JsonObject().put("code", ErrorCode.UNKNOWN_CMD.getCode()).put("message", msg)
-        .toBuffer().getBytes();
-    }
+    byte[] body = CommonProto.ErrorBody.newBuilder()
+      .setCode(ErrorCode.UNKNOWN_CMD.getCode()).setMessage(msg).build().toByteArray();
     ImMessage response = ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER).version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId(codecId).cmd(CMD_ERROR_VALUE).messageId(request.getMessageId()).body(body)
+      .codecId((byte) 0).cmd(CMD_ERROR_VALUE).messageId(request.getMessageId()).body(body)
       .build();
     connection.write(response.encodeToWire());
   }
 
   private void sendErrorToClient(Connection connection, ImMessage request, String detail) {
-    byte codecId = request.getCodecId();
-    byte[] body;
-    if (codecId == 0) {
-      body = CommonProto.ErrorBody.newBuilder()
-        .setCode(ErrorCode.INTERNAL_ERROR.getCode()).setMessage(detail).build().toByteArray();
-    } else {
-      body = new JsonObject().put("code", ErrorCode.INTERNAL_ERROR.getCode()).put("message", detail)
-        .toBuffer().getBytes();
-    }
+    byte[] body = CommonProto.ErrorBody.newBuilder()
+      .setCode(ErrorCode.INTERNAL_ERROR.getCode()).setMessage(detail).build().toByteArray();
     ImMessage response = ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER).version(ImMessage.WIRE_PROTOCOL_VERSION)
-      .codecId(codecId).cmd(CMD_ERROR_VALUE).messageId(request.getMessageId()).body(body)
+      .codecId((byte) 0).cmd(CMD_ERROR_VALUE).messageId(request.getMessageId()).body(body)
       .build();
     connection.write(response.encodeToWire());
   }

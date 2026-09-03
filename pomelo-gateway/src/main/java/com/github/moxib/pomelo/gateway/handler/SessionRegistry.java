@@ -24,15 +24,15 @@ public class SessionRegistry {
   private final ConcurrentMap<Connection, String> connectionToUserId = new ConcurrentHashMap<>();
 
   /** 注册上线 */
-  public void register(String userId, long id, Connection connection, byte codecId,
+  public void register(String userId, long id, Connection connection,
                        String userName, String nickname) {
-    register(userId, id, connection, codecId, userName, nickname, null);
+    register(userId, id, connection, userName, nickname, null);
   }
 
   /** 注册上线（含 token） */
-  public void register(String userId, long id, Connection connection, byte codecId,
+  public void register(String userId, long id, Connection connection,
                        String userName, String nickname, String token) {
-    Session old = sessions.put(userId, new Session(id, userId, connection, codecId, userName, nickname, token));
+    Session old = sessions.put(userId, new Session(id, userId, connection, userName, nickname, token));
     if (old != null) {
       // 标记旧定时器为取消，避免新 session 误操作旧 ID
       old.heartbeatTimerId.getAndSet(-1);
@@ -43,7 +43,7 @@ public class SessionRegistry {
       }
     }
     connectionToUserId.put(connection, userId);
-    LOG.info("用户 {} (id={}) 上线 (codec={}), 当前在线: {}", userId, id, codecId, sessions.size());
+    LOG.info("用户 {} (id={}) 上线, 当前在线: {}", userId, id, sessions.size());
   }
 
   /** 按 userId 注销下线 */
@@ -75,12 +75,6 @@ public class SessionRegistry {
   public Connection getConnectionByUserId(String userId) {
     Session s = sessions.get(userId);
     return s != null ? s.connection : null;
-  }
-
-  /** 按 userId 获取 codecId */
-  public byte getCodecByUserId(String userId) {
-    Session s = sessions.get(userId);
-    return s != null ? s.codecId : 0;
   }
 
   /** 按 userId 获取数字 id (BIGINT)，不在线返回 0 */
@@ -179,18 +173,16 @@ public class SessionRegistry {
     final long id;
     final String userId;
     final Connection connection;
-    final byte codecId;
     final String userName;
     final String nickname;
     final String token;
     final AtomicLong heartbeatTimerId;
 
-    Session(long id, String userId, Connection connection, byte codecId,
+    Session(long id, String userId, Connection connection,
             String userName, String nickname, String token) {
       this.id = id;
       this.userId = userId;
       this.connection = connection;
-      this.codecId = codecId;
       this.userName = userName;
       this.nickname = nickname;
       this.token = token;

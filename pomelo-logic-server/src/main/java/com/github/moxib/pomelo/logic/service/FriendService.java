@@ -1,6 +1,5 @@
 package com.github.moxib.pomelo.logic.service;
 
-import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.ConfigHolder;
@@ -11,8 +10,6 @@ import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.relation.RelationProto;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
-import io.vertx.core.json.JsonArray;
-import io.vertx.core.json.JsonObject;
 import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.Tuple;
@@ -43,6 +40,9 @@ public class FriendService extends ServiceBase {
   private static final String DELETE_FRIEND_SQL = """
     DELETE FROM im_friend WHERE (user_id = $1 AND friend_id = $2) OR (user_id = $2 AND friend_id = $1)
     """;
+  private static final String PROFILE_SQL = """
+    SELECT user_name, nickname, avatar FROM im_user WHERE id = $1
+    """;
 
   private final PushRouter pushRouter;
   private final Pool pgPool;
@@ -71,7 +71,6 @@ public class FriendService extends ServiceBase {
   private Future<ImMessage> handleSearch(ImMessage message) {
     SearchRequest req = decode(message, SearchRequest.class);
     String keyword = req.keyword();
-    byte codecId = message.getCodecId();
 
     if (keyword == null || keyword.isBlank()) {
       return Future.succeededFuture(buildErrorResp(message, CMD_FRIEND_SEARCH_RESP_VALUE, ErrorCode.BAD_REQUEST, "keyword 不能为空"));
@@ -79,27 +78,17 @@ public class FriendService extends ServiceBase {
 
     return pgPool.preparedQuery(SEARCH_SQL)
       .execute(Tuple.of("%" + keyword + "%", searchLimit))
-      .map(rows -> buildResponse(message, CMD_FRIEND_SEARCH_RESP_VALUE, buildSearchBody(codecId, rows)));
+      .map(rows -> buildResponse(message, CMD_FRIEND_SEARCH_RESP_VALUE, buildSearchBody(rows)));
   }
 
-  private Object buildSearchBody(byte codecId, Iterable<Row> rows) {
-    if (codecId == ProtobufCodec.CODEC_ID) {
-      RelationProto.SearchUserResp.Builder b = RelationProto.SearchUserResp.newBuilder().setCode(0).setMessage("ok");
-      for (Row row : rows) {
-        b.addUsers(RelationProto.SearchUserResp.UserInfo.newBuilder()
-          .setUserId(row.getLong("id")).setUserName(row.getString("user_name"))
-          .setNickname(row.getString("nickname")).setAvatar(row.getString("avatar")));
-      }
-      return b.build();
-    }
-    JsonObject json = jsonBody().put("code", 0).put("message", "ok");
-    JsonArray arr = new JsonArray(); json.put("users", arr);
+  private Object buildSearchBody(Iterable<Row> rows) {
+    RelationProto.SearchUserResp.Builder b = RelationProto.SearchUserResp.newBuilder().setCode(0).setMessage("ok");
     for (Row row : rows) {
-      arr.add(new JsonObject().put("userId", String.valueOf(row.getLong("id")))
-        .put("userName", row.getString("user_name")).put("nickname", row.getString("nickname"))
-        .put("avatar", row.getString("avatar")));
+      b.addUsers(RelationProto.SearchUserResp.UserInfo.newBuilder()
+        .setUserId(row.getLong("id")).setUserName(row.getString("user_name"))
+        .setNickname(row.getString("nickname")).setAvatar(row.getString("avatar")));
     }
-    return json;
+    return b.build();
   }
 
   private Future<ImMessage> handleAdd(ImMessage message) {
@@ -172,35 +161,50 @@ public class FriendService extends ServiceBase {
   }
 
   private ImMessage buildFriendResp(ImMessage req, int respCmd, String msg) {
-    byte codecId = req.getCodecId();
-    Object body = dualBody(codecId,
-      () -> switch (respCmd) {
-        case CMD_FRIEND_ADD_RESP_VALUE -> RelationProto.FriendAddResp.newBuilder().setCode(0).setMessage(msg).build();
-        case CMD_FRIEND_ACCEPT_RESP_VALUE -> RelationProto.FriendAcceptResp.newBuilder().setCode(0).setMessage(msg).build();
-        default -> RelationProto.FriendDeleteResp.newBuilder().setCode(0).setMessage(msg).build();
-      },
-      () -> jsonBody().put("code", 0).put("message", msg));
+    Object body = switch (respCmd) {
+      case CMD_FRIEND_ADD_RESP_VALUE -> RelationProto.FriendAddResp.newBuilder().setCode(0).setMessage(msg).build();
+      case CMD_FRIEND_ACCEPT_RESP_VALUE -> RelationProto.FriendAcceptResp.newBuilder().setCode(0).setMessage(msg).build();
+      default -> RelationProto.FriendDeleteResp.newBuilder().setCode(0).setMessage(msg).build();
+    };
     return buildResponse(req, respCmd, body);
   }
 
   private void publishFriendNotify(long targetUserId, int cmd, long fromUserId) {
-    PushEnvelope env = new PushEnvelope(
-      String.valueOf(targetUserId),
-      cmd,
-      buildFriendNotifyBody(cmd, fromUserId),
-      (byte) 0
-    );
-    pushRouter.push(env);
-    LOG.debug("FriendNotify 已广播: target={} cmd={}", targetUserId, cmd);
+    loadUserProfile(fromUserId).onSuccess(profile -> {
+      byte[] body = buildFriendNotifyBody(cmd, fromUserId, profile);
+      PushEnvelope env = new PushEnvelope(String.valueOf(targetUserId), cmd, body);
+      pushRouter.push(env);
+      LOG.debug("FriendNotify 已广播: target={} cmd={}", targetUserId, cmd);
+    }).onFailure(e -> LOG.warn("FriendNotify 查询用户信息失败 from={}: {}", fromUserId, e.getMessage()));
   }
 
-  private byte[] buildFriendNotifyBody(int cmd, long userId) {
-    if (cmd == CMD_FRIEND_ADD_NOTIFY_VALUE)
+  private Future<UserProfile> loadUserProfile(long userId) {
+    return pgPool.preparedQuery(PROFILE_SQL)
+      .execute(Tuple.of(userId))
+      .map(rows -> {
+        if (rows.size() == 0) {
+          return new UserProfile("", "", "");
+        }
+        Row row = rows.iterator().next();
+        return new UserProfile(nn(row.getString("user_name")), nn(row.getString("nickname")), nn(row.getString("avatar")));
+      });
+  }
+
+  private record UserProfile(String userName, String nickname, String avatar) {}
+
+  private static String nn(String s) { return s != null ? s : ""; }
+
+  private byte[] buildFriendNotifyBody(int cmd, long userId, UserProfile p) {
+    if (cmd == CMD_FRIEND_ADD_NOTIFY_VALUE) {
       return RelationProto.FriendAddNotify.newBuilder()
-        .setUserId(userId).setUserName("").setNickname("").setAvatar("").build().toByteArray();
-    if (cmd == CMD_FRIEND_ACCEPT_NOTIFY_VALUE)
+        .setUserId(userId).setUserName(p.userName()).setNickname(p.nickname()).setAvatar(p.avatar())
+        .build().toByteArray();
+    }
+    if (cmd == CMD_FRIEND_ACCEPT_NOTIFY_VALUE) {
       return RelationProto.FriendAcceptNotify.newBuilder()
-        .setUserId(userId).setUserName("").setNickname("").setAvatar("").build().toByteArray();
+        .setUserId(userId).setUserName(p.userName()).setNickname(p.nickname()).setAvatar(p.avatar())
+        .build().toByteArray();
+    }
     return RelationProto.FriendDeleteNotify.newBuilder().setUserId(userId).build().toByteArray();
   }
 }
