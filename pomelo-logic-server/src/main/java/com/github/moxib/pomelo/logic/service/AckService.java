@@ -69,25 +69,19 @@ public class AckService extends ServiceBase {
           return Future.succeededFuture(Collections.emptyList());
         }
         return messageRepo.batchUpdateStatus(messageIds, newStatus)
-          .compose(v -> {
+          .map(v -> {
             Map<Long, List<Long>> senderMessages = new LinkedHashMap<>();
             for (MessageRecord r : records) {
               senderMessages.computeIfAbsent(r.getSenderId(), k -> new ArrayList<>()).add(r.getId());
             }
-            // 批量查 DB 把数字 ID 转 NanoID
-            List<Long> senderIds = new ArrayList<>(senderMessages.keySet());
-            return messageRepo.findUserIdsByIds(senderIds)
-              .map(idToInfo -> {
-                List<AckNotifyContext> results = new ArrayList<>();
-                for (Map.Entry<Long, List<Long>> entry : senderMessages.entrySet()) {
-                  long senderId = entry.getKey();
-                  var info = idToInfo.get(senderId);
-                  String senderUserId = info != null ? info.userId() : String.valueOf(senderId);
-                  results.add(new AckNotifyContext(senderId, senderUserId, entry.getValue(), ackType));
-                }
-                LOG.info("ACK: updated {} msgs to status={}, notify {} senders", messageIds.size(), newStatus, results.size());
-                return results;
-              });
+            // ACK_NOTIFY 按发送者会话路由
+            List<AckNotifyContext> results = new ArrayList<>();
+            for (Map.Entry<Long, List<Long>> entry : senderMessages.entrySet()) {
+              long senderId = entry.getKey();
+              results.add(new AckNotifyContext(senderId, String.valueOf(senderId), entry.getValue(), ackType));
+            }
+            LOG.info("ACK: updated {} msgs to status={}, notify {} senders", messageIds.size(), newStatus, results.size());
+            return results;
           });
       });
   }
