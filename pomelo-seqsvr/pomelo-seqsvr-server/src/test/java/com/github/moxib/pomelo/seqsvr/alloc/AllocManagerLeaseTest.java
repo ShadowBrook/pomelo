@@ -187,4 +187,48 @@ class AllocManagerLeaseTest {
     assertEquals(10000L, alloc.getSectionMaxSeq(0), "内存 section max 应为 Store 对齐值");
     assertEquals(10000L, storeManager.getMaxSeqsData()[0], "Store 持久化应为对齐值");
   }
+
+  @Test
+  @DisplayName("租约常量：停服阈值 15s，与 pending 激活延迟 5s 解耦（2026-09-07 事故 P9）")
+  void testLeaseConstantsDecoupled() {
+    assertEquals(15000, AllocManager.LEASE_TIMEOUT_MS, "停服阈值应放宽到 15s");
+    assertEquals(5000, AllocManager.PENDING_ACTIVATE_DELAY_MS, "pending 激活延迟保持 5s");
+  }
+
+  @Test
+  @DisplayName("6s 无成功 store 读仍服务，超过 15s 阈值才停服")
+  void testLeaseThresholdDecoupledFromPendingActivation() {
+    assertDoesNotThrow(() -> alloc.fetchNextSequence(3, 0), "正常时应可发号");
+
+    long now = System.currentTimeMillis();
+    // 6s 读停顿：旧实现（5s 阈值）已停服，新实现应仍在服务
+    alloc.backdateLeaseForTest(now - 6000);
+    alloc.checkLease(now);
+    assertEquals(AllocState.INITED, alloc.getState(), "6s 读停顿不应触发停服（阈值 15s）");
+    assertDoesNotThrow(() -> alloc.fetchNextSequence(4, 0), "6s 读停顿内应可继续发号");
+
+    // 超过 15s 阈值：停服
+    alloc.backdateLeaseForTest(now - AllocManager.LEASE_TIMEOUT_MS - 1000);
+    alloc.checkLease(now);
+    assertEquals(AllocState.ERROR, alloc.getState(), "超过 15s 阈值应停服");
+    assertThrows(IllegalStateException.class, () -> alloc.fetchNextSequence(5, 0));
+  }
+
+  @Test
+  @DisplayName("pending 激活延迟固定 5s，不随停服阈值放大")
+  void testPendingActivationDelayIndependentOfLeaseThreshold() throws Exception {
+    AllocManager narrow = newAlloc(new RangeId(0, SECTION));
+    RouterNode wide = new RouterNode("node-1", "127.0.0.1", 0,
+      Collections.singletonList(new RangeId(0, 2 * SECTION)));
+    long now = System.currentTimeMillis();
+    narrow.updateRouter(new Router(2, Collections.singletonList(wide)));
+    assertTrue(narrow.getPendingSections().containsKey(1), "扩容后 section 1 应为 pending");
+
+    // 恰好 5s：pending 应激活（若实现误用停服阈值 15s，此断言失败）
+    long t = now + AllocManager.PENDING_ACTIVATE_DELAY_MS;
+    narrow.backdateLeaseForTest(t);
+    narrow.checkLease(t);
+    assertFalse(narrow.getPendingSections().containsKey(1), "5s 后 pending 应激活");
+    assertTrue(narrow.getActiveSections().contains(1), "5s 后应服务新号段");
+  }
 }

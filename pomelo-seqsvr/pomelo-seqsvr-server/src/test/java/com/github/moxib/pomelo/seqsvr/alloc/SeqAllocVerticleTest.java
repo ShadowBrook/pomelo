@@ -1,5 +1,7 @@
 package com.github.moxib.pomelo.seqsvr.alloc;
 
+import com.github.moxib.pomelo.seqsvr.proto.SeqSvrConstants;
+import com.github.moxib.pomelo.seqsvr.rpc.SeqSvrAddresses;
 import com.github.moxib.pomelo.seqsvr.store.StoreVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -138,5 +140,41 @@ class SeqAllocVerticleTest {
     assertTrue(done.await(10, TimeUnit.SECONDS), "nodeScoped fetch 应返回结果");
     assertNull(errRef.get(), "nodeScoped fetch 失败: " + errRef);
     assertNotNull(seqRef.get(), "响应应携带 seq");
+  }
+
+  @Test
+  @DisplayName("路由过期回复携带 retryAfterMs（客户端据此延迟重试，2026-09-07 事故 P9）")
+  void testRouteOutdatedReplyCarriesRetryAfterMs() throws Exception {
+    CountDownLatch deployed = new CountDownLatch(1);
+    AtomicReference<Throwable> deployErr = new AtomicReference<>();
+    // 节点只声明 [0,5000)，请求 id=9999 → 不在服务范围 → ROUTE_OUTDATED
+    SeqAllocConfig config = new SeqAllocConfig(10000, 0, 5000, "node-1", "127.0.0.1", 0,
+      "seqsvr.store", false, SeqSvrAddresses.MEDIATE_PREFIX,
+      1000, AllocManager.SYNC_LEASE_TIMEOUT_MS, AllocManager.CHECK_LEASE_TIMEOUT_MS,
+      AllocManager.LEASE_TIMEOUT_MS);
+    vertx.deployVerticle(new StoreVerticle())
+      .compose(storeId -> vertx.deployVerticle(new SeqAllocVerticle(config)))
+      .onSuccess(id -> deployed.countDown())
+      .onFailure(err -> {
+        deployErr.set(err);
+        deployed.countDown();
+      });
+    assertTrue(deployed.await(10, TimeUnit.SECONDS), "verticle 应成功部署");
+    assertNull(deployErr.get(), "部署失败: " + deployErr);
+
+    JsonObject req = new JsonObject().put("id", 9999).put("version", 0);
+    CountDownLatch done = new CountDownLatch(1);
+    AtomicReference<JsonObject> bodyRef = new AtomicReference<>();
+    vertx.eventBus().<JsonObject>request("seqsvr.alloc.fetchNext", req)
+      .onSuccess(resp -> {
+        bodyRef.set(resp.body());
+        done.countDown();
+      })
+      .onFailure(err -> done.countDown());
+    assertTrue(done.await(10, TimeUnit.SECONDS), "请求应返回");
+    assertNotNull(bodyRef.get(), "应收到 ROUTE_OUTDATED 回复而非失败");
+    assertEquals(SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED, bodyRef.get().getInteger("code"),
+      "服务范围外的 id 应回复路由过期");
+    assertEquals(2000L, bodyRef.get().getLong("retryAfterMs"), "过期回复应携带 retryAfterMs=2000");
   }
 }

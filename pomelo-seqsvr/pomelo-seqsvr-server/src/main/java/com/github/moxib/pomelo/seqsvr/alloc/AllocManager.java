@@ -51,7 +51,14 @@ public class AllocManager {
   // 租约常量（对齐 Go）
   public static final long CHECK_LEASE_TIMEOUT_MS = 1000;
   public static final long SYNC_LEASE_TIMEOUT_MS = 4000;
-  public static final long LEASE_TIMEOUT_MS = 5000;
+  /**
+   * 停服阈值：距上次成功读取 Store 超过该时长即停止发号。
+   * 2026-09-07 事故 P9：从 5s 放宽到 15s（≈3× 同步周期），宿主短暂停顿不再直接打掉服务；
+   * 与 pending 激活延迟（PENDING_ACTIVATE_DELAY_MS）语义解耦。
+   */
+  public static final long LEASE_TIMEOUT_MS = 15000;
+  /** 新增号段 pending → active 的固定延迟（保证旧 AllocSvr 已停止），不随停服阈值放大 */
+  public static final long PENDING_ACTIVATE_DELAY_MS = 5000;
 
   private final StoreAccessor store;
   // 当前 set 的范围
@@ -223,7 +230,7 @@ public class AllocManager {
     }
     Set<Integer> toActivate = new HashSet<>();
     pendingSections.forEach((s, since) -> {
-      if (nowMs - since >= leaseTimeoutMs) {
+      if (nowMs - since >= PENDING_ACTIVATE_DELAY_MS) {
         toActivate.add(s);
       }
     });

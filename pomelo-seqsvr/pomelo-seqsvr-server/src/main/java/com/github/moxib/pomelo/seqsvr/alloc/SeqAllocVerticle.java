@@ -229,6 +229,9 @@ public class SeqAllocVerticle extends VerticleBase {
     return resp;
   }
 
+  /** 路由过期回复的建议重试间隔：客户端据此延迟重试，避免立即耗尽重试次数（2026-09-07 事故 P9） */
+  public static final long RETRY_AFTER_MS = 2000;
+
   /**
    * 构建"路由过期"响应：该节点不拥有请求 id 的号段，携带最新路由表供客户端收敛。
    */
@@ -237,6 +240,7 @@ public class SeqAllocVerticle extends VerticleBase {
     return new JsonObject()
       .put("code", SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED)
       .put("message", message)
+      .put("retryAfterMs", RETRY_AFTER_MS)
       .put("routeVersion", router.getVersion())
       .put("router", JsonObject.mapFrom(router));
   }
