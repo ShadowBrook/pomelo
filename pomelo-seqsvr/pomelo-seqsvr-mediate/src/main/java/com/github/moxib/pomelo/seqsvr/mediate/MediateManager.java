@@ -163,7 +163,9 @@ public class MediateManager {
 
   private Router generateRouter() {
     if (nodes.isEmpty()) {
-      return new Router(0, Collections.emptyList());
+      // 版本必须单调递增：全部节点失联被移除时归零会让持有旧版本的客户端
+      // 永久拒绝后续新路由表（2026-09-07 线上事故根因之一）
+      return new Router(router.getVersion() + 1, Collections.emptyList());
     }
 
     // 存活节点按 nodeId 排序，保证路由表确定性

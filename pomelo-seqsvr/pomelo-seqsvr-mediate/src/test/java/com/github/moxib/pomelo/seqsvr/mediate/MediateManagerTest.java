@@ -183,4 +183,25 @@ class MediateManagerTest {
     assertEquals(EXPECTED_SECTIONS, countSections(r));
     assertFalse(rangesOverlap(r));
   }
+
+  @Test
+  @DisplayName("全部节点失联移除后：路由版本必须继续递增，不得归零（客户端按版本单调采纳）")
+  void testVersionMonotonicWhenAllNodesRemoved() {
+    // 心跳超时 0ms：注册即视为失联，便于触发全节点移除
+    MediateManager fast = new MediateManager(store, new RangeId(0, MAX), 0);
+    Router r1 = fast.register(node("node-1"));
+    Router r2 = fast.register(node("node-2"));
+    int before = r2.getVersion();
+    assertTrue(before > 0, "注册后版本应为正数");
+
+    // 线上事故场景（2026-09-07）：宿主停顿导致心跳集体超时，全部节点被移除，
+    // 空成员分支曾把版本重置为 0，导致持有旧版本的客户端永久拒绝新路由表
+    assertTrue(fast.checkTimeouts(System.currentTimeMillis() + 1), "全部失联节点应被移除");
+    assertEquals(0, fast.getNodeCount());
+    Router empty = fast.getRouter();
+    assertEquals(before + 1, empty.getVersion(), "空成员路由版本必须继续递增（不得归零）");
+
+    Router back = fast.register(node("node-1"));
+    assertEquals(before + 2, back.getVersion(), "重新注册后版本继续递增");
+  }
 }
