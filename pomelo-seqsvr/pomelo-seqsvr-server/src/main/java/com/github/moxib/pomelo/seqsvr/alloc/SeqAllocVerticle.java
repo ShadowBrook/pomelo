@@ -1,5 +1,6 @@
 package com.github.moxib.pomelo.seqsvr.alloc;
 
+import com.github.moxib.pomelo.config.ClusterHelper;
 import com.github.moxib.pomelo.seqsvr.proto.AllocState;
 import com.github.moxib.pomelo.seqsvr.proto.RangeId;
 import com.github.moxib.pomelo.seqsvr.proto.Router;
@@ -10,14 +11,21 @@ import com.github.moxib.pomelo.seqsvr.rpc.MediateClient;
 import com.github.moxib.pomelo.seqsvr.rpc.SeqSvrAddresses;
 import com.github.moxib.pomelo.seqsvr.rpc.StoreAccessor;
 import com.github.moxib.pomelo.seqsvr.rpc.StoreClients;
+import io.github.shadowbrook.RedisClusterManager;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.eventbus.Message;
+import io.vertx.core.eventbus.MessageConsumer;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerRequest;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * AllocSvr Verticle — 序列号分配服务。
@@ -40,6 +48,12 @@ public class SeqAllocVerticle extends VerticleBase {
 
   private AllocManager allocManager;
   private MediateClient mediate;
+  private HttpServer adminServer;
+  private long selfCheckTimer = -1;
+  private final List<MessageConsumer<Object>> consumers = new ArrayList<>();
+
+  /** 应用层订阅自检周期(2026-09-07 事故 P2) */
+  public static final long SELF_CHECK_INTERVAL_MS = 30000;
   private long syncLeaseTimer;
   private long checkLeaseTimer;
   private long heartbeatTimer = -1;
@@ -85,7 +99,8 @@ public class SeqAllocVerticle extends VerticleBase {
       return initFuture
         .onSuccess(v -> LOG.info("SeqAllocVerticle started: nodeId={}, setId=[{},{}), maxIdSize={}, state={}",
           nodeId, config.setIdBegin(), config.setIdSize(), config.maxIdSize(), allocManager.getState()))
-        .onFailure(err -> LOG.error("SeqAllocVerticle init failed: nodeId={}", nodeId, err));
+        .onFailure(err -> LOG.error("SeqAllocVerticle init failed: nodeId={}", nodeId, err))
+        .compose(v -> startServices());
     }
 
     // Mediate 模式：周期心跳 + 注册（失败自动重试，返回路由表立即应用）
@@ -100,7 +115,8 @@ public class SeqAllocVerticle extends VerticleBase {
       })
       .map(v -> null)
       .onFailure(err -> LOG.error("SeqAllocVerticle init failed: nodeId={}, cause={}",
-        nodeId, err.getMessage()));
+        nodeId, err.getMessage()))
+      .compose(v -> startServices());
   }
 
   /** 注册失败后的重试间隔 */
@@ -165,11 +181,68 @@ public class SeqAllocVerticle extends VerticleBase {
 
   private void registerConsumers(String nodeId) {
     // 兼容 / 兜底地址（单节点开发、客户端无路由表）
-    vertx.eventBus().consumer(SeqSvrAddresses.ALLOC_FETCH_NEXT, this::onFetchNext);
-    vertx.eventBus().consumer(SeqSvrAddresses.ALLOC_GET_CURRENT, this::onGetCurrent);
+    consumers.add(vertx.eventBus().consumer(SeqSvrAddresses.ALLOC_FETCH_NEXT, this::onFetchNext));
+    consumers.add(vertx.eventBus().consumer(SeqSvrAddresses.ALLOC_GET_CURRENT, this::onGetCurrent));
     // 按 nodeId 路由地址（多节点客户端凭路由表路由到拥有号段的节点）
-    vertx.eventBus().consumer(SeqSvrAddresses.allocNodeFetchNext(nodeId), this::onFetchNext);
-    vertx.eventBus().consumer(SeqSvrAddresses.allocNodeGetCurrent(nodeId), this::onGetCurrent);
+    consumers.add(vertx.eventBus().consumer(SeqSvrAddresses.allocNodeFetchNext(nodeId), this::onFetchNext));
+    consumers.add(vertx.eventBus().consumer(SeqSvrAddresses.allocNodeGetCurrent(nodeId), this::onGetCurrent));
+  }
+
+  /**
+   * init 完成后启动：订阅自检定时器（P2）与 admin 健康端口（P5）。
+   */
+  private Future<Void> startServices() {
+    selfCheckTimer = vertx.setPeriodic(SELF_CHECK_INTERVAL_MS, id -> selfCheckSubscriptions());
+    if (config.adminPort() <= 0) {
+      return Future.succeededFuture();
+    }
+    adminServer = vertx.createHttpServer();
+    adminServer.requestHandler(this::handleAdminRequest);
+    return adminServer.listen(config.adminPort()).mapEmpty();
+  }
+
+  /** 本节点 4 个发号地址在集群订阅表中是否可见；非集群模式（无 CM）视为可见。 */
+  private boolean subscriptionsVisible() {
+    return ClusterHelper.clusterManager()
+      .filter(RedisClusterManager::isActive)
+      .map(cm -> Stream.of(
+          SeqSvrAddresses.ALLOC_FETCH_NEXT,
+          SeqSvrAddresses.ALLOC_GET_CURRENT,
+          SeqSvrAddresses.allocNodeFetchNext(config.nodeId()),
+          SeqSvrAddresses.allocNodeGetCurrent(config.nodeId()))
+        .allMatch(cm::isSubscriptionVisible))
+      .orElse(true);
+  }
+
+  /** 应用层自检：集群订阅表丢失本节点订阅时,重新注册并触发 CM 立即对账（P2）。 */
+  private void selfCheckSubscriptions() {
+    if (!subscriptionsVisible()) {
+      LOG.error("AllocSvr EventBus 订阅对集群不可见,重新注册消费者: nodeId={}", config.nodeId());
+      consumers.forEach(MessageConsumer::unregister);
+      consumers.clear();
+      registerConsumers(config.nodeId());
+      ClusterHelper.clusterManager().ifPresent(RedisClusterManager::reconcileNow);
+    }
+  }
+
+  private void handleAdminRequest(HttpServerRequest req) {
+    if (!"/health".equals(req.path())) {
+      req.response().setStatusCode(404).end();
+      return;
+    }
+    AllocState state = allocManager.getState();
+    boolean subscriptionOk = subscriptionsVisible();
+    boolean serving = state == AllocState.INITED;
+    req.response()
+      .putHeader("content-type", "application/json")
+      .setStatusCode(serving && subscriptionOk ? 200 : 503)
+      .end(new JsonObject()
+        .put("nodeId", config.nodeId())
+        .put("state", state.name())
+        .put("serving", serving)
+        .put("routerVersion", allocManager.getRouter().getVersion())
+        .put("subscriptionOk", subscriptionOk)
+        .encode());
   }
 
   private void onFetchNext(Message<Object> msg) {
@@ -249,6 +322,12 @@ public class SeqAllocVerticle extends VerticleBase {
   public Future<?> stop() {
     vertx.cancelTimer(syncLeaseTimer);
     vertx.cancelTimer(checkLeaseTimer);
+    if (selfCheckTimer != -1) {
+      vertx.cancelTimer(selfCheckTimer);
+    }
+    consumers.forEach(MessageConsumer::unregister);
+    consumers.clear();
+    Future<Void> adminClosed = adminServer != null ? adminServer.close() : Future.succeededFuture();
     if (heartbeatTimer != -1) {
       vertx.cancelTimer(heartbeatTimer);
     }
@@ -261,7 +340,7 @@ public class SeqAllocVerticle extends VerticleBase {
       });
     }
     LOG.info("SeqAllocVerticle stopped: nodeId={}", config.nodeId());
-    return Future.succeededFuture();
+    return adminClosed;
   }
 
   /** 供集成测试 / 诊断使用 */

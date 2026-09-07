@@ -4,6 +4,7 @@ import com.github.moxib.pomelo.seqsvr.proto.SeqSvrConstants;
 import com.github.moxib.pomelo.seqsvr.rpc.SeqSvrAddresses;
 import com.github.moxib.pomelo.seqsvr.store.StoreVerticle;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -176,5 +177,54 @@ class SeqAllocVerticleTest {
     assertEquals(SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED, bodyRef.get().getInteger("code"),
       "服务范围外的 id 应回复路由过期");
     assertEquals(2000L, bodyRef.get().getLong("retryAfterMs"), "过期回复应携带 retryAfterMs=2000");
+  }
+
+  @Test
+  @DisplayName("admin 端口 /health：暴露 state/serving/routerVersion/subscriptionOk（事故 P5）")
+  void testHealthEndpoint() throws Exception {
+    int adminPort = 18105;
+    CountDownLatch deployed = new CountDownLatch(1);
+    AtomicReference<Throwable> deployErr = new AtomicReference<>();
+    SeqAllocConfig config = new SeqAllocConfig(SeqSvrConstants.DEBUG_MAX_ID_SIZE, 0,
+      SeqSvrConstants.DEBUG_MAX_ID_SIZE, "node-1", "127.0.0.1", 0,
+      "seqsvr.store", false, SeqSvrAddresses.MEDIATE_PREFIX,
+      1000, AllocManager.SYNC_LEASE_TIMEOUT_MS, AllocManager.CHECK_LEASE_TIMEOUT_MS,
+      AllocManager.LEASE_TIMEOUT_MS, "", 2, 2, adminPort);
+    vertx.deployVerticle(new StoreVerticle())
+      .compose(storeId -> vertx.deployVerticle(new SeqAllocVerticle(config)))
+      .onSuccess(id -> deployed.countDown())
+      .onFailure(err -> {
+        deployErr.set(err);
+        deployed.countDown();
+      });
+    assertTrue(deployed.await(10, TimeUnit.SECONDS), "verticle 应成功部署");
+    assertNull(deployErr.get(), "部署失败: " + deployErr);
+
+    CountDownLatch done = new CountDownLatch(1);
+    AtomicReference<Integer> statusRef = new AtomicReference<>();
+    AtomicReference<JsonObject> bodyRef = new AtomicReference<>();
+    vertx.createHttpClient()
+      .request(io.vertx.core.http.HttpMethod.GET, adminPort, "127.0.0.1", "/health")
+      .compose(req -> req.send())
+      .onComplete(ar -> {
+        if (ar.succeeded()) {
+          HttpClientResponse resp = ar.result();
+          statusRef.set(resp.statusCode());
+          resp.body().onComplete(b -> {
+            if (b.succeeded()) {
+              bodyRef.set(io.vertx.core.json.Json.decodeValue(b.result(), JsonObject.class));
+            }
+            done.countDown();
+          });
+        } else {
+          done.countDown();
+        }
+      });
+    assertTrue(done.await(10, TimeUnit.SECONDS), "健康检查应返回");
+    assertEquals(200, statusRef.get(), "INITED + 订阅可见应返回 200");
+    assertEquals("INITED", bodyRef.get().getString("state"));
+    assertEquals(Boolean.TRUE, bodyRef.get().getBoolean("serving"));
+    assertEquals("node-1", bodyRef.get().getString("nodeId"));
+    assertEquals(Boolean.TRUE, bodyRef.get().getBoolean("subscriptionOk"), "非集群测试环境订阅视为可见");
   }
 }

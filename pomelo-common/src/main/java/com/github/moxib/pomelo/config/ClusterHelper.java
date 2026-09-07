@@ -12,6 +12,7 @@ import org.yaml.snakeyaml.Yaml;
 
 import java.io.InputStream;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -49,6 +50,16 @@ public final class ClusterHelper {
 
   private static final String YAML_PATH = "conf/config.yaml";
 
+  // 最近一次集群模式创建的 CM 实例，供应用层做订阅可见性自检（2026-09-07 事故加固 P2/P5）
+  private static volatile RedisClusterManager lastClusterManager;
+
+  /**
+   * 返回最近一次以集群模式创建的 {@link RedisClusterManager}；非集群模式或尚未创建时为空。
+   */
+  public static Optional<RedisClusterManager> clusterManager() {
+    return Optional.ofNullable(lastClusterManager);
+  }
+
   private ClusterHelper() {}
 
   /**
@@ -80,6 +91,7 @@ public final class ClusterHelper {
           .toCompletableFuture()
           .get(60, TimeUnit.SECONDS);
       LOG.info("Clustered Vert.x started, isClustered={}", vertx.isClustered());
+      lastClusterManager = clusterManager;
       return vertx;
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();

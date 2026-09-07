@@ -26,7 +26,8 @@ public record SeqAllocConfig(
   long leaseMs,
   String storeReplicas,
   int storeW,
-  int storeR
+  int storeR,
+  int adminPort
 ) {
 
   /** 兼容旧签名：默认单副本 Store */
@@ -34,7 +35,7 @@ public record SeqAllocConfig(
                         String storePrefix, boolean mediateEnabled, String mediatePrefix,
                         long heartbeatMs, long syncLeaseMs, long checkLeaseMs, long leaseMs) {
     this(maxIdSize, setIdBegin, setIdSize, nodeId, ip, port, storePrefix, mediateEnabled, mediatePrefix,
-      heartbeatMs, syncLeaseMs, checkLeaseMs, leaseMs, "", 2, 2);
+      heartbeatMs, syncLeaseMs, checkLeaseMs, leaseMs, "", 2, 2, 0);
   }
 
   public static SeqAllocConfig fromConfig() {
@@ -57,7 +58,8 @@ public record SeqAllocConfig(
       ConfigHolder.getLong("seqsvr.leaseTimeoutMs", AllocManager.LEASE_TIMEOUT_MS),
       ConfigHolder.getString("seqsvr.store.replicas", ""),
       ConfigHolder.getInt("seqsvr.store.w", 2),
-      ConfigHolder.getInt("seqsvr.store.r", 2)
+      ConfigHolder.getInt("seqsvr.store.r", 2),
+      ConfigHolder.getInt("seqsvr.adminPort", 10105)
     );
   }
 }
