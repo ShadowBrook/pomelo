@@ -6,11 +6,14 @@ import com.github.moxib.pomelo.seqsvr.proto.RouterNode;
 import com.github.moxib.pomelo.seqsvr.proto.SeqSvrConstants;
 import com.github.moxib.pomelo.seqsvr.rpc.SeqSvrAddresses;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * seqsvr 客户端 SDK — 供 Logic-Server / Gateway 调用。
@@ -29,14 +32,25 @@ public class SeqClientService {
 
   private static final Logger LOG = LoggerFactory.getLogger(SeqClientService.class);
 
-  /** 最多重试一次 */
+  /** 最多重试一次（常规路由更新 / 传输兜底） */
   private static final int MAX_RETRY = 1;
+
+  /** 连续 ROUTE_OUTDATED 达到该次数时，强制采纳服务端嵌入路由（版本倒退逃生，2026-09-07 事故 P8） */
+  private static final int FORCE_ADOPT_AFTER = 2;
+
+  /** 连续 ROUTE_OUTDATED 达到该次数时，向 Mediate 全量拉取路由表 */
+  private static final int MEDIATE_PULL_AFTER = 3;
+
+  /** 单次发号的最大尝试次数（含拉取 Mediate 后的重试），防御性上限 */
+  private static final int HARD_MAX_ATTEMPTS = 4;
 
   private final Vertx vertx;
   // id 哈希空间，须与服务端 maxIdSize 对齐（测试可缩小；生产默认 PRODUCTION_MAX_ID_SIZE）
   private final int maxIdSize;
   private volatile int routeVersion;
   private volatile Router cacheRouter;
+  private final AtomicInteger consecutiveOutdated = new AtomicInteger();
+  private volatile String lastOutdatedMessage = "";
 
   public SeqClientService(Vertx vertx) {
     this(vertx, SeqSvrConstants.PRODUCTION_MAX_ID_SIZE);
@@ -65,6 +79,10 @@ public class SeqClientService {
   }
 
   private Future<Long> attempt(int id, boolean increment, int attempt) {
+    if (attempt > HARD_MAX_ATTEMPTS) {
+      return Future.failedFuture(new IllegalStateException(
+        "route outdated retries exhausted (" + attempt + " attempts): id=" + id));
+    }
     String address = routeAddress(id, increment);
     return send(address, id)
       .compose(resp -> resolveResponse(resp, id, increment, attempt))
@@ -74,22 +92,67 @@ public class SeqClientService {
   private Future<Long> resolveResponse(JsonObject resp, int id, boolean increment, int attempt) {
     int code = resp.getInteger("code", SeqSvrConstants.ALLOC_CODE_OK);
     if (code == SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED) {
-      int versionBefore = routeVersion;
-      updateRouteFrom(resp);
-      if (attempt >= MAX_RETRY) {
-        // 路由表有实质更新
-        if (routeVersion > versionBefore) {
-          LOG.info("Route outdated but route updated (v{}→v{}), retrying: id={}",
-            versionBefore, routeVersion, id);
-          return attempt(id, increment, attempt + 1);
+      lastOutdatedMessage = resp.getString("message", "");
+      int consecutive = consecutiveOutdated.incrementAndGet();
+      boolean adopted = updateRouteFrom(resp);
+      if (!adopted && consecutive >= FORCE_ADOPT_AFTER) {
+        JsonObject routerJson = resp.getJsonObject("router");
+        if (routerJson != null) {
+          // 版本倒退逃生：服务端现实拓扑优先于本地缓存版本号（2026-09-07 事故 P8）
+          forceAdoptRouter(routerJson.mapTo(Router.class), id, consecutive);
+          adopted = true;
         }
-        return Future.failedFuture(new IllegalStateException("route outdated after retry: " + resp.getString("message")));
       }
-      // 路由表已更新，重路由重试
-      return attempt(id, increment, attempt + 1);
+      if (attempt >= MAX_RETRY) {
+        if (consecutive >= MEDIATE_PULL_AFTER) {
+          return pullRouterFromMediate(id, increment, attempt);
+        }
+        if (adopted) {
+          return delayedRetry(resp, id, increment, attempt);
+        }
+        return Future.failedFuture(new IllegalStateException(
+          "route outdated after retry: " + resp.getString("message")));
+      }
+      return delayedRetry(resp, id, increment, attempt);
     }
+    consecutiveOutdated.set(0);
     processRouteInResponse(resp);
     return Future.succeededFuture(resp.getLong("seq"));
+  }
+
+  /** 服务端要求延迟重试（retryAfterMs，如 stop-serving 宽限），否则立即重试。 */
+  private Future<Long> delayedRetry(JsonObject resp, int id, boolean increment, int attempt) {
+    long delayMs = resp.getLong("retryAfterMs", 0L);
+    if (delayMs <= 0) {
+      return attempt(id, increment, attempt + 1);
+    }
+    Promise<Long> p = Promise.promise();
+    vertx.setTimer(delayMs, t -> attempt(id, increment, attempt + 1).onComplete(p));
+    return p.future();
+  }
+
+  /** 无条件采纳服务端路由（版本倒退 / Mediate 全量拉取后调用）。 */
+  private void forceAdoptRouter(Router router, int id, int consecutive) {
+    cacheRouter = router;
+    routeVersion = router.getVersion();
+    LOG.warn("Force adopting server router v{} after {} consecutive route-outdated "
+      + "(local version rejected it): id={}", routeVersion, consecutive, id);
+  }
+
+  /** 连续过期达到阈值：向 Mediate 全量拉取路由表，强制采纳后重试。 */
+  private Future<Long> pullRouterFromMediate(int id, boolean increment, int attempt) {
+    return vertx.eventBus().<JsonObject>request(SeqSvrAddresses.MEDIATE_GET_ROUTER, new JsonObject())
+      .map(msg -> msg.body().getJsonObject("router"))
+      .compose(routerJson -> {
+        if (routerJson == null) {
+          return Future.<Long>failedFuture(new IllegalStateException(
+            "route outdated after retry: mediate returned no router"));
+        }
+        forceAdoptRouter(routerJson.mapTo(Router.class), id, consecutiveOutdated.get());
+        return attempt(id, increment, attempt + 1);
+      })
+      .recover(err -> Future.failedFuture(new IllegalStateException(
+        "route outdated after retry: " + lastOutdatedMessage, err)));
   }
 
   private Future<Long> fallbackOnTransportFailure(int id, boolean increment, int attempt, Throwable err) {
@@ -104,17 +167,7 @@ public class SeqClientService {
     LOG.debug("node-scoped request failed, falling back to shared address: id={}, cause={}",
       id, err.getMessage());
     String shared = increment ? SeqSvrAddresses.ALLOC_FETCH_NEXT : SeqSvrAddresses.ALLOC_GET_CURRENT;
-    return send(shared, id).compose(resp -> {
-      int code = resp.getInteger("code", SeqSvrConstants.ALLOC_CODE_OK);
-      if (code == SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED) {
-        updateRouteFrom(resp);
-        // 路由表已更新，用新路由重试
-        LOG.info("Route outdated from fallback, retrying with updated route: id={}", id);
-        return attempt(id, increment, attempt + 1);
-      }
-      processRouteInResponse(resp);
-      return Future.succeededFuture(resp.getLong("seq"));
-    });
+    return send(shared, id).compose(resp -> resolveResponse(resp, id, increment, attempt));
   }
 
   private Future<JsonObject> send(String address, int id) {
@@ -176,10 +229,11 @@ public class SeqClientService {
     updateRouteFrom(resp);
   }
 
-  private void updateRouteFrom(JsonObject resp) {
+  /** @return 是否实际采纳（版本严格大于本地缓存才采纳；版本倒退时由 forceAdoptRouter 兜底） */
+  private boolean updateRouteFrom(JsonObject resp) {
     JsonObject routerJson = resp.getJsonObject("router");
     if (routerJson == null) {
-      return;
+      return false;
     }
     Router newRouter = routerJson.mapTo(Router.class);
     if (newRouter.getVersion() > routeVersion) {
@@ -187,7 +241,9 @@ public class SeqClientService {
       routeVersion = newRouter.getVersion();
       LOG.info("Route table updated: version={}, nodes={}",
         routeVersion, newRouter.getNodeList().size());
+      return true;
     }
+    return false;
   }
 
   // ==================== 路由表缓存 ====================

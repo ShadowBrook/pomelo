@@ -163,4 +163,105 @@ class SeqClientServiceTest {
     long seq = awaitLong(client.fetchNextSequence(123L));
     assertEquals(200L, seq, "目标节点不可达时应通过共享地址兜底成功");
   }
+
+  @Test
+  @DisplayName("连续路由过期且服务端版本更低：强制采纳嵌入路由（版本倒退逃生通道）")
+  void testRepeatedOutdatedForceAdoptsEmbeddedRouter() throws Exception {
+    // 客户端持有 v6（线上事故：Mediate 版本倒退后服务端只回 v2）
+    Router stale = new Router(6, Collections.singletonList(
+      new RouterNode("node-A", "127.0.0.1", 0,
+        Collections.singletonList(new RangeId(0, SeqSvrConstants.PRODUCTION_MAX_ID_SIZE)))));
+    // 服务端新拓扑：node-B 拥有全部分区，但版本号只有 2
+    Router newerButLowerVersion = new Router(2, Collections.singletonList(
+      new RouterNode("node-B", "127.0.0.1", 0,
+        Collections.singletonList(new RangeId(0, SeqSvrConstants.PRODUCTION_MAX_ID_SIZE)))));
+
+    // node-A 一直回 ROUTE_OUTDATED + 低版本嵌入路由
+    vertx.eventBus().consumer(SeqSvrAddresses.allocNodeFetchNext("node-A"), msg ->
+      msg.reply(new JsonObject()
+        .put("code", SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED)
+        .put("message", "not in an active section of node-A")
+        .put("router", JsonObject.mapFrom(newerButLowerVersion))));
+    // node-B 按新拓扑成功
+    vertx.eventBus().consumer(SeqSvrAddresses.allocNodeFetchNext("node-B"), msg ->
+      msg.reply(new JsonObject().put("code", SeqSvrConstants.ALLOC_CODE_OK).put("seq", 100L)));
+
+    SeqClientService client = new SeqClientService(vertx);
+    client.setRouter(stale);
+
+    long seq = awaitLong(client.fetchNextSequence(123L));
+    assertEquals(100L, seq, "强制采纳低版本路由后应在新拓扑节点成功");
+    assertEquals(2, client.getRouteVersion(), "客户端应强制采纳服务端低版本路由（版本倒退场景）");
+    assertEquals("node-B", client.getRouter().getNodeList().get(0).getNodeId(),
+      "路由表应收敛到服务端现实拓扑");
+  }
+
+  @Test
+  @DisplayName("连续 3 次路由过期：主动向 Mediate 拉取路由表并重置缓存")
+  void testOutdatedLadderPullsRouterFromMediate() throws Exception {
+    Router v2Router = new Router(2, Collections.singletonList(
+      new RouterNode("node-B", "127.0.0.1", 0,
+        Collections.singletonList(new RangeId(0, SeqSvrConstants.PRODUCTION_MAX_ID_SIZE)))));
+    Router v7Router = new Router(7, Collections.singletonList(
+      new RouterNode("node-C", "127.0.0.1", 0,
+        Collections.singletonList(new RangeId(0, SeqSvrConstants.PRODUCTION_MAX_ID_SIZE)))));
+    Router stale = new Router(6, Collections.singletonList(
+      new RouterNode("node-A", "127.0.0.1", 0,
+        Collections.singletonList(new RangeId(0, SeqSvrConstants.PRODUCTION_MAX_ID_SIZE)))));
+
+    // node-A / node-B 全部回过期；Mediate 返回 v7 → node-C 成功
+    vertx.eventBus().consumer(SeqSvrAddresses.allocNodeFetchNext("node-A"), msg ->
+      msg.reply(new JsonObject()
+        .put("code", SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED)
+        .put("message", "not owned by node-A")
+        .put("router", JsonObject.mapFrom(v2Router))));
+    vertx.eventBus().consumer(SeqSvrAddresses.allocNodeFetchNext("node-B"), msg ->
+      msg.reply(new JsonObject()
+        .put("code", SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED)
+        .put("message", "not owned by node-B")
+        .put("router", JsonObject.mapFrom(v2Router))));
+    vertx.eventBus().consumer(SeqSvrAddresses.MEDIATE_GET_ROUTER, msg ->
+      msg.reply(new JsonObject().put("router", JsonObject.mapFrom(v7Router))));
+    vertx.eventBus().consumer(SeqSvrAddresses.allocNodeFetchNext("node-C"), msg ->
+      msg.reply(new JsonObject().put("code", SeqSvrConstants.ALLOC_CODE_OK).put("seq", 300L)));
+
+    SeqClientService client = new SeqClientService(vertx);
+    client.setRouter(stale);
+
+    long seq = awaitLong(client.fetchNextSequence(123L));
+    assertEquals(300L, seq, "Mediate 拉取后应在正确节点成功");
+    assertEquals(7, client.getRouteVersion(), "应采纳 Mediate 返回的 v7 路由表");
+  }
+
+  @Test
+  @DisplayName("路由过期响应携带 retryAfterMs：客户端延迟后再重试")
+  void testOutdatedWithRetryAfterMsDelaysRetry() throws Exception {
+    Router newer = new Router(8, Collections.singletonList(
+      new RouterNode("node-B", "127.0.0.1", 0,
+        Collections.singletonList(new RangeId(0, SeqSvrConstants.PRODUCTION_MAX_ID_SIZE)))));
+    long delayMs = 300;
+    long[] firstReplyAt = {0};
+    vertx.eventBus().consumer(SeqSvrAddresses.ALLOC_FETCH_NEXT, msg -> {
+      long now = System.currentTimeMillis();
+      if (firstReplyAt[0] == 0) {
+        firstReplyAt[0] = now;
+        msg.reply(new JsonObject()
+          .put("code", SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED)
+          .put("message", "stop serving, retry later")
+          .put("retryAfterMs", delayMs)
+          .put("router", JsonObject.mapFrom(newer)));
+      } else {
+        msg.reply(new JsonObject().put("code", SeqSvrConstants.ALLOC_CODE_OK).put("seq", 400L));
+      }
+    });
+
+    SeqClientService client = new SeqClientService(vertx);
+    long start = System.currentTimeMillis();
+    long seq = awaitLong(client.fetchNextSequence(123L));
+    long elapsed = System.currentTimeMillis() - start;
+
+    assertEquals(400L, seq);
+    assertTrue(elapsed >= delayMs,
+      "重试应被 retryAfterMs 推迟: elapsed=" + elapsed + "ms, delay=" + delayMs + "ms");
+  }
 }
