@@ -90,9 +90,15 @@ alloc 重启后 mesh 干净(0 次 Connecting 失败),但 35 分钟内出现 **9 
    `getRouter` 全量拉取；`retryAfterMs` 延迟重试；单次发号尝试上限 4 次；`updateRouteFrom` 返回是否采纳。
 > - P9 ✅ `fa48fc6` — `LEASE_TIMEOUT_MS` 5000→15000（约 3× 同步周期）；新增 `PENDING_ACTIVATE_DELAY_MS=5000`
    解耦 pending 激活节奏；`ROUTE_OUTDATED` 回复统一携带 `retryAfterMs=2000`。
-> - 遗留：RedisClusterManager 订阅自愈（P1~P4，库层）与 /health/alloc 探针（P5）待后续批次；
-   仓库既有环境性失败（logic `RedisIdGeneratorTest`、gateway `TcpGatewayVerticleTest`，与本次改动无关，已在
-   改动前基线复跑确认）需另行排查。
+> - P1~P4 ✅ 库层（vertx-redis-clustermanager 0.0.2，独立仓库分支 5.x）：
+   `reconcileOwnSubs` 周期对账（`subscriptionReconcileIntervalMs`，默认 30s，0 禁用）、put/remove 写失败
+   ERROR 日志且不再上抛（对账兜底）、`isRegisteredInRedis`/`reconcileNow`/`isSubscriptionVisible` API、
+   memberRemoved 重推保留。测试：ITSubscriptionCatalog 13/13、ITRedisClusterManagerReconcile 3/3，
+   全库 391 跑 388 过（3 处经基线对照为既有问题）。
+> - P2/P5 ✅ `829fea8` — SeqAllocVerticle 30s 自检（丢失→ERROR+重注册+触发 CM 对账）+ admin 端口
+   `GET /health`（state/serving/routerVersion/subscriptionOk，异常 503）；pomelo 依赖升至 0.0.2。
+> - 遗留：仓库既有环境性失败（logic `RedisIdGeneratorTest`、gateway `TcpGatewayVerticleTest`，与本次改动无关，
+   已在改动前基线复跑确认）需另行排查；CM remove() 写失败时 Redis 残留条目由 leave 清理（库层已知边界）。
 
 ### 5.1 库层:RedisClusterManager 订阅自愈(治本,P1/P3/P4)
 
