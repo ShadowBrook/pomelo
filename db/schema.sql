@@ -67,8 +67,12 @@ CREATE TABLE IF NOT EXISTS im_message_c2c (
     seq             BIGINT       NOT NULL,           -- seqsvr 收件人同步版本号 (写扩散信箱递增序号)
     status          SMALLINT     NOT NULL DEFAULT 0, -- 0=已发送, 1=已送达, 2=已读
     created_at      BIGINT       NOT NULL,           -- 创建时间 (Unix毫秒)
-    PRIMARY KEY (id)
-) PARTITION BY HASH (id);
+    client_msg_id   BIGINT       NOT NULL,           -- 客户端消息 ID (发送端生成, 重试幂等去重)
+    PRIMARY KEY (id, sender_id),
+    -- 幂等唯一键：分区表唯一约束必须包含分区键 sender_id，
+    -- 服务端 INSERT ... ON CONFLICT (sender_id, client_msg_id) DO NOTHING 实现原子重试幂等
+    CONSTRAINT uq_c2c_client_msg UNIQUE (sender_id, client_msg_id)
+) PARTITION BY HASH (sender_id);
 
 COMMENT ON TABLE  im_message_c2c              IS '单聊消息表 (HASH分区)';
 COMMENT ON COLUMN im_message_c2c.id           IS '雪花ID (客户端生成)';
@@ -80,14 +84,15 @@ COMMENT ON COLUMN im_message_c2c.content      IS '文本内容或资源链接 (�
 COMMENT ON COLUMN im_message_c2c.seq          IS 'seqsvr 收件人同步版本号（写扩散信箱递增序号，收件人维度）；会话内排序请用 created_at';
 COMMENT ON COLUMN im_message_c2c.status       IS '0=已发送, 1=已送达, 2=已读';
 COMMENT ON COLUMN im_message_c2c.created_at   IS '创建时间 (Unix毫秒)';
+COMMENT ON COLUMN im_message_c2c.client_msg_id IS '客户端消息 ID (发送端生成, 服务端按 (sender_id, client_msg_id) 幂等去重)';
 
 CREATE TABLE im_message_c2c_p0 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 0);
 CREATE TABLE im_message_c2c_p1 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 1);
 CREATE TABLE im_message_c2c_p2 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 2);
 CREATE TABLE im_message_c2c_p3 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 3);
 
--- 会话维度查询索引（双向会话，按 conversation_id 排序）
-CREATE INDEX idx_c2c_conversation ON im_message_c2c (conversation_id, created_at DESC);
+-- 会话维度查询索引（双向会话，按 conversation_id + created_at DESC + id DESC 排序）
+CREATE INDEX idx_c2c_conversation ON im_message_c2c (conversation_id, created_at DESC, id DESC);
 -- 离线拉取索引（收件人信箱按 seq 增量有序拉取；seq 为收件人同步版本号）
 CREATE INDEX idx_c2c_recipient_pending ON im_message_c2c (recipient_id, seq) WHERE status < 2;
 -- BRIN 索引：全局时间范围扫描，体积极小
@@ -104,8 +109,11 @@ CREATE TABLE IF NOT EXISTS im_message_group (
     content    TEXT,                              -- 文本内容或资源链接
     seq        BIGINT       NOT NULL,             -- 群同步版本号
     created_at BIGINT       NOT NULL,             -- 创建时间 (Unix毫秒)
-    PRIMARY KEY (id)
-) PARTITION BY HASH (id);
+    client_msg_id BIGINT    NOT NULL,             -- 客户端消息 ID (发送端生成, 重试幂等去重)
+    PRIMARY KEY (id, group_id),
+    -- 幂等唯一键：分区键 group_id 包含于约束内，按群哈希同时让群维度查询获得分区裁剪
+    CONSTRAINT uq_group_client_msg UNIQUE (group_id, sender_id, client_msg_id)
+) PARTITION BY HASH (group_id);
 
 COMMENT ON TABLE  im_message_group             IS '群聊消息表 (HASH分区)';
 COMMENT ON COLUMN im_message_group.id          IS '雪花ID (客户端生成)';
