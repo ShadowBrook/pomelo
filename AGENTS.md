@@ -4,7 +4,17 @@ This file provides guidance to Codex (Codex.ai/code) when working with code in t
 
 ## Project Overview
 
-Pomelo is an IM (Instant Messaging) server built on **Vert.x 5.0.8** (reactive, non-blocking event-driven framework) with **Java 17** and **Maven**. It exposes a custom binary wire protocol over **TCP (port 9000)** and **WebSocket (port 9001)** dual gateways, with Protobuf and JSON dual codec support. The project is in early development — the protocol layer is complete but most business handlers are stubs.
+Pomelo is an IM (Instant Messaging) server built on **Vert.x 5** (reactive, non-blocking) with **Java 21** and **Maven multi-module** layout. It exposes a custom binary wire protocol over **TCP (default 9000)** and **WebSocket (default 9001)** gateways. The wire codec is **Protobuf-only** (codecId frozen to 0; the legacy JSON codec has been removed).
+
+### Modules
+
+| Module | Responsibility |
+|--------|----------------|
+| `pomelo-common` | Wire protocol (`ImMessage`), Protobuf codec registry, config (`ConfigHolder`), session route table, JWT parser, push envelope codec, generated proto classes |
+| `pomelo-gateway` | TCP/WS gateways, connection/session management, EventBus forwarding to logic, push delivery |
+| `pomelo-logic-server` | Business services (C2C/C2G/groups/friends/ack/pull/auth/upload), PostgreSQL repositories, Redis, HTTP API (default 8888), snowflake ID generation |
+| `pomelo-seqsvr` | Sequence server (alloc / store / mediate / client SDK) — per-recipient monotonic seq allocation with lease-based failover |
+| `pomelo-benchmark` | Load-test client and metrics |
 
 ## Build & Run Commands
 
@@ -12,107 +22,72 @@ Pomelo is an IM (Instant Messaging) server built on **Vert.x 5.0.8** (reactive, 
 # Run all tests
 ./mvnw clean test
 
-# Run a single test class
-./mvnw clean test -Dtest=TcpGatewayVerticleTest
+# Run a single test class / method
+./mvnw test -pl pomelo-gateway -am -Dtest=TcpGatewayVerticleTest
+./mvnw test -pl pomelo-gateway -am -Dtest=TcpGatewayVerticleTest#testHeartbeatMessage
 
-# Run a single test method
-./mvnw clean test -Dtest=TcpGatewayVerticleTest#testHeartbeatMessage
-
-# Build fat jar (output: target/pomelo-1.0.0-SNAPSHOT-fat.jar)
+# Build fat jars
 ./mvnw clean package
 
-# Run the application (deploys WsGatewayVerticle on port 9001)
-./mvnw clean compile exec:java
-
-# Generate Protobuf Java sources from .proto files (also runs on compile)
+# Generate Protobuf Java sources (also runs during compile)
 ./mvnw protobuf:compile
 ```
 
-Tests use JUnit 5 with the Vert.x extension (`@ExtendWith(VertxExtension.class)`). Integration tests use `CountDownLatch` for async coordination. Testcontainers is available for Redis-dependent tests.
+Notes:
+- Redis-dependent tests use Testcontainers (requires Docker). `RedisIdGeneratorTest` is legacy and may be skipped: `-Dtest='!RedisIdGeneratorTest'`.
+- Java 21 is required; set `JAVA_HOME` accordingly.
+- Editing `.proto` files requires `./mvnw protobuf:compile` (runs automatically on compile) to regenerate Java sources under `pomelo-common/src/main/java/com/github/moxib/pomelo/proto/`.
 
 ## Architecture
 
-### Wire Protocol (`ImMessage`)
-
-The core data structure is `ImMessage` (`common/ImMessage.java`) — a custom binary protocol with:
-- **Fixed header**: magic number (`0x504D454C` = "PMEL"), version, codec ID, command (cmd)
-- **Variable headers**: key-value string pairs (e.g., targetUserId, status)
-- **Body**: raw bytes, interpreted via the codec identified by `codecId`
-- Serialization uses a 4-byte length prefix + `encodeToWire()`/`readFromWire()`
-
-TCP uses `RecordParser` with fixed-size mode switching (4-byte length → message body) for sticky packet handling.
-
-### Message Flow
+### Request Flow
 
 ```
-Client → Gateway Verticle (TCP/Ws) → ImMessage.readFromWire()
+Client → Gateway Verticle (TCP/Ws, RecordParser framing)
        → MessageDispatcher.dispatch(connection, imMessage)
-       → handlerRegistry.get(cmd) → Handler.handle(connection, message)
-       → connection.write(response.encodeToWire())
+           - identity: taken from SessionRegistry (token verified at AUTH), never from client headers
+           - unauthenticated connections: only CMD_PING / CMD_AUTH_REQ are forwarded
+       → EventBus (logic.c2c / logic.c2g / logic.group / logic.pull / ...)
+       → Logic service → PgMessageRepository / SeqClientService → reply buffer → client
 ```
 
-### Cmd Routing
+### Identity Trust Chain (important)
 
-`MessageDispatcher` maintains a `Map<Integer, Supplier<MessageHandler>>` registry. Cmd values are defined in `proto/common/common.proto` (the `Cmd` enum). New handlers must be registered in `MessageDispatcher.registerDefaultHandlers()`.
+`userId`/`userName`/`nickname` variable headers are **server-controlled**: the gateway overwrites them from the authenticated session (`MessageDispatcher.normalizeSenderHeaders`) before forwarding. Logic services must treat these headers as the only identity source; body-embedded identity fields (`senderId`, `userId`) are informational only. Ownership checks still happen in SQL (`recipient_id` predicates) as defense in depth.
 
-### Connection Abstraction
+### Message Flow (C2C)
 
-`Connection` interface (`gateway/handler/Connection.java`) abstracts `NetSocket` and `ServerWebSocket` behind a common API: `write(Buffer)`, `remoteAddress()`, `close()`. The TCP gateway uses `Connection.from(netSocket)`, WebSocket uses `Connection.from(webSocket)`.
+1. `C2CService` validates identity, allocates a snowflake message id and a recipient-scoped seq from seqsvr, persists to `im_message_c2c` (idempotent by `(sender_id, client_msg_id)` retry lookup), then pushes `C2CNotify` via `PushRouter`.
+2. Recipients sync via `PULL_REQ` (`seq > sinceSeq` on their inbox) or receive pushes; conversation history pull is ordered by `created_at DESC, id DESC`.
 
-### Codec System
+### seqsvr
 
-Two codec types identified by `codecId`:
-- **0 (Protobuf)**: `ProtobufCodec` uses a static `Parser[256]` array indexed by cmd — zero reflection. New proto message types must be registered in the static initializer. Cmd values are capped at 255.
-- **1 (JSON)**: `JsonCodec` uses Jackson `ObjectMapper` for arbitrary POJOs.
+- **AllocSvr** (`AllocManager`): in-memory per-id cur_seq, section max persisted to StoreSvr in SEQ_STEP-aligned batches. Lease: route-table sync every 4s; stops serving after 15s without a successful store read, or when `saveMaxSeq` stays unsaved past the same threshold (prevents seq reissue). Newly assigned sections activate after `2 × syncLease` pending delay (guarantees the previous owner stopped).
+- **MediateSvr**: assigns sections to alloc nodes, regenerates the router table. Router updates are **persist-first**: the in-memory/returned version only advances after the Store write quorum succeeds (prevents version rollback on restart — see `docs/2026-09-07-seqsvr-subscription-loss-incident.md`).
+- **StoreSvr**: mmap-backed per-set files, optional NRW multi-replica client (`ReplicatedStoreClient`).
+- **Client** (`SeqClientService`): caches router by version, retries on `ROUTE_OUTDATED` with embedded-router adoption, force-adopt and Mediate pull escape hatches (incident P8).
 
-`CodecRegistry` provides a `cmd × codecId` two-dimensional lookup.
+### Session Routing
 
-### Handler Hierarchy
+Gateways register per-user routes in a clustered `SessionRouteTable` (Vert.x cluster-wide map, no TTL; node liveness is a separate TTL'd heartbeat). Pushes go precise-route first, broadcast fallback on dead/unknown node; route deletion is conditional (`removeIfPresent`) so stale disconnects never clobber a newer node's route.
 
-- `MessageHandler` — interface: `handle(Connection, ImMessage)`
-- `AbstractMessageHandler` — base class providing `sendResponse()`, `sendErrorResponse()`, `decodeProtobuf()`, `encodeProtobuf()`
-- Concrete handlers: `HeartbeatHandler`, `LoginHandler`, `LogoutHandler`, `C2CMessageHandler`, `C2GMessageHandler`, `CtrlReqHandler`, `AckReqHandler`, `PullMessageHandler`, `FriendHandler`
+## Design Docs
 
-### PullMessageHandler — Dual Mode
-
-`PullMessageHandler` serves two purposes via the same `PULL_REQ`/`PULL_RESP` command pair:
-
-1. **Offline message pull** (no `peerId` in body): calls `MessageService.pullOfflineMessages()` → `MessageRepository.pullPending()` — fetches messages with `status < 2` for the requesting user, ordered by `seq`. The message's `seq` is the **recipient's** seqsvr sync version (write-diffusion inbox sequence, assigned at `C2CService.doSend` via `fetchNextSequence(recipientId)`), so `seq > sinceSeq` is the recipient's incremental sync watermark. Used after reconnection.
-
-2. **Conversation history pull** (`peerId` present in body): calls `MessageService.pullConversationHistory(userId, peerId, beforeTime, limit)` which computes `conversationId = buildConversationId(userId, peerId)` (sorted `userId:peerId`) and delegates to `MessageRepository.pullConversation()`. Queries by `conversation_id` with `created_at < beforeTime ORDER BY created_at DESC LIMIT $3`. When `beforeTime` is 0, treated as `Long.MAX_VALUE` (fetch latest). Conversation order is by `created_at` — **not** the per-user `seq`, which mixes two users' inbox spaces and is incomparable.
-
-Both modes now include the message records in the response body (`{code, message, hasMore, messages: [...]}`) — messages are JSON-serialized with fields: `id`, `senderId`, `recipientId`, `msgType`, `content`, `seq`, `createdAt`.
-
-### Proto Definitions
-
-Proto source files live in `src/main/proto/` across 9 domain packages:
-- `common.proto` — `Cmd` enum (command codes), `MsgType`, `AckType`, `MessageContent`
-- `auth.proto` — AuthReq/Resp, LogoutReq/Resp
-- `chat.proto` — C2CReq/Resp/Notify (single chat)
-- `group.proto` — C2GReq/Resp/Notify (group chat)
-- `ctrl.proto` — CtrlReq/Resp/Notify, CtrlType enum
-- `heartbeat.proto` — Ping/Pong
-- `ack.proto` — AckReq/Resp/Notify
-- `pull.proto` — PullReq/Resp (message pulling)
-- `message.proto` — Unified MsgBody (oneof wrapping all message types)
-
-Generated Java classes are output to `src/main/java/com/github/moxib/pomelo/proto/` by the protobuf-maven-plugin.
-
-### Distributed ID Generation
-
-`RedisIdGenerator` implements `IdGenerator` using a Redisson-inspired approach: pre-allocates ID batches locally via Lua scripts on Redis, serves from `AtomicLong` until exhausted, then fetches the next batch. Default allocation size is 5000.
+- `docs/2026-09-08-message-model-and-conversation-key-design.md` — 消息扩散模型（单聊写扩散信箱 / 群聊读融合时间线）与会话键（c2c conversation_id / group group_id）设计决策
+- `docs/2026-09-07-seqsvr-subscription-loss-incident.md` — 2026-09-07 seqsvr 订阅丢失事故分析与加固（P1–P9）
 
 ## Key Constraints
 
-- The `ProtobufCodec` static registry is indexed by cmd value (0–255). New proto message cmd values must fit in this range and be registered both in the `ProtobufCodec` static block and in `MessageDispatcher`.
-- Currently `MainVerticle` only deploys `WsGatewayVerticle`. To use TCP, deploy `TcpGatewayVerticle` instead or alongside it.
-- Ports are configurable via system properties: `gateway.tcp.port` (default 9000), `gateway.websocket.port` (default 9001).
-- Editing `.proto` files requires running `./mvnw protobuf:compile` (or `./mvnw clean compile`) to regenerate Java sources **and** `cd src/test/resources && npm run proto` to regenerate proto.js for the JS SDK.
+- `ProtobufCodec` static registry is indexed by cmd (0–255 array + overflow map for `CMD_ERROR = 0xFFFF`). New cmds must register a parser there and a route in `MessageDispatcher.cmdToAddress`.
+- TCP/WS frames share the same wire format: 4-byte length prefix + `ImMessage`. Frame limits live in `ImMessage` (`MAX_FRAME_SIZE` etc.) and are enforced in both gateways.
+- `GatewayMain` deploys TCP and WS verticles **sharing one `SessionRegistry`/`MessageDispatcher`** — two dispatchers on one node would split the `gateway.push.<nodeId>` consumer and drop pushes.
+- Ports/config: `gateway.tcp.port`, `gateway.websocket.port`, `api.http.port`, `seqsvr.*` (see `conf/config.yaml`); env overrides with `POMELO_` prefix.
+- PostgreSQL schema: `db/schema.sql` — c2c messages are HASH-partitioned by `sender_id`, group messages by `group_id` (the partition key participates in the retry-idempotency unique key, as required by PG for partitioned-table constraints). Message-send idempotency is atomic: `INSERT ... ON CONFLICT (sender_id, client_msg_id) DO NOTHING` / `(group_id, sender_id, client_msg_id)`, with a follow-up lookup returning the original message on conflict.
 
 ## Coding Style
 
-- **No fully-qualified class names in code body** — always use imports. For example, write `Map<String, String> headers = ...` not `java.util.Map<String, String> headers = ...`. The only exceptions are generated protobuf code (under `proto/` package) which is auto-generated and should not be manually edited.
-- **No end-of-line comments** — comments must be placed on their own line above the code they describe, never trailing after code on the same line. For example:
+- **No fully-qualified class names in code body** — always use imports. Generated protobuf code under `proto/` is the only exception.
+- **No end-of-line comments** — comments go on their own line above the code:
   ```java
   // GOOD
   // 下一个可用 ID

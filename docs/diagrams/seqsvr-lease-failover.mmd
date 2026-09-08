@@ -1,0 +1,31 @@
+flowchart TD
+  subgraph LEASE["AllocSvr 租约双循环（对齐 Go 版 Lease）"]
+    T1["定时器：每 4s syncLease"] --> R1["store.loadRouteTable()"]
+    R1 -->|"成功"| OK["刷新 lastLeaseSuccess 心跳"]
+    R1 -->|"version 变化"| AR["applyRouter 应用新路由"]
+    AR -->|"本节点被整体移除"| CLR["清空全部号段<br/>→ WAIT_ROUTE_TABLE"]
+    AR -->|"号段被收回"| UN["立即卸载该 section<br/>（防双写）"]
+    AR -->|"新增号段"| PD["标记 pending<br/>（延迟 5s 生效，等旧节点停服）"]
+    T2["定时器：每 1s checkLease"] --> ACT["到期 pending 激活为 active<br/>并从 Store 刷新该 section max_seq 防回退"]
+    T2 --> EXP{"now - lastLeaseSuccess<br/>大于 15s？"}
+    EXP -->|"是"| ERR["state = ERROR<br/>停止发号（防脏数据回退）"]
+    EXP -->|"否且此前为 ERROR"| REC["重载 maxSeqs<br/>→ INITED 恢复服务"]
+  end
+
+  subgraph STATE["AllocManager 状态机"]
+    S0(["NONE"]) --> S1(["WAIT_ROUTE_TABLE"])
+    S1 -->|"开发模式：加载路由表"| S2(["WAIT_LOAD"])
+    S2 -->|"loadMaxSeqsData 成功"| S3(["INITED 发号中"])
+    S1 -->|"Mediate 模式：首次分配到号段"| S3
+    S3 -->|"15s 读不到 Store"| S4(["ERROR 停服"])
+    S4 -->|"Store 恢复，重载 maxSeqs"| S3
+    S3 -->|"路由表中本节点被移除"| S1
+  end
+
+  subgraph FAIL["MediateSvr 故障迁移 / 扩缩容"]
+    E1["触发：节点注册 / 优雅下线 /<br/>心跳超时 3s 判失联"] --> GEN["重生成路由表：<br/>存活节点均匀分块，贪心迁移最少 section<br/>version+1（单调递增防客户端死锁）"]
+    GEN --> PS["saveRouteTable 持久化到 StoreSvr"]
+    PS --> CV["存量 AllocSvr 4s 租约发现变更：<br/>收回立即卸载 / 新增 pending 5s<br/>客户端凭响应旁路收敛路由"]
+  end
+
+  FAIL -.->|"路由表变更"| LEASE

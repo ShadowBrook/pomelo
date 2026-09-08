@@ -1,0 +1,30 @@
+sequenceDiagram
+  autonumber
+  participant Biz as LogicServer<br/>C2CService
+  participant C as SeqClientService
+  participant A as AllocSvr<br/>AllocManager
+  participant S as StoreSvr ×M
+
+  Biz->>C: fetchNextSequence(recipientId)
+  C->>C: id = toSectionId(recipientId)<br/>murmur 终混哈希到 [0, maxIdSize)
+  C->>C: 本地缓存路由表匹配 id 所属号段的节点
+  C->>A: EventBus seqsvr.alloc.nodeN.fetchNext {id, version}
+
+  A->>A: state == INITED？section 在 active 中？
+  A->>A: curSeq = curSeqs[id] ?? base[section]<br/>再 +1（新 id 惰性起步）
+  alt curSeq > sectionMaxSeqs（跨过持久化水位）
+    A->>A: 内存乐观提升 alignUp(curSeq)<br/>向上取整到 SEQ_STEP=10000
+    A->>S: saveMaxSeq(id, curSeq) 写 W=2
+    S-->>A: 返回对齐后的持久化值，max 合并回填
+  end
+  alt 客户端 version 落后于服务端路由
+    A-->>C: {code:0, seq, router 最新路由表}
+    C->>C: 采纳路由表（仅版本更大才采纳）
+  else 客户端路由一致
+    A-->>C: {code:0, seq}
+  end
+  C-->>Biz: seq
+
+  note over C,A: 路由过期收敛：请求打到不再拥有该号段的节点时<br/>回复 {code:1 ROUTE_OUTDATED, retryAfterMs=2000, router}
+  C->>A: 延迟 retryAfterMs 后重试同一 id
+  note over C: 连续 2 次过期 → 强制采纳服务端嵌入路由（版本倒退逃生）<br/>连续 3 次过期 → 向 Mediate 全量拉取路由<br/>传输失败 → 走共享兜底地址重试一次；硬上限 4 次尝试
