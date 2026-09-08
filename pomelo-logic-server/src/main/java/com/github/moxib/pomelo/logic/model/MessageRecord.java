@@ -16,6 +16,8 @@ public class MessageRecord {
   private final long seq;
   private final int status;
   private final long createdAt;
+  // 客户端消息 ID（发送端生成，用于重试幂等去重）
+  private final long clientMsgId;
 
   private MessageRecord(Builder builder) {
     this.id = builder.id;
@@ -27,9 +29,18 @@ public class MessageRecord {
     this.seq = builder.seq;
     this.status = builder.status;
     this.createdAt = builder.createdAt;
+    this.clientMsgId = builder.clientMsgId;
   }
 
   public static Builder builder() { return new Builder(); }
+
+  /**
+   * 计算会话 ID — min(id1, id2):max(id1, id2)。
+   * 双向会话共用同一 ID，会话内排序使用 created_at。
+   */
+  public static String buildConversationId(long id1, long id2) {
+    return id1 < id2 ? id1 + ":" + id2 : id2 + ":" + id1;
+  }
 
   public long getId() { return id; }
   public long getSenderId() { return senderId; }
@@ -40,6 +51,7 @@ public class MessageRecord {
   public long getSeq() { return seq; }
   public int getStatus() { return status; }
   public long getCreatedAt() { return createdAt; }
+  public long getClientMsgId() { return clientMsgId; }
 
   public static class Builder {
     private long id;
@@ -51,6 +63,7 @@ public class MessageRecord {
     private long seq;
     private int status;
     private long createdAt;
+    private long clientMsgId;
 
     public Builder id(long id) { this.id = id; return this; }
     public Builder senderId(long senderId) { this.senderId = senderId; return this; }
@@ -61,6 +74,7 @@ public class MessageRecord {
     public Builder seq(long seq) { this.seq = seq; return this; }
     public Builder status(int status) { this.status = status; return this; }
     public Builder createdAt(long createdAt) { this.createdAt = createdAt; return this; }
+    public Builder clientMsgId(long clientMsgId) { this.clientMsgId = clientMsgId; return this; }
 
     public MessageRecord build() { return new MessageRecord(this); }
   }

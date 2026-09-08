@@ -8,6 +8,8 @@ import io.vertx.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
+
 /**
  * Logic-Server 推送路由器。
  * 查询 SessionRouteTable 精确路由到目标 Gateway 节点，
@@ -32,23 +34,28 @@ public class PushRouter {
     String targetUserId = env.getTargetUserId();
     routeTable.resolve(targetUserId)
       .compose(nodeId -> {
-        // 路由指向的节点已死（gateway 崩溃）时不发精确路由，降级广播
-        if (nodeId != null && !nodeId.isEmpty()) {
-          return routeTable.isNodeAlive(nodeId).map(alive -> alive ? nodeId : null);
+        if (nodeId == null || nodeId.isEmpty()) {
+          return Future.succeededFuture(Map.entry("", false));
         }
-        return Future.succeededFuture(null);
+        // 路由指向的节点已死（gateway 崩溃）时不发精确路由，降级广播
+        return routeTable.isNodeAlive(nodeId).map(alive -> Map.entry(nodeId, alive));
       })
-      .onSuccess(nodeId -> {
-        if (nodeId != null) {
+      .onSuccess(route -> {
+        String nodeId = route.getKey();
+        boolean alive = route.getValue();
+        if (!nodeId.isEmpty() && alive) {
           // 精确路由到存活的 Gateway 节点
           String addr = "gateway.push." + nodeId;
           vertx.eventBus().send(addr, PushCodec.encode(env));
           LOG.debug("Push sent directly: target={} node={} cmd={}", targetUserId, nodeId, env.getCmd());
         } else {
-          // 路由指向死节点：惰性清理残留路由，再广播兜底
-          routeTable.unregister(targetUserId);
+          if (!nodeId.isEmpty()) {
+            // 仅当路由仍指向该死节点时清理，避免误删用户刚迁移到新节点的路由
+            routeTable.unregister(targetUserId, nodeId);
+          }
+          // 死节点/无路由：广播兜底
           vertx.eventBus().publish("gateway.push", PushCodec.encode(env));
-          LOG.debug("Push broadcast (dead node): target={} cmd={}", targetUserId, env.getCmd());
+          LOG.debug("Push broadcast: target={} cmd={}", targetUserId, env.getCmd());
         }
       })
       .onFailure(e -> {

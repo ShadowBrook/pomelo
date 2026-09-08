@@ -65,23 +65,22 @@ public class TokenService {
     return parser.getExpiration(token);
   }
 
-  /** 将 token 加入 Redis 黑名单 */
+  /**
+   * 将 token 加入 Redis 黑名单。
+   * 返回的 Future 反映真实写入结果（调用方据此决定登出响应与告警）。
+   */
   public Future<Void> blacklist(String token) {
-    Promise<Void> promise = Promise.promise();
     String jti = getJti(token);
     if (jti == null) {
-      promise.complete();
-      return promise.future();
+      return Future.succeededFuture();
     }
     long ttl = Math.max(1, getExpiration(token) - System.currentTimeMillis() / 1000);
-    RedisFactory.get(vertx).getConnection().send(
+    return RedisFactory.get(vertx).getConnection().send(
       Request.cmd(Command.SET)
         .arg(blacklistPrefix + jti).arg("1")
         .arg("EX").arg(String.valueOf(ttl)))
-      .onSuccess(r -> LOG.debug("Token 已加入黑名单: jti={} ttl={}s", jti, ttl))
-      .onFailure(e -> LOG.warn("Token 黑名单失败: {}", e.getMessage()));
-    promise.complete();
-    return promise.future();
+      .<Void>map(r -> null)
+      .onSuccess(v -> LOG.debug("Token 已加入黑名单: jti={} ttl={}s", jti, ttl));
   }
 
   /** 检查 token 是否在黑名单中 */

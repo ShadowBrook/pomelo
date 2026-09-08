@@ -63,13 +63,21 @@ public class GroupPullService extends ServiceBase {
         userId, groupId, cursor, limit, backward);
 
       long numericGroupId = Long.parseLong(groupId);
+      long numericUserId = Long.parseLong(userId);
       return groupRepo.findById(numericGroupId).compose(group -> {
         if (group == null) {
           return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_PULL_MSG_RESP_VALUE,
             ErrorCode.NOT_FOUND, "群不存在"));
         }
-        return groupRepo.pullMessages(numericGroupId, cursor, limit, backward)
-          .compose(msgs -> buildPullResp(message, msgs, limit));
+        // 成员资格校验：非成员不得读取群消息
+        return groupRepo.isMember(numericGroupId, numericUserId).compose(isMember -> {
+          if (!isMember) {
+            return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_PULL_MSG_RESP_VALUE,
+              ErrorCode.UNAUTHORIZED, "你不是该群成员"));
+          }
+          return groupRepo.pullMessages(numericGroupId, cursor, limit, backward)
+            .compose(msgs -> buildPullResp(message, msgs, limit));
+        });
       });
     } catch (Exception e) {
       LOG.error("群消息拉取失败", e);

@@ -134,12 +134,24 @@ public class C2GService extends ServiceBase {
         long now = System.currentTimeMillis();
 
         return groupRepo.saveMessage(snowflakeId, internalGroupId, senderNumericId,
-            ctx.getMsgType(), ctx.getContent(), seq, now)
-          .map(inserted -> {
+            ctx.getMsgType(), ctx.getContent(), seq, now, ctx.getMessageId())
+          .compose(inserted -> {
             if (inserted) {
               pushToGroupMembers(ctx, internalGroupId, seq, snowflakeId, senderNumericId);
+              return Future.succeededFuture(new C2GRespResult(0, "success", snowflakeId, ctx.getGroupId(), seq, now));
             }
-            return new C2GRespResult(0, "success", snowflakeId, ctx.getGroupId(), seq, now);
+            // 幂等唯一键 (group_id, sender_id, client_msg_id) 冲突：客户端重试。
+            // 唯一约束保证原子——并发重试也只落一行，此处查回原消息返回
+            return groupRepo.findByGroupSenderAndClientMsgId(internalGroupId, senderNumericId, ctx.getMessageId())
+              .map(existing -> {
+                if (existing == null) {
+                  return new C2GRespResult(0, "success", snowflakeId, ctx.getGroupId(), seq, now);
+                }
+                LOG.info("C2G 重试命中幂等: groupId={} senderId={} clientMsgId={} existingId={}",
+                  internalGroupId, senderNumericId, ctx.getMessageId(), existing.getId());
+                return new C2GRespResult(0, "success",
+                  existing.getId(), ctx.getGroupId(), existing.getSeq(), existing.getCreatedAt());
+              });
           });
       });
   }

@@ -92,7 +92,7 @@ public class C2CService extends ServiceBase {
     return seqClient.fetchNextSequence(ctx.getRecipientId())
       .compose(seq -> {
         long now = System.currentTimeMillis();
-        String convId = MessageServiceImpl.buildConversationId(ctx.getSenderId(), ctx.getRecipientId());
+        String convId = MessageRecord.buildConversationId(ctx.getSenderId(), ctx.getRecipientId());
         MessageRecord record = MessageRecord.builder()
           .id(snowflakeId)
           .senderId(ctx.getSenderId())
@@ -103,18 +103,38 @@ public class C2CService extends ServiceBase {
           .seq(seq)
           .status(0)
           .createdAt(now)
+          .clientMsgId(ctx.getMessageId())
           .build();
 
         return messageRepo.save(record)
-          .map(inserted -> {
+          .compose(inserted -> {
             if (inserted) {
               publishC2CNotify(record, ctx.getSenderUserName(), ctx.getSenderNickname());
+              return Future.succeededFuture(C2CRespResult.builder()
+                .code(0).message("success")
+                .messageId(snowflakeId)
+                .seq(seq).serverTime(now)
+                .build());
             }
-            return C2CRespResult.builder()
-              .code(0).message("success")
-              .messageId(snowflakeId)
-              .seq(seq).serverTime(now)
-              .build();
+            // 幂等唯一键 (sender_id, client_msg_id) 冲突：客户端重试。
+            // 唯一约束保证原子——并发重试也只落一行，此处查回原消息返回
+            return messageRepo.findBySenderAndClientMsgId(ctx.getSenderId(), ctx.getMessageId())
+              .map(existing -> {
+                if (existing == null) {
+                  return C2CRespResult.builder()
+                    .code(0).message("success")
+                    .messageId(snowflakeId)
+                    .seq(seq).serverTime(now)
+                    .build();
+                }
+                LOG.info("C2C 重试命中幂等: senderId={} clientMsgId={} existingId={}",
+                  ctx.getSenderId(), ctx.getMessageId(), existing.getId());
+                return C2CRespResult.builder()
+                  .code(0).message("success")
+                  .messageId(existing.getId())
+                  .seq(existing.getSeq()).serverTime(existing.getCreatedAt())
+                  .build();
+              });
           });
       });
   }

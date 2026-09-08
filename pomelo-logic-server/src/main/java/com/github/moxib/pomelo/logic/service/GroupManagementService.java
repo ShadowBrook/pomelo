@@ -135,25 +135,31 @@ public class GroupManagementService extends ServiceBase {
         return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
           ErrorCode.NOT_FOUND, "群不存在"));
       }
-      return groupRepo.isFriend(operatorNumericId, inviteeNumericId).compose(isFriend -> {
-        if (!isFriend) {
+      return groupRepo.isMember(numericGroupId, operatorNumericId).compose(operatorIsMember -> {
+        if (!operatorIsMember) {
           return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
-            ErrorCode.UNAUTHORIZED, "只能邀请好友入群"));
+            ErrorCode.UNAUTHORIZED, "你不是该群成员，无权邀请"));
         }
-        return groupRepo.isMember(numericGroupId, inviteeNumericId).compose(alreadyMember -> {
-          if (alreadyMember) {
+        return groupRepo.isFriend(operatorNumericId, inviteeNumericId).compose(isFriend -> {
+          if (!isFriend) {
             return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
-              ErrorCode.CONFLICT, "用户已在群中"));
+              ErrorCode.UNAUTHORIZED, "只能邀请好友入群"));
           }
-          long now = System.currentTimeMillis();
-          return groupRepo.addMember(snowflake.nextId(), numericGroupId, inviteeNumericId, 0, now)
-            .map(v -> {
-              pushMemberChangeNotify(numericGroupId, inviteeNumericId, operatorNumericId);
-              GroupMgmtProto.InviteToGroupResp respBody = GroupMgmtProto.InviteToGroupResp.newBuilder()
-                .setCode(0).setMessage("success").build();
-              LOG.info("成员已邀请: groupId={} invitee={}", groupId, inviteeId);
-              return buildResponse(message, CMD_GROUP_INVITE_RESP_VALUE, respBody);
-            });
+          return groupRepo.isMember(numericGroupId, inviteeNumericId).compose(alreadyMember -> {
+            if (alreadyMember) {
+              return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_INVITE_RESP_VALUE,
+                ErrorCode.CONFLICT, "用户已在群中"));
+            }
+            long now = System.currentTimeMillis();
+            return groupRepo.addMember(snowflake.nextId(), numericGroupId, inviteeNumericId, 0, now)
+              .map(v -> {
+                pushMemberChangeNotify(numericGroupId, inviteeNumericId, operatorNumericId);
+                GroupMgmtProto.InviteToGroupResp respBody = GroupMgmtProto.InviteToGroupResp.newBuilder()
+                  .setCode(0).setMessage("success").build();
+                LOG.info("成员已邀请: groupId={} invitee={}", groupId, inviteeId);
+                return buildResponse(message, CMD_GROUP_INVITE_RESP_VALUE, respBody);
+              });
+          });
         });
       });
     });
@@ -185,15 +191,21 @@ public class GroupManagementService extends ServiceBase {
     }
     String groupId = req.groupId();
 
-    return groupRepo.findById(Long.parseLong(groupId))
-      .compose(group -> {
-        if (group == null) {
-          return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_GET_INFO_RESP_VALUE,
-            ErrorCode.NOT_FOUND, "群不存在"));
+    return membershipDenial(message, CMD_GROUP_GET_INFO_RESP_VALUE, getUserIdFromHeaders(message), Long.parseLong(groupId))
+      .compose(denial -> {
+        if (denial != null) {
+          return Future.succeededFuture(denial);
         }
-        GroupMgmtProto.GetGroupInfoResp respBody = GroupMgmtProto.GetGroupInfoResp.newBuilder()
-          .setCode(0).setMessage("success").setGroup(toProtoGroupInfo(group)).build();
-        return Future.succeededFuture(buildResponse(message, CMD_GROUP_GET_INFO_RESP_VALUE, respBody));
+        return groupRepo.findById(Long.parseLong(groupId))
+          .compose(group -> {
+            if (group == null) {
+              return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_GET_INFO_RESP_VALUE,
+                ErrorCode.NOT_FOUND, "群不存在"));
+            }
+            GroupMgmtProto.GetGroupInfoResp respBody = GroupMgmtProto.GetGroupInfoResp.newBuilder()
+              .setCode(0).setMessage("success").setGroup(toProtoGroupInfo(group)).build();
+            return Future.succeededFuture(buildResponse(message, CMD_GROUP_GET_INFO_RESP_VALUE, respBody));
+          });
       });
   }
 
@@ -205,27 +217,33 @@ public class GroupManagementService extends ServiceBase {
     }
     String groupId = req.groupId();
 
-    return groupRepo.findById(Long.parseLong(groupId)).compose(group -> {
-      if (group == null) {
-        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_GET_MEMBERS_RESP_VALUE,
-          ErrorCode.NOT_FOUND, "群不存在"));
-      }
-      return groupRepo.findMembers(group.getId())
-        .compose(members -> {
-        GroupMgmtProto.GetGroupMembersResp.Builder resp =
-          GroupMgmtProto.GetGroupMembersResp.newBuilder().setCode(0).setMessage("success");
-        for (GroupMemberRecord m : members) {
-          resp.addMembers(GroupMgmtProto.GroupMember.newBuilder()
-            .setUserId(m.getUserId())
-            .setUserName(nn(m.getUserName()))
-            .setNickname(nn(m.getNickname()))
-            .setAvatar(nn(m.getAvatar()))
-            .setRole(m.getRole()).setJoinedAt(m.getJoinedAt()).build());
+    return membershipDenial(message, CMD_GROUP_GET_MEMBERS_RESP_VALUE, getUserIdFromHeaders(message), Long.parseLong(groupId))
+      .compose(denial -> {
+        if (denial != null) {
+          return Future.succeededFuture(denial);
         }
-        return Future.succeededFuture(
-          buildResponse(message, CMD_GROUP_GET_MEMBERS_RESP_VALUE, resp.build()));
+        return groupRepo.findById(Long.parseLong(groupId)).compose(group -> {
+          if (group == null) {
+            return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_GET_MEMBERS_RESP_VALUE,
+              ErrorCode.NOT_FOUND, "群不存在"));
+          }
+          return groupRepo.findMembers(group.getId())
+            .compose(members -> {
+              GroupMgmtProto.GetGroupMembersResp.Builder resp =
+                GroupMgmtProto.GetGroupMembersResp.newBuilder().setCode(0).setMessage("success");
+              for (GroupMemberRecord m : members) {
+                resp.addMembers(GroupMgmtProto.GroupMember.newBuilder()
+                  .setUserId(m.getUserId())
+                  .setUserName(nn(m.getUserName()))
+                  .setNickname(nn(m.getNickname()))
+                  .setAvatar(nn(m.getAvatar()))
+                  .setRole(m.getRole()).setJoinedAt(m.getJoinedAt()).build());
+              }
+              return Future.succeededFuture(
+                buildResponse(message, CMD_GROUP_GET_MEMBERS_RESP_VALUE, resp.build()));
+            });
+        });
       });
-    });
   }
 
   private Future<ImMessage> handleGetMyGroups(ImMessage message) {
@@ -258,22 +276,52 @@ public class GroupManagementService extends ServiceBase {
     String groupId = req.groupId();
     long seq = req.seq();
 
-    return groupRepo.findById(Long.parseLong(groupId)).compose(group -> {
-      if (group == null) {
-        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_MSG_READ_RESP_VALUE,
-          ErrorCode.NOT_FOUND, "群不存在"));
-      }
-      return groupRepo.findMsgReaders(group.getId(), seq)
-        .map(readers -> {
-        GroupMgmtProto.GetGroupMsgReadStatusResp.Builder resp =
-          GroupMgmtProto.GetGroupMsgReadStatusResp.newBuilder().setCode(0).setMessage("success");
-        for (GroupMsgReader r : readers) {
-          resp.addReaders(GroupMgmtProto.GroupMsgReader.newBuilder()
-            .setUserId(r.userId()).setNickname(nn(r.nickname())).setAvatar(nn(r.avatar())).build());
+    return membershipDenial(message, CMD_GROUP_MSG_READ_RESP_VALUE, getUserIdFromHeaders(message), Long.parseLong(groupId))
+      .compose(denial -> {
+        if (denial != null) {
+          return Future.succeededFuture(denial);
         }
-        return buildResponse(message, CMD_GROUP_MSG_READ_RESP_VALUE, resp.build());
+        return groupRepo.findById(Long.parseLong(groupId)).compose(group -> {
+          if (group == null) {
+            return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_MSG_READ_RESP_VALUE,
+              ErrorCode.NOT_FOUND, "群不存在"));
+          }
+          return groupRepo.findMsgReaders(group.getId(), seq)
+            .map(readers -> {
+              GroupMgmtProto.GetGroupMsgReadStatusResp.Builder resp =
+                GroupMgmtProto.GetGroupMsgReadStatusResp.newBuilder().setCode(0).setMessage("success");
+              for (GroupMsgReader r : readers) {
+                resp.addReaders(GroupMgmtProto.GroupMsgReader.newBuilder()
+                  .setUserId(r.userId()).setNickname(nn(r.nickname())).setAvatar(nn(r.avatar())).build());
+              }
+              return buildResponse(message, CMD_GROUP_MSG_READ_RESP_VALUE, resp.build());
+            });
+        });
       });
-      });
+  }
+
+  /**
+   * 群信息类接口的成员资格门槛：未认证、群不存在或非成员时返回错误响应（非 null），
+   * 通过校验时返回 null，调用方继续原处理。
+   */
+  private Future<ImMessage> membershipDenial(ImMessage message, int respCmd, String userId, long groupId) {
+    if (userId == null || userId.isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, respCmd, ErrorCode.UNAUTHORIZED, "未认证用户"));
+    }
+    long numericUserId;
+    try {
+      numericUserId = Long.parseLong(userId);
+    } catch (NumberFormatException e) {
+      return Future.succeededFuture(buildErrorResp(message, respCmd, ErrorCode.UNAUTHORIZED, "无效用户"));
+    }
+    return groupRepo.findById(groupId).compose(group -> {
+      if (group == null) {
+        return Future.succeededFuture(buildErrorResp(message, respCmd, ErrorCode.NOT_FOUND, "群不存在"));
+      }
+      return groupRepo.isMember(groupId, numericUserId)
+        .map(isMember -> isMember ? null
+          : buildErrorResp(message, respCmd, ErrorCode.UNAUTHORIZED, "你不是该群成员"));
+    });
   }
 
   private static String nn(String s) { return s != null ? s : ""; }

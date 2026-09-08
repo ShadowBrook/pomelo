@@ -40,21 +40,22 @@ class GroupPullServiceMediaSignTest {
     @Override public Future<List<GroupMemberRecord>> findMembers(long groupId) { return Future.failedFuture(new UnsupportedOperationException()); }
     @Override public Future<Void> addMember(long id, long groupId, long userId, int role, long now) { return Future.failedFuture(new UnsupportedOperationException()); }
     @Override public Future<Void> removeMember(long groupId, long userId) { return Future.failedFuture(new UnsupportedOperationException()); }
-    @Override public Future<Boolean> isMember(long groupId, long userId) { return Future.failedFuture(new UnsupportedOperationException()); }
+    @Override public Future<Boolean> isMember(long groupId, long userId) { return Future.succeededFuture(true); }
     @Override public Future<Boolean> isMuted(long groupId, long userId) { return Future.failedFuture(new UnsupportedOperationException()); }
     @Override public Future<Boolean> isFriend(long a, long b) { return Future.failedFuture(new UnsupportedOperationException()); }
     @Override public Future<Void> updateLastReadSeq(long groupId, long userId, long seq) { return Future.failedFuture(new UnsupportedOperationException()); }
-    @Override public Future<Boolean> saveMessage(long id, long groupId, long sender, int msgType, String content, long seq, long createdAt) { return Future.failedFuture(new UnsupportedOperationException()); }
+    @Override public Future<Boolean> saveMessage(long id, long groupId, long sender, int msgType, String content, long seq, long createdAt, long clientMsgId) { return Future.failedFuture(new UnsupportedOperationException()); }
+    @Override public Future<GroupMsgWithSender> findByGroupSenderAndClientMsgId(long groupId, long sender, long clientMsgId) { return Future.succeededFuture(null); }
     @Override public Future<List<GroupMsgReader>> findMsgReaders(long groupId, long seq) { return Future.failedFuture(new UnsupportedOperationException()); }
   };
 
   private final MessageRepository stubMsgRepo = new MessageRepository() {
     @Override public Future<Boolean> save(MessageRecord record) { return Future.succeededFuture(true); }
-    @Override public Future<Void> updateStatus(long id, int status) { return Future.succeededFuture(); }
-    @Override public Future<Void> batchUpdateStatus(List<Long> ids, int status) { return Future.succeededFuture(); }
+    @Override public Future<Void> batchUpdateStatus(long recipientId, List<Long> ids, int status) { return Future.succeededFuture(); }
     @Override public Future<List<MessageRecord>> pullPending(long recipientId, long sinceSeq, int limit) { return Future.succeededFuture(List.of()); }
     @Override public Future<MessageRecord> findById(long id) { return Future.succeededFuture(null); }
-    @Override public Future<List<MessageRecord>> findByIds(List<Long> ids) { return Future.succeededFuture(List.of()); }
+    @Override public Future<List<MessageRecord>> findByIds(long recipientId, List<Long> ids) { return Future.succeededFuture(List.of()); }
+    @Override public Future<MessageRecord> findBySenderAndClientMsgId(long senderId, long clientMsgId) { return Future.succeededFuture(null); }
     @Override public Future<List<MessageRecord>> pullConversation(String cid, long before, int limit) { return Future.succeededFuture(List.of()); }
     @Override public Future<Map<Long, UserIdInfo>> findUserIdsByIds(List<Long> ids) { return Future.succeededFuture(Map.of()); }
   };

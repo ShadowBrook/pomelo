@@ -40,8 +40,8 @@ public class PullService extends ServiceBase {
   public Future<ImMessage> process(ImMessage message) {
     try {
       PullRequest req = decode(message, PullRequest.class);
-      String userId = req.userId() != null && !req.userId().isEmpty()
-        ? req.userId() : getUserIdFromHeaders(message);
+      // 身份只信 gateway 规范化后的 varHeader；body 中的 userId 一律忽略（防伪造拉取他人信箱）
+      String userId = getUserIdFromHeaders(message);
       String headerPeerId = message.getVarHeaders() != null ? message.getVarHeaders().get("peerId") : null;
       String peerId = req.peerId() != null && !req.peerId().isEmpty() && !"0".equals(req.peerId())
         ? req.peerId()
@@ -61,7 +61,7 @@ public class PullService extends ServiceBase {
       if (isHistoryPull) {
         LOG.info("拉取会话历史: userId={}({}) peerId={}({}) beforeTime={} limit={}",
           userId, resolvedUserId, peerId, resolvedPeerId, cursor, limit);
-        String conversationId = MessageServiceImpl.buildConversationId(resolvedUserId, resolvedPeerId);
+        String conversationId = MessageRecord.buildConversationId(resolvedUserId, resolvedPeerId);
         return messageRepo.pullConversation(conversationId, cursor, limit)
             .compose(records -> sendPullResp(message, records, limit));
       } else {

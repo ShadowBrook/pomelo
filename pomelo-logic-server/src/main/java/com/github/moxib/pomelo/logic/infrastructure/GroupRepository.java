@@ -39,7 +39,12 @@ public interface GroupRepository {
   Future<Void> updateLastReadSeq(long groupId, long userId, long seq);
 
   Future<Boolean> saveMessage(long id, long groupId, long senderNumericId,
-                               int msgType, String content, long seq, long createdAt);
+                               int msgType, String content, long seq, long createdAt, long clientMsgId);
+
+  /**
+   * 按 (groupId, senderId, clientMsgId) 查询已有群消息，用于客户端重试幂等。
+   */
+  Future<GroupMsgWithSender> findByGroupSenderAndClientMsgId(long groupId, long senderId, long clientMsgId);
 
   Future<List<GroupMsgWithSender>> pullMessages(long groupId, long cursor, int limit, boolean backward);
 

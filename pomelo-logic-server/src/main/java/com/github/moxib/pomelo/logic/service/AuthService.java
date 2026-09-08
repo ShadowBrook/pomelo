@@ -76,13 +76,18 @@ public class AuthService extends ServiceBase {
     String token = null;
     Map<String, String> headers = message.getVarHeaders();
     if (headers != null) token = headers.get("token");
-    if (token != null && !token.isEmpty() && !"test-token".equals(token)) {
-      TokenService.get(vertx).blacklist(token);
+    if (token != null && !token.isEmpty()) {
+      // 等待黑名单写入完成再响应；失败记录 ERROR（token 在 TTL 内仍有效，需关注）
+      return TokenService.get(vertx).blacklist(token)
+        .onFailure(e -> LOG.error("登出黑名单写入失败，token 在 TTL 内仍有效: {}", e.getMessage()))
+        .map(v -> logoutResponse(message));
     }
+    return Future.succeededFuture(logoutResponse(message));
+  }
 
+  private ImMessage logoutResponse(ImMessage message) {
     AuthProto.LogoutResp respBody = AuthProto.LogoutResp.newBuilder()
       .setCode(0).setMessage("登出成功").build();
-
-    return Future.succeededFuture(buildResponse(message, CMD_LOGOUT_RESP_VALUE, respBody));
+    return buildResponse(message, CMD_LOGOUT_RESP_VALUE, respBody);
   }
 }

@@ -20,22 +20,21 @@ import java.util.stream.Collectors;
 /**
  * 基于 PostgreSQL 的 MessageRepository 实现。
  * sender_id / recipient_id 使用 im_user.id (BIGINT Snowflake)。
+ * 归属类查询/更新一律带 recipient_id 条件（纵深防御）。
  */
 public class PgMessageRepository implements MessageRepository {
 
   private static final Logger LOG = LoggerFactory.getLogger(PgMessageRepository.class);
 
+  // 幂等唯一键 uq_c2c_client_msg (sender_id, client_msg_id) 由分区键 sender_id 参与构成，
+  // 重试冲突时 DO NOTHING，rowCount=0 由调用方查回原消息
   private static final String SAVE_SQL = """
-    INSERT INTO im_message_c2c (id, sender_id, recipient_id, conversation_id, msg_type, content, seq, status, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (id) DO NOTHING
-    """;
-
-  private static final String UPDATE_STATUS_SQL = """
-    UPDATE im_message_c2c SET status = $1 WHERE id = $2 AND status < $1
+    INSERT INTO im_message_c2c (id, sender_id, recipient_id, conversation_id, msg_type, content, seq, status, created_at, client_msg_id)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) ON CONFLICT (sender_id, client_msg_id) DO NOTHING
     """;
 
   private static final String BATCH_UPDATE_STATUS_SQL = """
-    UPDATE im_message_c2c SET status = $1 WHERE id = ANY($2) AND status < $1
+    UPDATE im_message_c2c SET status = $1 WHERE id = ANY($2) AND recipient_id = $3 AND status < $1
     """;
 
   private static final String PULL_PENDING_SQL = """
@@ -50,12 +49,20 @@ public class PgMessageRepository implements MessageRepository {
 
   private static final String FIND_BY_IDS_SQL = """
     SELECT id, sender_id, recipient_id, conversation_id, msg_type, content, seq, status, created_at
-    FROM im_message_c2c WHERE id = ANY($1)
+    FROM im_message_c2c WHERE id = ANY($1) AND recipient_id = $2
     """;
 
+  private static final String FIND_BY_SENDER_AND_CLIENT_MSG_SQL = """
+    SELECT id, sender_id, recipient_id, conversation_id, msg_type, content, seq, status, created_at
+    FROM im_message_c2c WHERE sender_id = $1 AND client_msg_id = $2
+    ORDER BY id DESC LIMIT 1
+    """;
+
+  // ORDER BY 附带 id 决胜：同毫秒消息分页确定性，避免 keyset 翻页丢重
   private static final String PULL_CONVERSATION_SQL = """
     SELECT id, sender_id, recipient_id, conversation_id, msg_type, content, seq, status, created_at
-    FROM im_message_c2c WHERE conversation_id = $1 AND created_at < $2 ORDER BY created_at DESC LIMIT $3
+    FROM im_message_c2c WHERE conversation_id = $1 AND created_at < $2
+    ORDER BY created_at DESC, id DESC LIMIT $3
     """;
 
   private static final String FIND_USER_IDS_BY_IDS_SQL = """
@@ -80,7 +87,8 @@ public class PgMessageRepository implements MessageRepository {
         record.getContent(),
         record.getSeq(),
         record.getStatus(),
-        record.getCreatedAt()))
+        record.getCreatedAt(),
+        record.getClientMsgId()))
       .map(r -> {
         int count = r.rowCount();
         boolean inserted = count > 0;
@@ -95,23 +103,14 @@ public class PgMessageRepository implements MessageRepository {
   }
 
   @Override
-  public Future<Void> updateStatus(long messageId, int newStatus) {
-    return pool.preparedQuery(UPDATE_STATUS_SQL)
-      .execute(Tuple.of(newStatus, messageId))
-      .onSuccess(r -> LOG.debug("消息状态更新: id={} status={}", messageId, newStatus))
-      .onFailure(e -> LOG.error("消息状态更新失败 id={}: {}", messageId, e.getMessage()))
-      .mapEmpty();
-  }
-
-  @Override
-  public Future<Void> batchUpdateStatus(List<Long> messageIds, int newStatus) {
+  public Future<Void> batchUpdateStatus(long recipientId, List<Long> messageIds, int newStatus) {
     if (messageIds == null || messageIds.isEmpty()) {
       return Future.succeededFuture();
     }
     List<Long> sorted = messageIds.stream().distinct().sorted().collect(Collectors.toList());
     return pool.preparedQuery(BATCH_UPDATE_STATUS_SQL)
-      .execute(Tuple.tuple().addInteger(newStatus).addArrayOfLong(sorted.toArray(new Long[0])))
-      .onSuccess(r -> LOG.debug("批量状态更新: count={} status={}", sorted.size(), newStatus))
+      .execute(Tuple.tuple().addInteger(newStatus).addArrayOfLong(sorted.toArray(new Long[0])).addLong(recipientId))
+      .onSuccess(r -> LOG.debug("批量状态更新: recipient={} count={} status={}", recipientId, sorted.size(), newStatus))
       .onFailure(e -> LOG.error("批量状态更新失败: {}", e.getMessage()))
       .mapEmpty();
   }
@@ -135,18 +134,28 @@ public class PgMessageRepository implements MessageRepository {
   }
 
   @Override
-  public Future<List<MessageRecord>> findByIds(List<Long> messageIds) {
+  public Future<List<MessageRecord>> findByIds(long recipientId, List<Long> messageIds) {
     if (messageIds == null || messageIds.isEmpty()) {
       return Future.succeededFuture(Collections.emptyList());
     }
     Long[] ids = messageIds.stream().distinct().sorted().toArray(Long[]::new);
     return pool.preparedQuery(FIND_BY_IDS_SQL)
-      .execute(Tuple.tuple().addArrayOfLong(ids))
+      .execute(Tuple.tuple().addArrayOfLong(ids).addLong(recipientId))
       .map(rows -> {
         List<MessageRecord> list = new ArrayList<>();
         for (Row row : rows) list.add(rowToRecord(row));
         return list;
       });
+  }
+
+  @Override
+  public Future<MessageRecord> findBySenderAndClientMsgId(long senderId, long clientMsgId) {
+    if (clientMsgId <= 0) {
+      return Future.succeededFuture(null);
+    }
+    return pool.preparedQuery(FIND_BY_SENDER_AND_CLIENT_MSG_SQL)
+      .execute(Tuple.of(senderId, clientMsgId))
+      .map(rows -> rows.size() > 0 ? rowToRecord(rows.iterator().next()) : null);
   }
 
   @Override

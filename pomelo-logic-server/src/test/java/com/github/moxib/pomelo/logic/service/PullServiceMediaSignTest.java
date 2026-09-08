@@ -25,13 +25,13 @@ class PullServiceMediaSignTest {
 
   private final MessageRepository stubRepo = new MessageRepository() {
     @Override public Future<Boolean> save(MessageRecord record) { return Future.succeededFuture(true); }
-    @Override public Future<Void> updateStatus(long messageId, int newStatus) { return Future.succeededFuture(); }
-    @Override public Future<Void> batchUpdateStatus(List<Long> ids, int newStatus) { return Future.succeededFuture(); }
+    @Override public Future<Void> batchUpdateStatus(long recipientId, List<Long> ids, int newStatus) { return Future.succeededFuture(); }
     @Override public Future<List<MessageRecord>> pullPending(long recipientId, long sinceSeq, int limit) {
       return Future.succeededFuture(List.of(IMAGE));
     }
     @Override public Future<MessageRecord> findById(long messageId) { return Future.succeededFuture(null); }
-    @Override public Future<List<MessageRecord>> findByIds(List<Long> ids) { return Future.succeededFuture(List.of()); }
+    @Override public Future<List<MessageRecord>> findByIds(long recipientId, List<Long> ids) { return Future.succeededFuture(List.of()); }
+    @Override public Future<MessageRecord> findBySenderAndClientMsgId(long senderId, long clientMsgId) { return Future.succeededFuture(null); }
     @Override public Future<List<MessageRecord>> pullConversation(String cid, long before, int limit) {
       return Future.succeededFuture(List.of());
     }

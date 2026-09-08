@@ -86,9 +86,17 @@ public class PgGroupRepository implements GroupRepository {
     WHERE group_id = $2 AND user_id = $3
     """;
 
+  // 幂等唯一键 uq_group_client_msg (group_id, sender_id, client_msg_id) 由分区键 group_id 参与构成，
+  // 重试冲突时 DO NOTHING，rowCount=0 由调用方查回原消息
   private static final String SAVE_MSG_SQL = """
-    INSERT INTO im_message_group (id, sender_id, group_id, msg_type, content, seq, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (id) DO NOTHING
+    INSERT INTO im_message_group (id, sender_id, group_id, msg_type, content, seq, created_at, client_msg_id)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (group_id, sender_id, client_msg_id) DO NOTHING
+    """;
+
+  private static final String FIND_BY_GROUP_SENDER_CLIENT_MSG_SQL = """
+    SELECT id, sender_id, group_id, msg_type, content, seq, created_at
+    FROM im_message_group WHERE group_id = $1 AND sender_id = $2 AND client_msg_id = $3
+    ORDER BY id DESC LIMIT 1
     """;
 
   private static final String FIND_MSG_READERS_SQL = """
@@ -234,9 +242,9 @@ public class PgGroupRepository implements GroupRepository {
 
   @Override
   public Future<Boolean> saveMessage(long id, long groupId, long senderNumericId,
-                                     int msgType, String content, long seq, long createdAt) {
+                                     int msgType, String content, long seq, long createdAt, long clientMsgId) {
     return pool.preparedQuery(SAVE_MSG_SQL)
-      .execute(Tuple.of(id, senderNumericId, groupId, msgType, content, seq, createdAt))
+      .execute(Tuple.of(id, senderNumericId, groupId, msgType, content, seq, createdAt, clientMsgId))
       .map(r -> {
         boolean inserted = r.rowCount() > 0;
         if (inserted) {
@@ -245,6 +253,29 @@ public class PgGroupRepository implements GroupRepository {
         return inserted;
       })
       .onFailure(e -> LOG.error("群消息持久化失败 id={}: {}", id, e.getMessage()));
+  }
+
+  @Override
+  public Future<GroupMsgWithSender> findByGroupSenderAndClientMsgId(long groupId, long senderId, long clientMsgId) {
+    if (clientMsgId <= 0) {
+      return Future.succeededFuture(null);
+    }
+    return pool.preparedQuery(FIND_BY_GROUP_SENDER_CLIENT_MSG_SQL)
+      .execute(Tuple.of(groupId, senderId, clientMsgId))
+      .map(rows -> {
+        if (rows.size() == 0) {
+          return null;
+        }
+        Row row = rows.iterator().next();
+        return new GroupMsgWithSender(
+          row.getLong("id"),
+          row.getLong("sender_id"),
+          row.getLong("group_id"),
+          row.getInteger("msg_type"),
+          row.getString("content"),
+          row.getLong("seq"),
+          row.getLong("created_at"));
+      });
   }
 
   @Override
