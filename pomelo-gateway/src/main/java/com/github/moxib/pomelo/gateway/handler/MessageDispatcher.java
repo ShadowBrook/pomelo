@@ -17,7 +17,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
@@ -35,6 +37,8 @@ public class MessageDispatcher {
   private final long heartbeatTimeoutMs;
   private final long nodeTtlMs;
   private long heartbeatTimerId = -1;
+  // TCP/WS Verticle 共享同一 Dispatcher 时 stop() 会被调用两次，需幂等
+  private final AtomicBoolean stopped = new AtomicBoolean(false);
 
   public MessageDispatcher(Vertx vertx, SessionRegistry sessionRegistry, long heartbeatTimeoutMs) {
     this.vertx = vertx;
@@ -76,6 +80,9 @@ public class MessageDispatcher {
    * 用户连接随节点关闭断开，重连到其他节点后由新节点重新注册。
    */
   public Future<Void> stop() {
+    if (!stopped.compareAndSet(false, true)) {
+      return Future.succeededFuture();
+    }
     if (heartbeatTimerId >= 0) {
       vertx.cancelTimer(heartbeatTimerId);
       heartbeatTimerId = -1;
@@ -95,9 +102,7 @@ public class MessageDispatcher {
       .cmd(CMD_PONG_VALUE)
       .messageId(request.getMessageId())
       .build();
-  }
-
-  /** 解析 push 并投递给本地连接的用户（EventBus 上 push 以 PushCodec Buffer 传输） */
+  }  /** 解析 push 并投递给本地连接的用户（EventBus 上 push 以 PushCodec Buffer 传输） */
   private void deliverPush(Object msgBody) {
     if (!(msgBody instanceof Buffer buf)) {
       LOG.warn("Unknown push body type: {}", msgBody.getClass().getName());
@@ -126,21 +131,33 @@ public class MessageDispatcher {
   }
 
   public void dispatch(Connection connection, ImMessage message) {
-    // 任何客户端消息都证明用户在线，重置心跳定时器
-    touchHeartbeat(message);
+    // 身份只取本节点 SessionRegistry 的认证结果；客户端携带的同名 varHeader 一律不可信
+    String authenticatedUserId = sessionRegistry.getUserIdByConnection(connection);
+    int cmd = message.getCmd();
+
+    if (authenticatedUserId != null) {
+      // 任何消息都证明用户在线，重置心跳定时器（以会话身份为准）
+      sessionRegistry.resetHeartbeatTimer(authenticatedUserId, heartbeatTimeoutMs);
+      normalizeSenderHeaders(message, authenticatedUserId);
+    } else if (cmd != CMD_PING_VALUE && cmd != CMD_AUTH_REQ_VALUE) {
+      // 未认证连接仅放行心跳与认证，防止伪造 varHeader 调用业务命令
+      LOG.warn("未认证连接请求业务命令，已拒绝: cmd=0x{} remote={}",
+        Integer.toHexString(cmd), connection.remoteAddress());
+      sendErrorToClient(connection, message, ErrorCode.UNAUTHORIZED, "请先完成认证");
+      return;
+    }
 
     // 心跳由 gateway 本地应答
-    if (message.getCmd() == CMD_PING_VALUE) {
+    if (cmd == CMD_PING_VALUE) {
       connection.write(buildPong(message).encodeToWire());
       return;
     }
 
-    String address = cmdToAddress(message.getCmd());
+    String address = cmdToAddress(cmd);
     if (address == null) {
       handleUnknownCmd(connection, message);
       return;
     }
-    enrichWithSenderInfo(message);
     Buffer wire = message.encodeToWire();
     vertx.eventBus().<Buffer>request(address, wire)
       .onSuccess(replyMsg -> {
@@ -152,21 +169,32 @@ public class MessageDispatcher {
       })
       .onFailure(cause -> {
         LOG.warn("EventBus request failed: address={} cause={}", address, cause.getMessage());
-        sendErrorToClient(connection, message, cause.getMessage());
+        sendErrorToClient(connection, message, ErrorCode.INTERNAL_ERROR, cause.getMessage());
       });
   }
 
   /**
-   * 任何客户端消息（含 PING）都证明用户在线，重置连接心跳超时定时器。
-   * 仅本地 Vert.x timer，无 Redis 写——session 路由无需续期（节点存活由节点心跳管理）。
+   * 以认证会话为准覆写发送者身份头（userId/userName/nickname），
+   * 使 logic 层从 varHeader 取到的身份永远可信。
+   * peerId、token 等其余头保留（属于请求参数或客户端自身凭证）。
+   * 重建头 Map 而非原地修改，避免依赖解码产物可变。
    */
-  private void touchHeartbeat(ImMessage message) {
+  private void normalizeSenderHeaders(ImMessage message, String userId) {
+    Map<String, String> normalized = new HashMap<>();
     Map<String, String> headers = message.getVarHeaders();
-    if (headers == null) return;
-    String userId = headers.get("userId");
-    if (userId != null && !userId.isEmpty()) {
-      sessionRegistry.resetHeartbeatTimer(vertx, userId, heartbeatTimeoutMs);
+    if (headers != null) {
+      normalized.putAll(headers);
     }
+    normalized.put("userId", userId);
+    String userName = sessionRegistry.getUserName(userId);
+    if (userName != null) {
+      normalized.put("userName", userName);
+    }
+    String nickname = sessionRegistry.getNickname(userId);
+    if (nickname != null) {
+      normalized.put("nickname", nickname);
+    }
+    message.setVarHeaders(normalized);
   }
 
   /**
@@ -182,9 +210,9 @@ public class MessageDispatcher {
       return;
     }
     if (response.getCmd() == CMD_LOGOUT_RESP_VALUE) {
-      String userId = getUserIdFromRequest(request);
-      if (userId != null && !userId.isEmpty()) {
-        sessionRegistry.unregisterByUserId(vertx, userId);
+      // 以连接的认证身份注销，不信任请求中携带的 userId
+      String userId = sessionRegistry.unregisterByConnection(connection);
+      if (userId != null) {
         routeTable.unregister(userId);
         LOG.info("Session 已注销: userId={}", userId);
       }
@@ -213,7 +241,7 @@ public class MessageDispatcher {
         String nickname = claims.getString("nickname", "");
         sessionRegistry.register(userId, id, connection, userName, nickname, null);
         routeTable.register(userId);
-        sessionRegistry.startHeartbeatTimer(vertx, userId, heartbeatTimeoutMs);
+        sessionRegistry.startHeartbeatTimer(userId, heartbeatTimeoutMs);
         LOG.info("Session 已注册: userId={} id={}", userId, id);
       })
       .onFailure(e -> LOG.warn("Token 解析失败，无法注册 session: {}", e.getMessage()));
@@ -247,35 +275,6 @@ public class MessageDispatcher {
     }
   }
 
-  /** 从请求 varHeaders 或 body 取 userId（LOGOUT_REQ 用） */
-  private String getUserIdFromRequest(ImMessage request) {
-    Map<String, String> headers = request.getVarHeaders();
-    if (headers != null && headers.get("userId") != null && !headers.get("userId").isEmpty()) {
-      return headers.get("userId");
-    }
-    byte[] body = request.getBody();
-    if (body != null && body.length > 0) {
-      return new String(body, StandardCharsets.UTF_8).trim();
-    }
-    return null;
-  }
-
-  private void enrichWithSenderInfo(ImMessage message) {
-    Map<String, String> headers = message.getVarHeaders();
-    if (headers == null) return;
-    String userId = headers.get("userId");
-    if (userId == null) return;
-    if (sessionRegistry.getId(userId) == 0) return;
-    String userName = sessionRegistry.getUserName(userId);
-    String nickname = sessionRegistry.getNickname(userId);
-    if (userName != null && !headers.containsKey("userName")) {
-      headers.put("userName", userName);
-    }
-    if (nickname != null && !headers.containsKey("nickname")) {
-      headers.put("nickname", nickname);
-    }
-  }
-
   private static String cmdToAddress(int cmd) {
     if (cmd == CMD_C2C_REQ_VALUE)          return "logic.c2c";
     if (cmd == CMD_C2G_REQ_VALUE)          return "logic.c2g";
@@ -306,9 +305,10 @@ public class MessageDispatcher {
     connection.write(response.encodeToWire());
   }
 
-  private void sendErrorToClient(Connection connection, ImMessage request, String detail) {
+  private void sendErrorToClient(Connection connection, ImMessage request, ErrorCode errorCode, String detail) {
+    String msg = detail != null ? detail : errorCode.getDefaultMessage();
     byte[] body = CommonProto.ErrorBody.newBuilder()
-      .setCode(ErrorCode.INTERNAL_ERROR.getCode()).setMessage(detail).build().toByteArray();
+      .setCode(errorCode.getCode()).setMessage(msg).build().toByteArray();
     ImMessage response = ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER).version(ImMessage.WIRE_PROTOCOL_VERSION)
       .codecId((byte) 0).cmd(CMD_ERROR_VALUE).messageId(request.getMessageId()).body(body)

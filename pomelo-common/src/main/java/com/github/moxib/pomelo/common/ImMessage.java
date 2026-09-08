@@ -2,6 +2,7 @@ package com.github.moxib.pomelo.common;
 
 import io.vertx.core.buffer.Buffer;
 import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -31,6 +32,16 @@ public class ImMessage {
   public static final byte WIRE_PROTOCOL_VERSION = 1;
   // 魔数常量 — "PMEL"
   public static final int MAGIC_NUMBER = 0x504D454C;
+  // 不含变长内容的最小帧长: magic(4)+version(1)+codecId(1)+cmd(4)+messageIdLen(4)+headersCount(4)+bodyLen(4)
+  public static final int MIN_FRAME_LENGTH = 22;
+  // 单帧总长上限（网关侧长度前缀与解析层共同校验，防御恶意长度声明的内存耗尽攻击）
+  public static final int MAX_FRAME_SIZE = 2 * 1024 * 1024;
+  // 消息体长度上限
+  public static final int MAX_BODY_LENGTH = 1024 * 1024;
+  // messageId 与变长头 key/value 的长度上限
+  public static final int MAX_STRING_LENGTH = 4096;
+  // 变长头数量上限
+  public static final int MAX_VAR_HEADER_COUNT = 64;
 
   /**
    * 编码到 Buffer
@@ -80,6 +91,13 @@ public class ImMessage {
    */
   public void readFromWire(Buffer buffer) {
     // Overall Length already read when passed in here
+    int totalLength = buffer.length();
+    if (totalLength < MIN_FRAME_LENGTH) {
+      throw new IllegalArgumentException("Frame too short: " + totalLength);
+    }
+    if (totalLength > MAX_FRAME_SIZE) {
+      throw new IllegalArgumentException("Frame too large: " + totalLength);
+    }
     int pos = 0;
 
     // 读取并验证魔数
@@ -107,6 +125,7 @@ public class ImMessage {
     // 读取消息 ID
     int messageIdLength = buffer.getInt(pos);
     pos += 4;
+    checkLength(messageIdLength, MAX_STRING_LENGTH, totalLength, pos, "messageIdLength");
     if (messageIdLength > 0) {
       byte[] messageIdBytes = buffer.getBytes(pos, pos + messageIdLength);
       this.messageId = new String(messageIdBytes, StandardCharsets.UTF_8);
@@ -119,10 +138,22 @@ public class ImMessage {
     // 读取消息体长度
     this.bodyLength = buffer.getInt(pos);
     pos += 4;
+    checkLength(bodyLength, MAX_BODY_LENGTH, totalLength, pos, "bodyLength");
 
     // 读取消息体
     if (this.bodyLength > 0) {
       this.body = buffer.getBytes(pos, pos + bodyLength);
+    }
+  }
+
+  /**
+   * 校验变长字段长度：非负、不超类型上限、不超帧内剩余字节数。
+   * 防御恶意或损坏的长度声明（负数/超长越界读与超大预分配）。
+   */
+  private static void checkLength(int length, int typeMax, int totalLength, int pos, String field) {
+    if (length < 0 || length > typeMax || length > totalLength - pos) {
+      throw new IllegalArgumentException(
+        "Invalid " + field + ": " + length + ", remaining=" + (totalLength - pos));
     }
   }
 
@@ -152,18 +183,23 @@ public class ImMessage {
     int pos = startPos;
     int headersCount = buffer.getInt(pos);
     pos += 4;
+    if (headersCount < 0 || headersCount > MAX_VAR_HEADER_COUNT) {
+      throw new IllegalArgumentException("Invalid headersCount: " + headersCount);
+    }
 
     if (headersCount > 0) {
-      varHeaders = new java.util.HashMap<>();
+      varHeaders = new HashMap<>();
       for (int i = 0; i < headersCount; i++) {
         int keyLength = buffer.getInt(pos);
         pos += 4;
+        checkLength(keyLength, MAX_STRING_LENGTH, buffer.length(), pos, "headerKeyLength");
         byte[] keyBytes = buffer.getBytes(pos, pos + keyLength);
         String key = new String(keyBytes, StandardCharsets.UTF_8);
         pos += keyLength;
 
         int valueLength = buffer.getInt(pos);
         pos += 4;
+        checkLength(valueLength, MAX_STRING_LENGTH, buffer.length(), pos, "headerValueLength");
         byte[] valueBytes = buffer.getBytes(pos, pos + valueLength);
         String value = new String(valueBytes, StandardCharsets.UTF_8);
         pos += valueLength;

@@ -1,55 +1,63 @@
 package com.github.moxib.pomelo.gateway;
 
+import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.proto.common.CommonProto;
+import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.NetClient;
+import io.vertx.core.net.NetSocket;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * GatewayVerticle 测试
+ * Gateway TCP 服务测试。
+ * 客户端侧按长度前缀做帧累积解析（处理响应粘包/分片），剥掉 4 字节前缀后再 readFromWire。
  */
 @DisplayName("Gateway TCP 服务测试")
 public class TcpGatewayVerticleTest {
 
+  private static final int TCP_PORT = 19100;
+
   private Vertx vertx;
   private TcpGatewayVerticle tcpGatewayVerticle;
-  private int tcpPort = 9000;
 
   @BeforeEach
   void setUp() throws InterruptedException {
+    // Verticle 启动时配置尚未加载，端口走系统属性兜底
+    System.setProperty("gateway.tcp.port", String.valueOf(TCP_PORT));
     vertx = Vertx.vertx();
     tcpGatewayVerticle = new TcpGatewayVerticle();
 
     CountDownLatch latch = new CountDownLatch(1);
     vertx.deployVerticle(tcpGatewayVerticle)
-      .onSuccess(deploymentId -> {
-        System.out.println("Verticle deployed successfully");
-        latch.countDown();
-      })
+      .onSuccess(deploymentId -> latch.countDown())
       .onFailure(ar -> {
         System.err.println("Failed to deploy verticle: " + ar.getMessage());
         latch.countDown();
       });
 
     assertTrue(latch.await(5, TimeUnit.SECONDS));
-    // 等待服务器完全启动
-    Thread.sleep(500);
+    Thread.sleep(300);
   }
 
   @AfterEach
   void tearDown() throws InterruptedException {
+    System.clearProperty("gateway.tcp.port");
     if (vertx != null) {
       CountDownLatch latch = new CountDownLatch(1);
       vertx.close().onSuccess(v -> latch.countDown());
@@ -57,311 +65,158 @@ public class TcpGatewayVerticleTest {
     }
   }
 
-  @Test
-  @DisplayName("测试 TCP 连接建立")
-  void testTcpConnection() {
-    System.out.println("Starting testTcpConnection...");
-    CountDownLatch latch = new CountDownLatch(1);
-    AtomicBoolean connected = new AtomicBoolean(false);
+  /**
+   * 客户端侧帧读取器：按 [4 字节长度][载荷] 累积切帧，
+   * 同时处理 TCP 粘包（一次收到多帧）与分片（一帧拆多次到达）。
+   */
+  static class FrameReader {
+    private final List<ImMessage> frames = new ArrayList<>();
+    private final CountDownLatch latch;
+    private Buffer leftover = Buffer.buffer();
 
-    NetClient client = vertx.createNetClient();
-    client.connect(tcpPort, "localhost")
-      .onSuccess(socket -> {
-        System.out.println("Connected to server");
-        connected.set(true);
-        socket.close();
-        latch.countDown();
-      })
-      .onFailure(ar -> {
-        System.err.println("Failed to connect: " + ar.getMessage());
-        latch.countDown();
-      });
-
-    try {
-      assertTrue(latch.await(10, TimeUnit.SECONDS));
-      assertTrue(connected.get());
-    } catch (InterruptedException e) {
-      fail("Test interrupted");
+    FrameReader(int expected) {
+      this.latch = new CountDownLatch(expected);
     }
-  }
 
-  @Test
-  @DisplayName("测试心跳消息处理")
-  void testHeartbeatMessage() {
-    System.out.println("Starting testHeartbeatMessage...");
-    CountDownLatch latch = new CountDownLatch(1);
-    AtomicBoolean completed = new AtomicBoolean(false);
-
-    NetClient client = vertx.createNetClient();
-    client.connect(tcpPort, "localhost")
-      .onSuccess(socket -> {
-        System.out.println("Connected, sending heartbeat...");
-        // 构建心跳消息
-        ImMessage heartbeatRequest = ImMessage.builder()
-          .version((byte) 1)
-          .codecId((byte) 0)
-          // 心跳 cmd
-          .cmd((byte) 0x01)
-          .messageId("heartbeat-001")
-          .body("ping".getBytes(StandardCharsets.UTF_8))
-          .build();
-
-        // 发送心跳请求
-        Buffer requestBuffer = heartbeatRequest.encodeToWire();
-        System.out.println("Request buffer length: " + requestBuffer.length());
-        socket.write(requestBuffer);
-
-        // 等待并接收响应
-        socket.handler(buffer -> {
-          System.out.println("Received response, buffer length: " + buffer.length());
-          ImMessage response = new ImMessage(true);
-          response.readFromWire(buffer);
-
-          // 验证响应
-          System.out.println("Response cmd: " + response.getCmd());
-          System.out.println("Response messageId: " + response.getMessageId());
-          assertEquals((byte) 0x01, response.getCmd());
-          assertEquals("heartbeat-001", response.getMessageId());
-
-          completed.set(true);
-          socket.close();
-          latch.countDown();
-        });
-      })
-      .onFailure(ar -> {
-        System.err.println("Failed to connect: " + ar.getMessage());
-        latch.countDown();
-      });
-
-    try {
-      assertTrue(latch.await(10, TimeUnit.SECONDS));
-      assertTrue(completed.get());
-    } catch (InterruptedException e) {
-      fail("Test interrupted");
-    }
-  }
-
-  @Test
-  @DisplayName("测试登录消息处理")
-  void testLoginMessage() {
-    System.out.println("Starting testLoginMessage...");
-    CountDownLatch latch = new CountDownLatch(1);
-    AtomicBoolean completed = new AtomicBoolean(false);
-
-    NetClient client = vertx.createNetClient();
-    client.connect(tcpPort, "localhost")
-      .onSuccess(socket -> {
-        System.out.println("Connected, sending login request...");
-        // 构建登录请求
-        ImMessage loginRequest = ImMessage.builder()
-          .version((byte) 1)
-          .codecId((byte) 0)
-          // 登录 cmd
-          .cmd((byte) 0x02)
-          .messageId("login-001")
-          .body("{\"username\":\"test\",\"password\":\"123456\"}".getBytes(StandardCharsets.UTF_8))
-          .build();
-
-        // 发送登录请求
-        Buffer requestBuffer = loginRequest.encodeToWire();
-        socket.write(requestBuffer);
-
-        // 等待并接收响应
-        socket.handler(buffer -> {
-          System.out.println("Received login response");
-          ImMessage response = new ImMessage(true);
-          response.readFromWire(buffer);
-
-          // 验证响应
-          assertEquals((byte) 0x02, response.getCmd());
-          assertEquals("login-001", response.getMessageId());
-
-          completed.set(true);
-          socket.close();
-          latch.countDown();
-        });
-      })
-      .onFailure(ar -> {
-        System.err.println("Failed to connect: " + ar.getMessage());
-        latch.countDown();
-      });
-
-    try {
-      assertTrue(latch.await(10, TimeUnit.SECONDS));
-      assertTrue(completed.get());
-    } catch (InterruptedException e) {
-      fail("Test interrupted");
-    }
-  }
-
-  @Test
-  @DisplayName("测试聊天消息处理")
-  void testChatMessage() {
-    System.out.println("Starting testChatMessage...");
-    CountDownLatch latch = new CountDownLatch(1);
-    AtomicBoolean completed = new AtomicBoolean(false);
-
-    NetClient client = vertx.createNetClient();
-    client.connect(tcpPort, "localhost")
-      .onSuccess(socket -> {
-        System.out.println("Connected, sending chat message...");
-        // 构建聊天消息
-        ImMessage chatRequest = ImMessage.builder()
-          .version((byte) 1)
-          .codecId((byte) 0)
-          // 聊天消息 cmd
-          .cmd((byte) 0x10)
-          .messageId("chat-001")
-          .body("你好，这是一条聊天消息".getBytes(StandardCharsets.UTF_8))
-          .build();
-
-        // 发送聊天消息
-        Buffer requestBuffer = chatRequest.encodeToWire();
-        socket.write(requestBuffer);
-
-        // 等待并接收响应
-        socket.handler(buffer -> {
-          System.out.println("Received chat response");
-          ImMessage response = new ImMessage(true);
-          response.readFromWire(buffer);
-
-          // 验证响应
-          assertEquals((byte) 0x04, response.getCmd());
-          assertEquals("chat-001", response.getMessageId());
-
-          completed.set(true);
-          socket.close();
-          latch.countDown();
-        });
-      })
-      .onFailure(ar -> {
-        System.err.println("Failed to connect: " + ar.getMessage());
-        latch.countDown();
-      });
-
-    try {
-      assertTrue(latch.await(10, TimeUnit.SECONDS));
-      assertTrue(completed.get());
-    } catch (InterruptedException e) {
-      fail("Test interrupted");
-    }
-  }
-
-  @Test
-  @DisplayName("测试未知 cmd 处理")
-  void testUnknownCmdMessage() {
-    System.out.println("Starting testUnknownCmdMessage...");
-    CountDownLatch latch = new CountDownLatch(1);
-    AtomicBoolean completed = new AtomicBoolean(false);
-
-    NetClient client = vertx.createNetClient();
-    client.connect(tcpPort, "localhost")
-      .onSuccess(socket -> {
-        System.out.println("Connected, sending unknown cmd...");
-        // 构建未知 cmd 的消息
-        ImMessage unknownRequest = ImMessage.builder()
-          .version((byte) 1)
-          .codecId((byte) 0)
-          // 未知的 cmd
-          .cmd((byte) 0x99)
-          .messageId("unknown-001")
-          .build();
-
-        // 发送消息
-        Buffer requestBuffer = unknownRequest.encodeToWire();
-        socket.write(requestBuffer);
-
-        // 等待并接收响应
-        socket.handler(buffer -> {
-          System.out.println("Received unknown cmd response");
-          ImMessage response = new ImMessage(true);
-          response.readFromWire(buffer);
-
-          // 验证响应（应该收到错误响应）
-          System.out.println("Response cmd: " + response.getCmd());
-          assertTrue(response.getCmd() == (byte) 0xFF || response.getCmd() == (byte) 0xFE);
-
-          completed.set(true);
-          socket.close();
-          latch.countDown();
-        });
-      })
-      .onFailure(ar -> {
-        System.err.println("Failed to connect: " + ar.getMessage());
-        latch.countDown();
-      });
-
-    try {
-      assertTrue(latch.await(10, TimeUnit.SECONDS));
-      assertTrue(completed.get());
-    } catch (InterruptedException e) {
-      fail("Test interrupted");
-    }
-  }
-
-  @Test
-  @DisplayName("测试 TCP 粘包处理")
-  void testTcpStickPackage() {
-    System.out.println("Starting testTcpStickPackage...");
-    CountDownLatch latch = new CountDownLatch(1);
-    AtomicBoolean completed = new AtomicBoolean(false);
-
-    NetClient client = vertx.createNetClient();
-    client.connect(tcpPort, "localhost")
-      .onSuccess(socket -> {
-        System.out.println("Connected, sending stick package...");
-        // 构建两个心跳消息
-        ImMessage heartbeat1 = ImMessage.builder()
-          .version((byte) 1)
-          .codecId((byte) 0)
-          .cmd((byte) 0x01)
-          .messageId("heartbeat-stick-001")
-          .body("ping1".getBytes(StandardCharsets.UTF_8))
-          .build();
-
-        ImMessage heartbeat2 = ImMessage.builder()
-          .version((byte) 1)
-          .codecId((byte) 0)
-          .cmd((byte) 0x01)
-          .messageId("heartbeat-stick-002")
-          .body("ping2".getBytes(StandardCharsets.UTF_8))
-          .build();
-
-        // 将两个消息拼接在一起发送（模拟粘包）
-        Buffer buffer1 = heartbeat1.encodeToWire();
-        Buffer buffer2 = heartbeat2.encodeToWire();
-        Buffer stickBuffer = Buffer.buffer().appendBuffer(buffer1).appendBuffer(buffer2);
-
-        System.out.println("Stick buffer length: " + stickBuffer.length());
-        socket.write(stickBuffer);
-
-        AtomicInteger responseCount = new AtomicInteger(0);
-
-        // 等待并接收响应
-        socket.handler(buffer -> {
-          int count = responseCount.incrementAndGet();
-          System.out.println("Received stick package response #" + count);
-          ImMessage response = new ImMessage(true);
-          response.readFromWire(buffer);
-
-          // 收到两个响应后完成测试
-          if (count >= 2) {
-            completed.set(true);
-            socket.close();
-            latch.countDown();
+    Handler<Buffer> handler() {
+      return chunk -> {
+        Buffer data = leftover.appendBuffer(chunk);
+        int pos = 0;
+        while (data.length() - pos >= 4) {
+          int len = data.getInt(pos);
+          if (len < ImMessage.MIN_FRAME_LENGTH || len > ImMessage.MAX_FRAME_SIZE
+            || data.length() - pos - 4 < len) {
+            break;
           }
-        });
+          ImMessage msg = new ImMessage();
+          msg.readFromWire(data.getBuffer(pos + 4, pos + 4 + len));
+          frames.add(msg);
+          pos += 4 + len;
+          latch.countDown();
+        }
+        leftover = Buffer.buffer().appendBuffer(data, pos, data.length() - pos);
+      };
+    }
+
+    boolean awaitFrames(long seconds) throws InterruptedException {
+      return latch.await(seconds, TimeUnit.SECONDS);
+    }
+
+    List<ImMessage> frames() {
+      return frames;
+    }
+  }
+
+  private NetSocket connect() throws InterruptedException {
+    CountDownLatch latch = new CountDownLatch(1);
+    AtomicReference<NetSocket> socketRef = new AtomicReference<>();
+    NetClient client = vertx.createNetClient();
+    client.connect(TCP_PORT, "localhost")
+      .onSuccess(s -> {
+        socketRef.set(s);
+        latch.countDown();
       })
       .onFailure(ar -> {
         System.err.println("Failed to connect: " + ar.getMessage());
         latch.countDown();
       });
+    assertTrue(latch.await(10, TimeUnit.SECONDS), "连接应建立");
+    return socketRef.get();
+  }
 
-    try {
-      assertTrue(latch.await(10, TimeUnit.SECONDS));
-      assertTrue(completed.get());
-    } catch (InterruptedException e) {
-      fail("Test interrupted");
-    }
+  private static ImMessage ping(String messageId) {
+    return ImMessage.builder()
+      .magic(ImMessage.MAGIC_NUMBER)
+      .version(ImMessage.WIRE_PROTOCOL_VERSION)
+      .codecId((byte) 0)
+      .cmd(CMD_PING_VALUE)
+      .messageId(messageId)
+      .build();
+  }
+
+  @Test
+  @DisplayName("测试 TCP 连接建立与关闭")
+  void testTcpConnection() throws InterruptedException {
+    NetSocket socket = connect();
+    CountDownLatch closed = new CountDownLatch(1);
+    socket.closeHandler(v -> closed.countDown());
+    socket.close();
+    assertTrue(closed.await(10, TimeUnit.SECONDS), "连接应被关闭");
+  }
+
+  @Test
+  @DisplayName("测试心跳消息处理 - PING 应答 PONG")
+  void testHeartbeatMessage() throws InterruptedException {
+    NetSocket socket = connect();
+    FrameReader reader = new FrameReader(1);
+    socket.handler(reader.handler());
+
+    socket.write(ping("heartbeat-001").encodeToWire());
+    assertTrue(reader.awaitFrames(10), "应收到 PONG 响应");
+
+    ImMessage response = reader.frames().get(0);
+    assertEquals(CMD_PONG_VALUE, response.getCmd());
+    assertEquals("heartbeat-001", response.getMessageId());
+    socket.close();
+  }
+
+  @Test
+  @DisplayName("测试未认证业务命令被拒绝 - 返回 UNAUTHORIZED 错误")
+  void testUnauthenticatedC2CRejected() throws Exception {
+    NetSocket socket = connect();
+    FrameReader reader = new FrameReader(1);
+    socket.handler(reader.handler());
+
+    // 未完成 AUTH_REQ 直接发送 C2C_REQ（并伪造 userId 头）
+    ImMessage c2c = ImMessage.builder()
+      .magic(ImMessage.MAGIC_NUMBER)
+      .version(ImMessage.WIRE_PROTOCOL_VERSION)
+      .codecId((byte) 0)
+      .cmd(CMD_C2C_REQ_VALUE)
+      .messageId("c2c-001")
+      .varHeaders(Map.of("userId", "42"))
+      .build();
+    socket.write(c2c.encodeToWire());
+
+    assertTrue(reader.awaitFrames(10), "应收到错误响应");
+    ImMessage response = reader.frames().get(0);
+    assertEquals(CMD_ERROR_VALUE, response.getCmd());
+    CommonProto.ErrorBody err = CommonProto.ErrorBody.parseFrom(response.getBody());
+    assertEquals(ErrorCode.UNAUTHORIZED.getCode(), err.getCode());
+    socket.close();
+  }
+
+  @Test
+  @DisplayName("测试 TCP 粘包处理 - 两个 PING 应答两个 PONG")
+  void testTcpStickPackage() throws InterruptedException {
+    NetSocket socket = connect();
+    FrameReader reader = new FrameReader(2);
+    socket.handler(reader.handler());
+
+    Buffer stickBuffer = Buffer.buffer()
+      .appendBuffer(ping("stick-1").encodeToWire())
+      .appendBuffer(ping("stick-2").encodeToWire());
+    socket.write(stickBuffer);
+
+    assertTrue(reader.awaitFrames(10), "粘包的两帧都应得到响应");
+    assertEquals(2, reader.frames().size());
+    assertEquals("stick-1", reader.frames().get(0).getMessageId());
+    assertEquals("stick-2", reader.frames().get(1).getMessageId());
+    socket.close();
+  }
+
+  @Test
+  @DisplayName("测试超大帧长度声明 - 连接被服务端断开")
+  void testOversizedFrameClosesConnection() throws InterruptedException {
+    NetSocket socket = connect();
+    CountDownLatch closed = new CountDownLatch(1);
+    socket.closeHandler(v -> closed.countDown());
+
+    // 长度前缀声明超过 MAX_FRAME_SIZE 的帧
+    Buffer evil = Buffer.buffer().appendInt(ImMessage.MAX_FRAME_SIZE + 1);
+    socket.write(evil);
+
+    assertTrue(closed.await(10, TimeUnit.SECONDS),
+      "服务端应断开声明非法长度的连接");
   }
 }

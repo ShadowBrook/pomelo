@@ -205,4 +205,142 @@ public class ImMessageTest {
 
     assertNull(decoded.getMessageId());
   }
+
+  @Test
+  @DisplayName("测试帧过短 - 抛出异常")
+  void testFrameTooShort() {
+    Buffer buffer = Buffer.buffer();
+    buffer.appendInt(ImMessage.MAGIC_NUMBER);
+    buffer.appendByte((byte) 1);
+    buffer.appendByte((byte) 0);
+
+    ImMessage message = new ImMessage();
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, () -> message.readFromWire(buffer));
+    assertTrue(e.getMessage().contains("too short"));
+  }
+
+  @Test
+  @DisplayName("测试负数 messageId 长度 - 抛出异常")
+  void testNegativeMessageIdLengthRejected() {
+    Buffer buffer = Buffer.buffer();
+    buffer.appendInt(ImMessage.MAGIC_NUMBER);
+    buffer.appendByte((byte) 1);
+    buffer.appendByte((byte) 0);
+    buffer.appendInt(0x10);
+    // 负数长度
+    buffer.appendInt(-5);
+    buffer.appendInt(0);
+    buffer.appendInt(0);
+
+    ImMessage message = new ImMessage();
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, () -> message.readFromWire(buffer));
+    assertTrue(e.getMessage().contains("messageIdLength"));
+  }
+
+  @Test
+  @DisplayName("测试 body 长度超出剩余字节 - 抛出异常")
+  void testBodyLengthBeyondBufferRejected() {
+    Buffer buffer = Buffer.buffer();
+    buffer.appendInt(ImMessage.MAGIC_NUMBER);
+    buffer.appendByte((byte) 1);
+    buffer.appendByte((byte) 0);
+    buffer.appendInt(0x10);
+    buffer.appendInt(0);
+    buffer.appendInt(0);
+    // 声明的 body 长度超过帧内剩余字节
+    buffer.appendInt(999999);
+
+    ImMessage message = new ImMessage();
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, () -> message.readFromWire(buffer));
+    assertTrue(e.getMessage().contains("bodyLength"));
+  }
+
+  @Test
+  @DisplayName("测试 body 长度超过类型上限 - 抛出异常")
+  void testBodyLengthOverLimitRejected() {
+    ImMessage original = ImMessage.builder()
+        .version((byte) 1)
+        .codecId((byte) 0)
+        .cmd((byte) 0x10)
+        .messageId("m")
+        .body("x".getBytes(StandardCharsets.UTF_8))
+        .build();
+    // 构造帧后手工改写 bodyLength 为超过 MAX_BODY_LENGTH 的值
+    Buffer buffer = original.encodeToWire();
+    buffer.setInt(buffer.length() - 5, ImMessage.MAX_BODY_LENGTH + 1);
+
+    Buffer payload = buffer.getBuffer(4, buffer.length());
+    ImMessage message = new ImMessage();
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, () -> message.readFromWire(payload));
+    assertTrue(e.getMessage().contains("bodyLength"));
+  }
+
+  @Test
+  @DisplayName("测试变长头数量超上限 - 抛出异常")
+  void testHeaderCountOverLimitRejected() {
+    Buffer buffer = Buffer.buffer();
+    buffer.appendInt(ImMessage.MAGIC_NUMBER);
+    buffer.appendByte((byte) 1);
+    buffer.appendByte((byte) 0);
+    buffer.appendInt(0x10);
+    buffer.appendInt(0);
+    // 头数量超过上限
+    buffer.appendInt(ImMessage.MAX_VAR_HEADER_COUNT + 1);
+    buffer.appendInt(0);
+
+    ImMessage message = new ImMessage();
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, () -> message.readFromWire(buffer));
+    assertTrue(e.getMessage().contains("headersCount"));
+  }
+
+  @Test
+  @DisplayName("测试变长头 value 长度截断 - 抛出异常")
+  void testHeaderValueLengthTruncatedRejected() {
+    Buffer buffer = Buffer.buffer();
+    buffer.appendInt(ImMessage.MAGIC_NUMBER);
+    buffer.appendByte((byte) 1);
+    buffer.appendByte((byte) 0);
+    buffer.appendInt(0x10);
+    buffer.appendInt(0);
+    buffer.appendInt(1);
+    // key: 长度 1 + 内容 "k"
+    buffer.appendInt(1);
+    buffer.appendString("k");
+    // value: 声明长度 100 但无内容
+    buffer.appendInt(100);
+
+    ImMessage message = new ImMessage();
+    IllegalArgumentException e =
+        assertThrows(IllegalArgumentException.class, () -> message.readFromWire(buffer));
+    assertTrue(e.getMessage().contains("headerValueLength"));
+  }
+
+  @Test
+  @DisplayName("测试正常消息在长度上限内编解码不受影响")
+  void testNormalMessageWithinLimitsStillWorks() {
+    Map<String, String> headers = new HashMap<>();
+    headers.put("userId", "12345");
+    headers.put("peerId", "67890");
+
+    ImMessage original = ImMessage.builder()
+        .version((byte) 1)
+        .codecId((byte) 0)
+        .cmd(0x10)
+        .messageId("msg-limits-ok")
+        .body("hello".getBytes(StandardCharsets.UTF_8))
+        .varHeaders(headers)
+        .build();
+
+    Buffer buffer = original.encodeToWire();
+    ImMessage decoded = new ImMessage();
+    decoded.readFromWire(buffer.getBuffer(4, buffer.length()));
+
+    assertEquals(original.getMessageId(), decoded.getMessageId());
+    assertEquals(headers, decoded.getVarHeaders());
+  }
 }

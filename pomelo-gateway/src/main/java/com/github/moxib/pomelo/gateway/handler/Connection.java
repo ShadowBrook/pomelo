@@ -57,14 +57,16 @@ public interface Connection {
    */
   class NetSocketConnection implements Connection {
     private final NetSocket netSocket;
+    private final BoundedWriteQueue writes;
 
     public NetSocketConnection(NetSocket netSocket) {
       this.netSocket = netSocket;
+      this.writes = new BoundedWriteQueue(netSocket, netSocket::close);
     }
 
     @Override
     public Future<Void> write(Buffer buffer) {
-      return netSocket.write(buffer);
+      return writes.write(buffer);
     }
 
     @Override
@@ -83,14 +85,16 @@ public interface Connection {
    */
   class WebSocketConnection implements Connection {
     private final ServerWebSocket webSocket;
+    private final BoundedWriteQueue writes;
 
     public WebSocketConnection(ServerWebSocket webSocket) {
       this.webSocket = webSocket;
+      this.writes = new BoundedWriteQueue(webSocket, () -> webSocket.close());
     }
 
     @Override
     public Future<Void> write(Buffer buffer) {
-      return webSocket.writeBinaryMessage(buffer);
+      return writes.write(buffer);
     }
 
     @Override

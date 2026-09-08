@@ -118,17 +118,27 @@ public final class SessionRouteTable {
 
   // ---- 路由条目 ----
 
-  /** 用户离线：删除路由条目 */
+  /**
+   * 用户离线：删除本节点登记的路由条目。
+   * 仅当条目仍指向本节点时才移除——用户顶号迁移到其他节点后，
+   * 旧节点迟到的断连清理不会误删新节点写入的路由。
+   */
   public Future<Void> unregister(String userId) {
+    return unregister(userId, nodeId);
+  }
+
+  /**
+   * 条件删除路由：仅当条目当前指向 expectedNodeId 时移除。
+   * 供 PushRouter 清理死节点残留路由使用（expectedNodeId 为解析出的死节点）。
+   */
+  public Future<Void> unregister(String userId, String expectedNodeId) {
     if (!vertx.isClustered() || userId == null) {
       return Future.succeededFuture();
     }
-    return getMap().compose(m -> {
-      Future<Void> f = m.remove(userId).mapEmpty();
-      f.onSuccess(v -> LOG.debug("Route removed: {}", userId));
-      f.onFailure(e -> LOG.warn("Failed to remove route: {}", userId, e));
-      return f;
-    });
+    return getMap()
+      .compose(m -> m.removeIfPresent(userId, expectedNodeId).map(v -> (Void) null))
+      .onSuccess(v -> LOG.debug("Route removed (if owned): {} → {}", userId, expectedNodeId))
+      .onFailure(e -> LOG.warn("Failed to remove route: {} → {}", userId, expectedNodeId, e));
   }
 
   /**
