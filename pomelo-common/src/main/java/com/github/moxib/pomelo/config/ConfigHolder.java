@@ -189,11 +189,12 @@ public final class ConfigHolder {
   }
 
   /**
-   * 获取布尔配置值。配置未加载时 fallback 到 Boolean.getBoolean。
+   * 获取布尔配置值。配置未加载时 fallback 到系统属性。
    */
   public static boolean getBoolean(String path, boolean defaultValue) {
     if (config == null) {
-      return Boolean.getBoolean(path);
+      String sysProp = System.getProperty(path);
+      return sysProp != null ? Boolean.parseBoolean(sysProp) : defaultValue;
     }
     Boolean val = getNestedBoolean(path);
     if (val != null) {
