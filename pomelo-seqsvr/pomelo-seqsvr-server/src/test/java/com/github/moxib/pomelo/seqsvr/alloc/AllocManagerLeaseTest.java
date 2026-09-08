@@ -189,10 +189,12 @@ class AllocManagerLeaseTest {
   }
 
   @Test
-  @DisplayName("租约常量：停服阈值 15s，与 pending 激活延迟 5s 解耦（2026-09-07 事故 P9）")
-  void testLeaseConstantsDecoupled() {
+  @DisplayName("租约常量：停服阈值 15s，pending 激活延迟 = 2× 同步周期，两者解耦（2026-09-07 事故 P9）")
+  void testLeaseConstantsDecoupled() throws Exception {
+    AllocManager m = newAlloc(new RangeId(0, SECTION));
     assertEquals(15000, AllocManager.LEASE_TIMEOUT_MS, "停服阈值应放宽到 15s");
-    assertEquals(5000, AllocManager.PENDING_ACTIVATE_DELAY_MS, "pending 激活延迟保持 5s");
+    assertEquals(2 * AllocManager.SYNC_LEASE_TIMEOUT_MS, m.getPendingActivateDelayMs(),
+      "pending 激活延迟应为同步周期的 2 倍，保证旧 owner 已停止发号");
   }
 
   @Test
@@ -215,7 +217,7 @@ class AllocManagerLeaseTest {
   }
 
   @Test
-  @DisplayName("pending 激活延迟固定 5s，不随停服阈值放大")
+  @DisplayName("pending 激活延迟取 2× 同步周期，不随停服阈值放大")
   void testPendingActivationDelayIndependentOfLeaseThreshold() throws Exception {
     AllocManager narrow = newAlloc(new RangeId(0, SECTION));
     RouterNode wide = new RouterNode("node-1", "127.0.0.1", 0,
@@ -224,8 +226,8 @@ class AllocManagerLeaseTest {
     narrow.updateRouter(new Router(2, Collections.singletonList(wide)));
     assertTrue(narrow.getPendingSections().containsKey(1), "扩容后 section 1 应为 pending");
 
-    // 恰好 5s：pending 应激活（若实现误用停服阈值 15s，此断言失败）
-    long t = now + AllocManager.PENDING_ACTIVATE_DELAY_MS;
+    // 恰好 2× 同步周期：pending 应激活（若实现误用停服阈值 15s，此断言失败）
+    long t = now + narrow.getPendingActivateDelayMs();
     narrow.backdateLeaseForTest(t);
     narrow.checkLease(t);
     assertFalse(narrow.getPendingSections().containsKey(1), "5s 后 pending 应激活");

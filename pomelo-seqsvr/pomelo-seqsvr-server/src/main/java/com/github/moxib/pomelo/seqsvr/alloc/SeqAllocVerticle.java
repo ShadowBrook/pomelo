@@ -83,7 +83,7 @@ public class SeqAllocVerticle extends VerticleBase {
     StoreAccessor store = StoreClients.create(vertx.eventBus(), config.storePrefix(),
       config.storeReplicas(), config.storeW(), config.storeR());
     allocManager = new AllocManager(store, setId, myNode, config.maxIdSize(), config.leaseMs(),
-      config.mediateEnabled());
+      config.mediateEnabled(), config.syncLeaseMs());
 
     // 注册 EventBus consumer
     registerConsumers(nodeId);

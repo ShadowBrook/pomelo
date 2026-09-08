@@ -25,9 +25,10 @@ class MediateManagerTest {
   private static final int MAX = SeqSvrConstants.DEBUG_MAX_ID_SIZE;
   private static final int EXPECTED_SECTIONS = new RangeId(0, MAX).calcSetSectionSize();
 
-  /** 内存 StoreAccessor：仅记录最近保存的路由表 */
-  private static final class MemStore implements StoreAccessor {
+  /** 内存 StoreAccessor：仅记录最近保存的路由表，可注入保存失败 */
+  private static class MemStore implements StoreAccessor {
     volatile Router saved;
+    volatile boolean failSave;
 
     @Override
     public Future<long[]> loadMaxSeqsData() { return Future.succeededFuture(new long[0]); }
@@ -42,6 +43,9 @@ class MediateManagerTest {
 
     @Override
     public Future<Void> saveRouteTable(Router router) {
+      if (failSave) {
+        return Future.failedFuture("store down");
+      }
       this.saved = router;
       return Future.succeededFuture();
     }
@@ -116,8 +120,8 @@ class MediateManagerTest {
   @Test
   @DisplayName("注册两个节点：路由表 2 节点、不重叠、覆盖全部分区")
   void testRegisterTwoNodesBalanced() {
-    Router r1 = manager.register(node("node-1"));
-    Router r2 = manager.register(node("node-2"));
+    Router r1 = manager.register(node("node-1")).result();
+    Router r2 = manager.register(node("node-2")).result();
 
     assertTrue(r2.getVersion() > r1.getVersion(), "版本应自增");
     assertEquals(2, r2.getNodeList().size());
@@ -131,7 +135,7 @@ class MediateManagerTest {
   @Test
   @DisplayName("单节点注册：独占全部分区")
   void testSingleNodeOwnsAll() {
-    Router r = manager.register(node("node-1"));
+    Router r = manager.register(node("node-1")).result();
     assertEquals(1, r.getNodeList().size());
     assertEquals(EXPECTED_SECTIONS, countSections(r));
   }
@@ -141,7 +145,7 @@ class MediateManagerTest {
   void testUnregisterRebalances() {
     manager.register(node("node-1"));
     manager.register(node("node-2"));
-    Router r = manager.unregister("node-1");
+    Router r = manager.unregister("node-1").result();
 
     assertEquals(1, r.getNodeList().size());
     assertEquals("node-2", r.getNodeList().get(0).getNodeId());
@@ -154,8 +158,8 @@ class MediateManagerTest {
     // 心跳超时设 100ms，便于测试
     MediateManager fast = new MediateManager(store, new RangeId(0, MAX), 100);
 
-    fast.register(node("node-1"));
-    fast.register(node("node-2"));
+    fast.register(node("node-1")).result();
+    fast.register(node("node-2")).result();
     assertFalse(fast.heartbeat("ghost", Collections.emptyMap()), "未知节点心跳应被拒");
 
     // 超过心跳超时：两节点都失联
@@ -163,7 +167,7 @@ class MediateManagerTest {
     // node-1 恢复心跳，保持存活
     assertTrue(fast.heartbeat("node-1", Collections.emptyMap()), "心跳应被接受");
 
-    assertTrue(fast.checkTimeouts(System.currentTimeMillis()), "应有节点被移除");
+    assertTrue(fast.checkTimeouts(System.currentTimeMillis()).result(), "应有节点被移除");
     assertEquals(1, fast.getNodeCount(), "失联节点应被移除");
     assertEquals(1, fast.getRouter().getNodeList().size());
     assertEquals("node-1", fast.getRouter().getNodeList().get(0).getNodeId());
@@ -172,11 +176,11 @@ class MediateManagerTest {
   @Test
   @DisplayName("增量迁移：扩容只割存量节点尾部，不重排存量节点头部")
   void testIncrementalKeepsExistingNodeHead() {
-    manager.register(node("node-1"));
-    Router twoNodes = manager.register(node("node-2"));
+    manager.register(node("node-1")).result();
+    Router twoNodes = manager.register(node("node-2")).result();
     int node2Head = firstSectionOf(twoNodes, "node-2");
 
-    Router r = manager.register(node("node-3"));
+    Router r = manager.register(node("node-3")).result();
 
     assertEquals(node2Head, firstSectionOf(r, "node-2"),
       "node-2 头部号段不因扩容而移位（增量迁移不重排存量节点头部）");
@@ -189,19 +193,37 @@ class MediateManagerTest {
   void testVersionMonotonicWhenAllNodesRemoved() {
     // 心跳超时 0ms：注册即视为失联，便于触发全节点移除
     MediateManager fast = new MediateManager(store, new RangeId(0, MAX), 0);
-    Router r1 = fast.register(node("node-1"));
-    Router r2 = fast.register(node("node-2"));
+    Router r1 = fast.register(node("node-1")).result();
+    Router r2 = fast.register(node("node-2")).result();
     int before = r2.getVersion();
     assertTrue(before > 0, "注册后版本应为正数");
 
     // 线上事故场景（2026-09-07）：宿主停顿导致心跳集体超时，全部节点被移除，
     // 空成员分支曾把版本重置为 0，导致持有旧版本的客户端永久拒绝新路由表
-    assertTrue(fast.checkTimeouts(System.currentTimeMillis() + 1), "全部失联节点应被移除");
+    assertTrue(fast.checkTimeouts(System.currentTimeMillis() + 1).result(), "全部失联节点应被移除");
     assertEquals(0, fast.getNodeCount());
     Router empty = fast.getRouter();
     assertEquals(before + 1, empty.getVersion(), "空成员路由版本必须继续递增（不得归零）");
 
-    Router back = fast.register(node("node-1"));
+    Router back = fast.register(node("node-1")).result();
     assertEquals(before + 2, back.getVersion(), "重新注册后版本继续递增");
+  }
+
+  @Test
+  @DisplayName("Store 持久化失败：注册失败返回，内存路由保持旧版本（版本不外泄未持久化值）")
+  void testPersistFailureKeepsRouterUntouched() {
+    MemStore store = new MemStore();
+    MediateManager m = new MediateManager(store, new RangeId(0, MAX));
+    store.failSave = true;
+
+    Future<Router> first = m.register(node("node-1"));
+    assertTrue(first.failed(), "持久化失败时注册应失败");
+    assertEquals(0, m.getRouter().getVersion(), "内存路由不得更新为未持久化的版本");
+
+    // Store 恢复后重新注册成功，且返回的路由与落盘一致
+    store.failSave = false;
+    Router ok = m.register(node("node-1")).result();
+    assertEquals(1, ok.getVersion());
+    assertEquals(1, store.saved.getVersion(), "成功路径必须先落盘");
   }
 }

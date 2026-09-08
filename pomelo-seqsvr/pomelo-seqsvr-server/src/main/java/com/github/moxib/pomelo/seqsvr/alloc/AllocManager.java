@@ -11,6 +11,7 @@ import io.vertx.core.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -54,11 +55,9 @@ public class AllocManager {
   /**
    * 停服阈值：距上次成功读取 Store 超过该时长即停止发号。
    * 2026-09-07 事故 P9：从 5s 放宽到 15s（≈3× 同步周期），宿主短暂停顿不再直接打掉服务；
-   * 与 pending 激活延迟（PENDING_ACTIVATE_DELAY_MS）语义解耦。
+   * 与 pending 激活延迟语义解耦。
    */
   public static final long LEASE_TIMEOUT_MS = 15000;
-  /** 新增号段 pending → active 的固定延迟（保证旧 AllocSvr 已停止），不随停服阈值放大 */
-  public static final long PENDING_ACTIVATE_DELAY_MS = 5000;
 
   private final StoreAccessor store;
   // 当前 set 的范围
@@ -66,6 +65,13 @@ public class AllocManager {
   private final int maxIdSize;
   private final String nodeId;
   private final long leaseTimeoutMs;
+  private final long syncLeaseMs;
+  /**
+   * 新增号段 pending → active 的延迟。
+   * 必须大于旧 owner 在路由变更后继续发号的最大窗口（≈ syncLeaseMs），
+   * 取 2× 同步周期留出一个完整周期的余量，避免迁移期双写。
+   */
+  private final long pendingActivateDelayMs;
   // Mediate 模式：路由表为空时不自举单节点，等待 Mediate 分配号段（避免多节点启动时双写）
   private final boolean waitForRouter;
 
@@ -81,6 +87,12 @@ public class AllocManager {
   private long[] baseSectionMaxSeqs;
   // 每个已分配 id 的独立 cur_seq，稀疏存储，键 = id
   private final Map<Integer, Long> curSeqs = new HashMap<>();
+
+  // 待持久化的 (id → 已发 cur_seq)：saveMaxSeq 失败后按同步周期重试，
+  // 防止单次 RPC 抖动导致 section max 落后于已发号，崩溃后同 id seq 回退重发
+  private final Map<Integer, Long> pendingSaves = new HashMap<>();
+  // pendingSaves 最早一次出现的时刻（连续保存失败升级停服的判定起点）
+  private long firstPendingSaveAt;
 
   // 当前实际服务的 section（不含 pending 中的新增号段）
   private final Set<Integer> activeSections = new HashSet<>();
@@ -98,21 +110,31 @@ public class AllocManager {
    * @param maxIdSize  服务的最大 id 空间
    */
   public AllocManager(StoreAccessor store, RangeId setId, RouterNode myNode, int maxIdSize) {
-    this(store, setId, myNode, maxIdSize, LEASE_TIMEOUT_MS, false);
+    this(store, setId, myNode, maxIdSize, LEASE_TIMEOUT_MS, false, SYNC_LEASE_TIMEOUT_MS);
   }
 
   public AllocManager(StoreAccessor store, RangeId setId, RouterNode myNode, int maxIdSize, long leaseTimeoutMs) {
-    this(store, setId, myNode, maxIdSize, leaseTimeoutMs, false);
+    this(store, setId, myNode, maxIdSize, leaseTimeoutMs, false, SYNC_LEASE_TIMEOUT_MS);
   }
 
   public AllocManager(StoreAccessor store, RangeId setId, RouterNode myNode, int maxIdSize, long leaseTimeoutMs,
                       boolean waitForRouter) {
+    this(store, setId, myNode, maxIdSize, leaseTimeoutMs, waitForRouter, SYNC_LEASE_TIMEOUT_MS);
+  }
+
+  /**
+   * @param syncLeaseMs 租约同步周期，pending 激活延迟取其 2 倍
+   */
+  public AllocManager(StoreAccessor store, RangeId setId, RouterNode myNode, int maxIdSize, long leaseTimeoutMs,
+                      boolean waitForRouter, long syncLeaseMs) {
     this.store = store;
     this.setId = setId;
     this.cacheMyNode = myNode;
     this.nodeId = myNode.getNodeId();
     this.maxIdSize = maxIdSize;
     this.leaseTimeoutMs = leaseTimeoutMs;
+    this.syncLeaseMs = syncLeaseMs;
+    this.pendingActivateDelayMs = 2 * syncLeaseMs;
     this.waitForRouter = waitForRouter;
     this.state = AllocState.NONE;
     this.router = new Router(0, Collections.emptyList());
@@ -164,6 +186,9 @@ public class AllocManager {
     // 快照启动时的 section max，作为未分配 id 惰性起步值
     this.baseSectionMaxSeqs = maxSeqs.clone();
     curSeqs.clear();
+    // 重载后内存与 Store 对齐，未落盘的待保存记录一并放弃（对应已发号视为丢失，产生空洞）
+    pendingSaves.clear();
+    firstPendingSaveAt = 0;
     // 初始化为本节点当前拥有的全部 section
     activeSections.clear();
     activeSections.addAll(coveredSections(cacheMyNode));
@@ -190,6 +215,8 @@ public class AllocManager {
 
   private void onLeaseRouteLoaded(Router newRouter) {
     lastLeaseSuccess = System.currentTimeMillis();
+    // 借租约同步的节奏重试此前失败的 saveMaxSeq
+    flushPendingSaves();
     if (newRouter.getNodeList().isEmpty()) {
       // Store 尚无路由表（未部署 Mediate / 开发模式）：保持现状
       return;
@@ -208,6 +235,7 @@ public class AllocManager {
    */
   public void checkLease(long nowMs) {
     activatePendingSections(nowMs);
+    escalateUnsavedMaxSeqs(nowMs);
 
     if (nowMs - lastLeaseSuccess > leaseTimeoutMs) {
       if (state == AllocState.INITED) {
@@ -222,6 +250,26 @@ public class AllocManager {
   }
 
   /**
+   * saveMaxSeq 持续失败的升级保护：超过停服阈值仍存在未落盘的已发号时停止发号。
+   * 否则 section max 持久化落后于内存已发号，节点崩溃后同 id 会从持久化值重新起步，造成 seq 回退重发。
+   */
+  private void escalateUnsavedMaxSeqs(long nowMs) {
+    if (pendingSaves.isEmpty()) {
+      firstPendingSaveAt = 0;
+      return;
+    }
+    if (firstPendingSaveAt == 0) {
+      firstPendingSaveAt = nowMs;
+      return;
+    }
+    if (nowMs - firstPendingSaveAt > leaseTimeoutMs && state == AllocState.INITED) {
+      LOG.error("saveMaxSeq pending for {}ms with {} unsaved ids, stop serving to prevent seq reissue: nodeId={}",
+        nowMs - firstPendingSaveAt, pendingSaves.size(), nodeId);
+      state = AllocState.ERROR;
+    }
+  }
+
+  /**
    * 将到期 pending 号段激活为服务中，并从 Store 刷新其 max_seq（防止回退）。
    */
   private void activatePendingSections(long nowMs) {
@@ -230,7 +278,7 @@ public class AllocManager {
     }
     Set<Integer> toActivate = new HashSet<>();
     pendingSections.forEach((s, since) -> {
-      if (nowMs - since >= PENDING_ACTIVATE_DELAY_MS) {
+      if (nowMs - since >= pendingActivateDelayMs) {
         toActivate.add(s);
       }
     });
@@ -390,29 +438,50 @@ public class AllocManager {
   // ==================== 持久化 ====================
 
   /**
-   * 提升 section max_seq 并异步持久化。
+   * 提升 section max_seq 并持久化（带重试）。
    * <p>
    * 发号路径不阻塞等待网络往返：先用向上取整到 SEQ_STEP 的对齐值乐观提升内存（与 Store 计算一致），
-   * 再异步 saveMaxSeq，收到 Store 对齐返回值后以 max 合并回填（修复 Go 问题 3 —— SaveMaxSeq 返回值未回填）。
+   * 再异步 saveMaxSeq。持久化失败进入 pendingSaves 队列，随租约同步周期重试；
+   * 持续失败超过停服阈值由 {@link #escalateUnsavedMaxSeqs} 升级 ERROR 停服，
+   * 收到 Store 对齐返回值后以 max 合并回填（修复 Go 问题 3 —— SaveMaxSeq 返回值未回填）。
    */
   private void bumpSection(int id, int sectionIdx, long curSeq) {
     long optimistic = alignUp(curSeq);
     if (optimistic > sectionMaxSeqs[sectionIdx]) {
       sectionMaxSeqs[sectionIdx] = optimistic;
     }
+    pendingSaves.merge(id, curSeq, Math::max);
+    flushPendingSaves();
+  }
 
-    store.saveMaxSeq(id, curSeq).onComplete(ar -> {
-      if (ar.succeeded()) {
+  /** 重试所有未落盘的 saveMaxSeq；成功且值未被更新的条目移出队列，并以对齐返回值回填内存。 */
+  private void flushPendingSaves() {
+    if (pendingSaves.isEmpty()) {
+      return;
+    }
+    for (Map.Entry<Integer, Long> entry : new ArrayList<>(pendingSaves.entrySet())) {
+      int id = entry.getKey();
+      long targetSeq = entry.getValue();
+      store.saveMaxSeq(id, targetSeq).onComplete(ar -> {
+        if (ar.failed()) {
+          LOG.warn("saveMaxSeq failed, will retry on next lease sync: nodeId={}, id={}, targetSeq={}, cause={}",
+            nodeId, id, targetSeq, ar.cause().getMessage());
+          return;
+        }
+        // 队列中该 id 已被更大的值覆盖时保留新值
+        if (pendingSaves.get(id) == null || pendingSaves.get(id) <= targetSeq) {
+          pendingSaves.remove(id);
+        }
         long aligned = ar.result();
-        if (aligned > sectionMaxSeqs[sectionIdx]) {
+        int sectionIdx = sectionIndex(id);
+        if (sectionIdx < sectionMaxSeqs.length && aligned > sectionMaxSeqs[sectionIdx]) {
           sectionMaxSeqs[sectionIdx] = aligned;
         }
-      } else {
-        // 持久化失败：租约机制会因 Store 不可用而停止服务，防止回退
-        LOG.warn("saveMaxSeq failed: nodeId={}, id={}, curSeq={}, cause={}",
-          nodeId, id, curSeq, ar.cause().getMessage());
-      }
-    });
+        if (sectionIdx < baseSectionMaxSeqs.length && aligned > baseSectionMaxSeqs[sectionIdx]) {
+          baseSectionMaxSeqs[sectionIdx] = aligned;
+        }
+      });
+    }
   }
 
   private static long alignUp(long v) {
@@ -498,6 +567,9 @@ public class AllocManager {
 
   /** pending 中的 section → 标记时刻 */
   public Map<Integer, Long> getPendingSections() { return Collections.unmodifiableMap(pendingSections); }
+
+  /** pending 激活延迟（= 2× 租约同步周期） */
+  public long getPendingActivateDelayMs() { return pendingActivateDelayMs; }
 
   /** 测试注入：把租约心跳回拨，模拟长时间无法读取 StoreSvr */
   void backdateLeaseForTest(long nowMs) {

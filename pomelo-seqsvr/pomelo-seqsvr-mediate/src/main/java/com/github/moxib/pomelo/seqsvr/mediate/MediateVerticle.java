@@ -63,7 +63,9 @@ public class MediateVerticle extends VerticleBase {
         vertx.eventBus().consumer(SeqSvrAddresses.MEDIATE_HEARTBEAT, this::onHeartbeat);
         vertx.eventBus().consumer(SeqSvrAddresses.MEDIATE_GET_ROUTER, this::onGetRouter);
 
-        timeoutCheckTimer = vertx.setPeriodic(checkIntervalMs, id -> manager.checkTimeouts(System.currentTimeMillis()));
+        timeoutCheckTimer = vertx.setPeriodic(checkIntervalMs,
+          id -> manager.checkTimeouts(System.currentTimeMillis())
+            .onFailure(e -> LOG.warn("timeout re-balance failed, will retry: {}", e.getMessage())));
 
         // Admin HTTP（无 vertx-web，手动路由两个只读端点）
         adminServer = vertx.createHttpServer();
@@ -92,8 +94,13 @@ public class MediateVerticle extends VerticleBase {
   private void onRegister(Message<Object> msg) {
     try {
       RouterNode node = ((JsonObject) msg.body()).mapTo(RouterNode.class);
-      Router newRouter = manager.register(node);
-      msg.reply(new JsonObject().put("ok", true).put("router", JsonObject.mapFrom(newRouter)));
+      manager.register(node)
+        .onSuccess(newRouter -> msg.reply(
+          new JsonObject().put("ok", true).put("router", JsonObject.mapFrom(newRouter))))
+        .onFailure(e -> {
+          LOG.warn("registerAllocSvr failed: {}", e.getMessage());
+          msg.fail(500, e.getMessage());
+        });
     } catch (Exception e) {
       LOG.warn("registerAllocSvr failed: {}", e.getMessage());
       msg.fail(500, e.getMessage());
@@ -101,9 +108,19 @@ public class MediateVerticle extends VerticleBase {
   }
 
   private void onUnregister(Message<Object> msg) {
-    String nodeId = ((JsonObject) msg.body()).getString("nodeId");
-    Router newRouter = manager.unregister(nodeId);
-    msg.reply(new JsonObject().put("ok", true).put("router", JsonObject.mapFrom(newRouter)));
+    try {
+      String nodeId = ((JsonObject) msg.body()).getString("nodeId");
+      manager.unregister(nodeId)
+        .onSuccess(newRouter -> msg.reply(
+          new JsonObject().put("ok", true).put("router", JsonObject.mapFrom(newRouter))))
+        .onFailure(e -> {
+          LOG.warn("unRegisterAllocSvr failed: {}", e.getMessage());
+          msg.fail(500, e.getMessage());
+        });
+    } catch (Exception e) {
+      LOG.warn("unRegisterAllocSvr failed: {}", e.getMessage());
+      msg.fail(500, e.getMessage());
+    }
   }
 
   private void onHeartbeat(Message<Object> msg) {

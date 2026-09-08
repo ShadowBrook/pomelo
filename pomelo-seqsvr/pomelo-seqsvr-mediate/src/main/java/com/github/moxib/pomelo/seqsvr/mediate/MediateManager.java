@@ -89,8 +89,10 @@ public class MediateManager {
 
   /**
    * 注册 AllocSvr（声明 nodeId / addr / 能力号段），返回生成后的当前路由表。
+   * 路由表持久化成功后才返回新版本；持久化失败时注册失败，内存路由保持旧版本，
+   * 避免出现"集群在用 vN、Store 落盘 vN-1"的版本倒退（mediate 重启后旧版本复活）。
    */
-  public synchronized Router register(RouterNode node) {
+  public Future<Router> register(RouterNode node) {
     if (node == null || node.getNodeId() == null || node.getNodeId().isBlank()) {
       throw new IllegalArgumentException("nodeId required for registerAllocSvr");
     }
@@ -101,14 +103,14 @@ public class MediateManager {
   }
 
   /**
-   * 优雅下线。
+   * 优雅下线。节点未知时直接返回当前路由表（不产生新版本）。
    */
-  public synchronized Router unregister(String nodeId) {
+  public Future<Router> unregister(String nodeId) {
     if (nodes.remove(nodeId) != null) {
       LOG.info("AllocSvr unregistered: nodeId={}", nodeId);
       return regenerateAndPersist();
     }
-    return router;
+    return Future.succeededFuture(router);
   }
 
   /**
@@ -126,9 +128,9 @@ public class MediateManager {
   /**
    * 心跳超时检查（每 CHECK_INTERVAL 调用）：移除失联节点并重生成路由表。
    *
-   * @return 是否有节点被移除（路由表变化）
+   * @return Future，成功时 true=有节点被移除（路由表已变化并持久化）
    */
-  public synchronized boolean checkTimeouts(long nowMs) {
+  public Future<Boolean> checkTimeouts(long nowMs) {
     List<String> stale = new ArrayList<>();
     nodes.forEach((id, info) -> {
       if (nowMs - info.lastSeen > heartbeatTimeoutMs) {
@@ -136,29 +138,32 @@ public class MediateManager {
       }
     });
     if (stale.isEmpty()) {
-      return false;
+      return Future.succeededFuture(false);
     }
     for (String id : stale) {
       LOG.warn("AllocSvr heartbeat timeout, removing: nodeId={}", id);
       nodes.remove(id);
     }
-    regenerateAndPersist();
-    return true;
+    return regenerateAndPersist().map(r -> true);
   }
 
   // ==================== 路由表生成 ====================
 
   /**
-   * 将全量 section 按存活节点数均匀分块，生成新路由表并持久化。
-   * 所有节点互为备机；节点增减时号段自动重排（故障迁移 / 扩容缩容）。
+   * 生成新路由表并持久化，持久化成功后才更新内存并对外发布。
+   * 持久化失败保持内存旧版本并返回失败——调用方（注册 RPC）失败后由 AllocSvr 重试注册。
    */
-  private Router regenerateAndPersist() {
+  private Future<Router> regenerateAndPersist() {
     Router newRouter = generateRouter();
-    this.router = newRouter;
-    store.saveRouteTable(newRouter).onFailure(err ->
-      LOG.warn("saveRouteTable failed: version={}, cause={}", newRouter.getVersion(), err.getMessage()));
-    LOG.info("Router regenerated: version={}, nodes={}", newRouter.getVersion(), newRouter.getNodeList().size());
-    return newRouter;
+    return store.saveRouteTable(newRouter)
+      .map(v -> {
+        this.router = newRouter;
+        LOG.info("Router regenerated: version={}, nodes={}",
+          newRouter.getVersion(), newRouter.getNodeList().size());
+        return newRouter;
+      })
+      .onFailure(err -> LOG.error("saveRouteTable failed, keeping previous router (old version={}): {}",
+        router.getVersion(), err.getMessage()));
   }
 
   private Router generateRouter() {
