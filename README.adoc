@@ -1,31 +1,253 @@
 = Pomelo
+:toc: macro
+:toclevels: 2
 
-image:https://img.shields.io/badge/vert.x-5.0.8-purple.svg[link="https://vertx.io"]
+image:https://img.shields.io/badge/Vert.x-5.1.5-purple.svg[link="https://vertx.io"]
+image:https://img.shields.io/badge/Java-21-blue.svg[]
+image:https://img.shields.io/badge/Protocol-Protobuf-green.svg[]
+image:https://img.shields.io/badge/License-Apache%202.0-lightgrey.svg[]
 
-This application was generated using http://start.vertx.io
+Pomelo 是一个基于 **Vert.x 5 + Java 21** 的分布式 IM（即时通讯）服务器，采用自定义二进制协议、TCP/WebSocket 双网关、写扩散信箱与读融合时间线两种消息模型，并自带一套**微信式 seqsvr 序列号服务**（多副本存储 + 租约故障迁移 + 仲裁路由）。
 
-== Building
+toc::[]
 
-To launch your tests:
-```
-./mvnw clean test
-```
+== 功能特性
 
-To package your application:
-```
-./mvnw clean package
-```
+=== 消息
+* **单聊 / 群聊**：文本、图片、语音、视频、文件、表情、合并转发、引用消息
+* **离线消息**：按收件人信箱序号（seq）增量拉取，重连后自动补齐
+* **会话历史**：按会话键 + 时间倒序游标分页（同毫秒消息以 id 决胜，翻页不丢不重）
+* **消息可靠性**：发送幂等（客户端重试不产生重复消息、不重复消耗序号）、送达/已读状态回执
+* **引用消息**：快照式引用块，点击可定位原消息；被引用消息被清理后仍可读
+* **合并转发**：多条消息打包为「聊天记录」卡片，展开逐条查看，内嵌媒体自动签名
+* **群已读**：消息级已读人数（圈内数字）与「全部已读」态，由群成员已读游标本地推导
 
-To run your application:
-```
-./mvnw clean compile exec:java
-```
+=== 媒体
+* 对象存储直传：客户端拿 **presigned PUT** 直传（不经业务服务器），读侧由服务端注入 **presigned GET**
+* 视频消息**自动抓帧生成封面**（本地 canvas 抓帧 → 上传 → 服务端签名注入缩略图）
+* 媒体内容只存稳定对象 key，URL 由服务端读侧签名，支持引用/合并转发内嵌媒体的**递归签名**
 
-== Help
+=== 关系链与群组
+* 好友：搜索、申请、接受、删除，全链路实时通知
+* 群组：创建、邀请（限好友）、群信息/成员列表、我的群、禁言、成员变更通知
+* 群消息已读：成员级已读水位（`last_read_seq`），一次查询覆盖全群
 
-* https://vertx.io/docs/[Vert.x Documentation]
-* https://stackoverflow.com/questions/tagged/vert.x?sort=newest&pageSize=15[Vert.x Stack Overflow]
-* https://groups.google.com/forum/?fromgroups#!forum/vertx[Vert.x User Group]
-* https://discord.gg/6ry7aqPWXy[Vert.x Discord]
+=== 接入与认证
+* **双网关**：TCP（默认 9000）与 WebSocket（默认 9001）共用同一套会话与路由
+* JWT（HS256）签发与验签 + Redis 黑名单（登出即时失效）
+* HTTP API：注册、登录、资料查询、好友列表（默认 8888）
 
+== 架构总览
 
+[source]
+----
+                        ┌──────────────┐
+   Client ──TCP/WS──▶   │   Gateway    │  会话注册 / 身份规范化 / 推送投递
+                        └──────┬───────┘
+                               │ Vert.x EventBus（Redis Cluster Manager）
+                        ┌──────▼───────┐
+                        │ Logic Server │  C2C/C2G · 好友 · 群组 · 拉取 · ACK · 上传
+                        └──┬────┬───┬──┘
+                           │    │   │
+              ┌────────────▼┐ ┌─▼───▼─────┐ ┌──────────────┐
+              │ PostgreSQL  │ │   Redis   │ │ Object Store │
+              │ 消息/群/好友 │ │ 会话/黑名单│ │ (S3/MinIO)   │
+              └─────────────┘ └───────────┘ └──────────────┘
+                           │
+                    ┌──────▼──────────────────────────────┐
+                    │ seqsvr：Alloc × N → Store × M(多副本) │
+                    │          ↑ Mediate（仲裁/路由分配）  │
+                    └─────────────────────────────────────┘
+----
+
+=== 模块
+
+[cols="1,3"]
+|===
+| 模块 | 职责
+
+| `pomelo-common`
+| 线协议 `ImMessage`、Protobuf 编解码注册表、配置、会话路由表、JWT、推送信封、生成代码
+
+| `pomelo-gateway`
+| TCP/WS 网关、连接与会话管理、身份规范化、EventBus 转发、推送投递
+
+| `pomelo-logic-server`
+| 业务服务（单聊/群聊/好友/群组/拉取/ACK/上传）、PostgreSQL 仓储、HTTP API、Snowflake ID
+
+| `pomelo-seqsvr`
+| 序列号服务：alloc（发号）/ store（持久化）/ mediate（仲裁）/ client（SDK）
+
+| `pomelo-benchmark`
+| 压测客户端与指标采集
+|===
+
+== 技术特色
+
+=== 1. seqsvr：写扩散信箱 + 读融合时间线
+
+单聊与群聊采用**两种不同的序号语义**，各自匹配其扩散模型：
+
+[cols="1,1,1"]
+|===
+| | 单聊 | 群聊
+
+| 扩散模型
+| 写扩散信箱
+| 读融合时间线
+
+| 序号维度
+| **收件人**（每人独立水位）
+| **群**（全群共享一条流）
+
+| 已读模型
+| 消息级状态（送达/已读）
+| 成员级已读水位 `last_read_seq`
+|===
+
+发号服务本身对齐微信 seqsvr 设计：
+
+* **号段分配**：按 section 批量预分配 max_seq，内存惰性递增，按需持久化
+* **多副本存储**：NRW 语义（写 W 份确认、读 R 份取最大值合并），mmap 落地
+* **租约与故障迁移**：每 4s 同步路由表；连续 15s 读不到存储即停发号（防序号回退重发）；新增号段延迟 `2×同步周期` 激活（保证旧持有者已停止）
+* **仲裁路由**：Mediate 按节点数均匀分片、心跳超时重排；**路由版本持久化先行**，避免重启后版本倒退
+* **客户端自愈**：路由缓存按版本单调采纳，连续过期时强制采纳服务端路由 / 向 Mediate 全量拉取（版本倒退逃生通道）
+
+=== 2. 发送幂等：数据库唯一键兜底
+
+消息表以**幂等唯一键**做重试去重，`INSERT ... ON CONFLICT DO NOTHING` 原子保证：
+
+* 单聊：`UNIQUE (sender_id, client_msg_id)`
+* 群聊：`UNIQUE (group_id, sender_id, client_msg_id)`
+
+客户端超时重发、断线补发复用同一 `client_msg_id`，命中冲突即返回原消息（原序号、原消息 ID），**不重复落库、不重复发号、不重复推送**。
+
+=== 3. 消息模型：引用与转发都是「包装型消息」
+
+* `MSG_TYPE_REPLY = 9`：content 为 `{reply: 快照, body: 原消息}`
+* `MSG_TYPE_FORWARD = 8`：content 为 `{标题, items: [消息快照]}`
+
+快照由客户端生成、服务端零特判透传；**媒体 URL 由服务端读侧递归注入**（引用体、转发条目内的对象 key 逐层签名）。旧客户端遇到未知类型只降级显示，不崩溃。
+
+=== 4. 身份信任链：网关是唯一身份来源
+
+* 未认证连接**只放行**心跳与认证，其余命令一律拒绝
+* 已认证连接的 `userId`/`userName`/`nickname` 由网关**无条件覆写**为令牌解析结果，客户端伪造无效
+* 归属类查询/更新在 SQL 层再带一次归属条件（纵深防御）
+
+=== 5. 网关健壮性
+
+* **帧校验**：长度前缀与解析边界双重校验（单帧上限 2MB），非法帧即断连
+* **写背压**：有界写队列 + drain 回调，慢消费者主动断连，防止 OOM
+* **会话竞态**：顶号后旧连接的迟到断连事件不会误删新会话；路由删除为条件删除，跨节点迁移不回删新路由
+* **推送路由**：按用户路由精确投递到所在网关，节点失联时惰性清理并广播兜底
+
+=== 6. 群已读：O(1) 查询 + 本地推导
+
+后端一次返回全群 `user_id → last_read_seq`，客户端本地推导每条消息的已读人数（`lastReadSeq >= seq` 的成员数）。相比按消息逐条查询，请求量从 O(消息数) 降到 O(1)，且覆盖历史消息。
+
+== 快速开始
+
+=== 一键部署（Docker Compose）
+
+前置：Docker、JDK 21。
+
+[source,bash]
+----
+# 构建 5 个服务镜像（Jib，无需 Dockerfile）并启动全部 11 个容器
+JAVA_HOME=/path/to/jdk21 ./deploy.sh
+
+# 仅重建某个服务（-am 自动带上游依赖）
+./deploy.sh pomelo-logic-server
+----
+
+启动后：
+
+[cols="1,1,2"]
+|===
+| 服务 | 端口 | 说明
+
+| HTTP API | 8888 | 注册 / 登录 / 资料 / 好友列表
+| TCP 网关 | 9000 | 自定义二进制协议
+| WebSocket 网关 | 9001 | 同上（二进制帧）
+| PostgreSQL | 5432 | 消息 / 群 / 好友（首次启动自动建表）
+| Redis | 6379 | 集群 EventBus / 黑名单 / 路由表
+| 对象存储 | 9002 / 9003 | S3 API / 控制台
+| seqsvr-alloc | 10105 | 发号服务健康端点 `/health`
+| seqsvr-mediate | 10106 | 路由表 `/router`、节点状态 `/nodes`
+|===
+
+=== 本地构建与测试
+
+[source,bash]
+----
+./mvnw clean package                 # 构建全部模块
+./mvnw clean test                    # 运行全部测试
+./mvnw test -pl pomelo-gateway -am   # 单模块测试（-am 带上游）
+./mvnw protobuf:compile              # 由 .proto 生成 Java 源码
+----
+
+说明：
+
+* 需要 **JDK 21**（`JAVA_HOME` 指向 21）
+* 依赖 Redis 的测试使用 Testcontainers（需 Docker）；`RedisIdGeneratorTest` 为遗留用例，可用 `-Dtest='!RedisIdGeneratorTest'` 跳过
+* 修改 `.proto` 后需重新生成：后端 `./mvnw protobuf:compile`；前端 `npm run proto`
+
+=== 前端
+
+配套前端仓库：https://github.com/ShadowBrook/pomelo-web[pomelo-web]（React 19 + Vite + Zustand + protobufjs），通过 9001 端口的二进制帧协议与服务端通信。
+
+== 配置
+
+配置优先级（低 → 高）：
+
+1. `conf/config.yaml`（默认值）
+2. 环境变量 `POMELO_*`（下划线转嵌套路径，如 `POMELO_DATABASE_HOST=pg` → `database.host`）
+3. 系统属性 `-D`
+
+常用配置项：
+
+[cols="1,2"]
+|===
+| 键 | 说明
+
+| `gateway.tcp.port` / `gateway.websocket.port` | 网关端口
+| `gateway.heartbeat.timeoutMs` | 客户端心跳超时
+| `api.http.port` | HTTP API 端口
+| `database.*` / `redis.*` | 存储连接
+| `jwt.secret` / `jwt.ttlSeconds` | 令牌密钥与有效期
+| `seqsvr.*` | 发号服务（节点 ID、号段、租约、副本数 W/R、admin 端口）
+| `message.pullLimit` / `friend.searchLimit` | 拉取与搜索上限
+|===
+
+== 目录结构
+
+[source]
+----
+pomelo/
+├── pomelo-common/          # 协议、编解码、配置、路由表、JWT
+├── pomelo-gateway/         # TCP/WS 网关与会话管理
+├── pomelo-logic-server/    # 业务服务 + PostgreSQL 仓储 + HTTP API
+├── pomelo-seqsvr/
+│   ├── pomelo-seqsvr-client/   # 客户端 SDK（路由缓存与自愈）
+│   ├── pomelo-seqsvr-store/    # 多副本持久化（mmap + NRW）
+│   ├── pomelo-seqsvr-mediate/  # 仲裁与路由分配
+│   └── pomelo-seqsvr-server/   # 发号服务
+├── pomelo-benchmark/       # 压测
+├── db/schema.sql           # 建表脚本（分区 + 索引 + 幂等唯一键）
+├── conf/config.yaml        # 默认配置
+├── docs/                   # 设计与事故分析文档
+└── deploy.sh               # 一键构建镜像 + 启动
+----
+
+== 设计文档
+
+* link:docs/2026-09-08-message-model-and-conversation-key-design.md[消息模型与会话键设计] — 写扩散信箱 / 读融合时间线、会话键选型
+* link:docs/2026-09-08-reply-and-forward-message-design.md[引用与转发消息设计] — 包装型消息、快照与递归签名
+* link:docs/2026-09-07-seqsvr-subscription-loss-incident.md[seqsvr 订阅丢失事故分析] — 三层根因与加固方案
+* link:docs/gateway-logic-architecture.md[网关与逻辑层架构]
+* link:docs/c2c-message-flow.md[单聊消息链路]
+
+== License
+
+Apache License 2.0
