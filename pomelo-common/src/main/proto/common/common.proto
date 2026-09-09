@@ -150,8 +150,12 @@ enum MsgType {
     MSG_TYPE_FILE    = 5;
     // 表情
     MSG_TYPE_EMOJI   = 6;
+    // 合并转发的聊天记录卡片
+    MSG_TYPE_FORWARD = 8;
+    // 引用消息（包装类型：content 为 {reply: 快照, body: 原消息} JSON）
+    MSG_TYPE_REPLY   = 9;
     // 系统消息
-    MSG_TYPE_SYSTEM  = 7;
+    MSG_TYPE_SYSTEM  = 99;
 }
 
 enum AckType {

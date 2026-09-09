@@ -1070,12 +1070,28 @@ public final class CommonProto {
     MSG_TYPE_EMOJI(6),
     /**
      * <pre>
+     * 合并转发的聊天记录卡片
+     * </pre>
+     *
+     * <code>MSG_TYPE_FORWARD = 8;</code>
+     */
+    MSG_TYPE_FORWARD(8),
+    /**
+     * <pre>
+     * 引用消息（包装类型：content 为 {reply: 快照, body: 原消息} JSON）
+     * </pre>
+     *
+     * <code>MSG_TYPE_REPLY = 9;</code>
+     */
+    MSG_TYPE_REPLY(9),
+    /**
+     * <pre>
      * 系统消息
      * </pre>
      *
-     * <code>MSG_TYPE_SYSTEM = 7;</code>
+     * <code>MSG_TYPE_SYSTEM = 99;</code>
      */
-    MSG_TYPE_SYSTEM(7),
+    MSG_TYPE_SYSTEM(99),
     UNRECOGNIZED(-1),
     ;
 
@@ -1133,12 +1149,28 @@ public final class CommonProto {
     public static final int MSG_TYPE_EMOJI_VALUE = 6;
     /**
      * <pre>
+     * 合并转发的聊天记录卡片
+     * </pre>
+     *
+     * <code>MSG_TYPE_FORWARD = 8;</code>
+     */
+    public static final int MSG_TYPE_FORWARD_VALUE = 8;
+    /**
+     * <pre>
+     * 引用消息（包装类型：content 为 {reply: 快照, body: 原消息} JSON）
+     * </pre>
+     *
+     * <code>MSG_TYPE_REPLY = 9;</code>
+     */
+    public static final int MSG_TYPE_REPLY_VALUE = 9;
+    /**
+     * <pre>
      * 系统消息
      * </pre>
      *
-     * <code>MSG_TYPE_SYSTEM = 7;</code>
+     * <code>MSG_TYPE_SYSTEM = 99;</code>
      */
-    public static final int MSG_TYPE_SYSTEM_VALUE = 7;
+    public static final int MSG_TYPE_SYSTEM_VALUE = 99;
 
 
     public final int getNumber() {
@@ -1172,7 +1204,9 @@ public final class CommonProto {
         case 4: return MSG_TYPE_VIDEO;
         case 5: return MSG_TYPE_FILE;
         case 6: return MSG_TYPE_EMOJI;
-        case 7: return MSG_TYPE_SYSTEM;
+        case 8: return MSG_TYPE_FORWARD;
+        case 9: return MSG_TYPE_REPLY;
+        case 99: return MSG_TYPE_SYSTEM;
         default: return null;
       }
     }
@@ -3226,14 +3260,15 @@ java.lang.String defaultValue) {
       "UP_ACK_REQ\020\226\001\022\027\n\022CMD_GROUP_ACK_RESP\020\227\001\022\033" +
       "\n\026CMD_GROUP_MSG_READ_REQ\020\230\001\022\034\n\027CMD_GROUP" +
       "_MSG_READ_RESP\020\231\001\022\023\n\016CMD_UPLOAD_REQ\020\240\001\022\024" +
-      "\n\017CMD_UPLOAD_RESP\020\241\001\022\017\n\tCMD_ERROR\020\377\377\003*\252\001" +
+      "\n\017CMD_UPLOAD_RESP\020\241\001\022\017\n\tCMD_ERROR\020\377\377\003*\324\001" +
       "\n\007MsgType\022\024\n\020MSG_TYPE_UNKNOWN\020\000\022\021\n\rMSG_T" +
       "YPE_TEXT\020\001\022\022\n\016MSG_TYPE_IMAGE\020\002\022\022\n\016MSG_TY" +
       "PE_VOICE\020\003\022\022\n\016MSG_TYPE_VIDEO\020\004\022\021\n\rMSG_TY" +
-      "PE_FILE\020\005\022\022\n\016MSG_TYPE_EMOJI\020\006\022\023\n\017MSG_TYP" +
-      "E_SYSTEM\020\007*!\n\007AckType\022\014\n\010RECEIVED\020\000\022\010\n\004S" +
-      "EEN\020\001B3\n$com.github.moxib.pomelo.proto.c" +
-      "ommonB\013CommonProtob\006proto3"
+      "PE_FILE\020\005\022\022\n\016MSG_TYPE_EMOJI\020\006\022\024\n\020MSG_TYP" +
+      "E_FORWARD\020\010\022\022\n\016MSG_TYPE_REPLY\020\t\022\023\n\017MSG_T" +
+      "YPE_SYSTEM\020c*!\n\007AckType\022\014\n\010RECEIVED\020\000\022\010\n" +
+      "\004SEEN\020\001B3\n$com.github.moxib.pomelo.proto" +
+      ".commonB\013CommonProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
