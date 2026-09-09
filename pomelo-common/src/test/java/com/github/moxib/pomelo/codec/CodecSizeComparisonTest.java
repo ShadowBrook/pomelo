@@ -24,7 +24,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *   2. Protobuf    —— 用现有 .proto（chat.C2CReq / chat.C2CNotify）编码同一逻辑消息
  *   3. JSON+deflate—— 两条路径：
  *        per-message ：每条消息独立 deflate（等价于“每次新建压缩流”，压缩率下限）
- *        stream       ：整条会话流共享一个 Deflater 窗口（permessage-deflate 常开的近似，压缩率上限）
+ *        stream       ：整条会话流共享一个 Deflater 窗口（假设压缩常开时的压缩率上限；
+ *                       注：网关已不再启用 permessage-deflate，此处仅作对比基线）
  *
  * 说明：proto 里 id 是 int64，web 端是字符串（snowflake > 2^53 精度），这里用等值 long/string 编码，
  * 字节差异只来自格式本身；varHeaders（userName/nickname）在两个 codec 下都在帧头，不计入 body。

@@ -2,6 +2,7 @@ package com.github.moxib.pomelo.logic;
 
 import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.config.SessionRouteTable;
+import com.github.moxib.pomelo.config.TlsConfig;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
 import com.github.moxib.pomelo.logic.infrastructure.TokenService;
@@ -9,7 +10,9 @@ import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.json.JsonArray;
+import io.vertx.core.net.PemKeyCertOptions;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.auth.hashing.HashingStrategy;
 import io.vertx.ext.web.Router;
@@ -92,9 +95,15 @@ public class ApiVerticle extends VerticleBase {
         router.get("/api/friends/:userId").handler(this::friends);
         router.get("/api/friends/:userId/pending").handler(this::pending);
 
-        server = vertx.createHttpServer();
+        // TLS：启用后客户端需使用 https://
+        HttpServerOptions serverOptions = new HttpServerOptions();
+        PemKeyCertOptions pem = TlsConfig.pemKeyCert();
+        if (pem != null) {
+          serverOptions.setSsl(true).setKeyCertOptions(pem);
+        }
+        server = vertx.createHttpServer(serverOptions);
         return server.requestHandler(router).listen(port)
-          .onSuccess(v2 -> LOG.info("ApiVerticle 已启动，端口: {}", port))
+          .onSuccess(v2 -> LOG.info("ApiVerticle 已启动，端口: {}（TLS={}）", port, TlsConfig.enabled()))
           .onFailure(e -> LOG.error("ApiVerticle 启动失败", e));
       });
   }

@@ -38,8 +38,13 @@ services:
       POMELO_DATABASE_PASSWORD: pomelo123
       # Redis 配置
       POMELO_REDIS_URI: "redis://redis:6379"
+      # TLS（HTTP API → https，证书由 deploy.sh 生成并挂载）
+      POMELO_TLS_ENABLED: "true"
+      POMELO_TLS_CERT_PATH: "/certs/server.crt"
+      POMELO_TLS_KEY_PATH: "/certs/server.key"
       # JVM 参数
       JAVA_OPTS: "-Xms256m -Xmx512m"
+    volumes: [./conf/tls:/certs:ro]
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,7 +63,12 @@ services:
     environment:
       VERTX_CLUSTER: "true"
       POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
+      # TLS（TCP/WS 网关，客户端需使用 TLS / wss://）
+      POMELO_TLS_ENABLED: "true"
+      POMELO_TLS_CERT_PATH: "/certs/server.crt"
+      POMELO_TLS_KEY_PATH: "/certs/server.key"
       JAVA_OPTS: "-Xms256m -Xmx512m"
+    volumes: [./conf/tls:/certs:ro]
     depends_on:
       redis:
         condition: service_healthy

@@ -39,6 +39,9 @@ fi
 
 PL=$(IFS=,; echo "${SERVICES[*]}")
 
+echo "==> [0/4] 生成开发用 TLS 自签名证书（已存在则跳过）"
+./scripts/gen-dev-cert.sh
+
 echo "==> [1/4] install 依赖到本地 .m2（-am 自动包含上游依赖）"
 ./mvnw install -pl "$PL" -am -DskipTests -q
 

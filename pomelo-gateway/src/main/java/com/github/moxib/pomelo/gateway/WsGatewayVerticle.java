@@ -2,6 +2,7 @@ package com.github.moxib.pomelo.gateway;
 
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.ConfigHolder;
+import com.github.moxib.pomelo.config.TlsConfig;
 import com.github.moxib.pomelo.gateway.handler.Connection;
 import com.github.moxib.pomelo.gateway.handler.MessageDispatcher;
 import com.github.moxib.pomelo.gateway.handler.SessionRegistry;
@@ -12,6 +13,7 @@ import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpServer;
 import io.vertx.core.http.HttpServerOptions;
 import io.vertx.core.http.ServerWebSocket;
+import io.vertx.core.net.PemKeyCertOptions;
 import io.vertx.core.parsetools.RecordParser;
 import java.net.SocketException;
 import org.slf4j.Logger;
@@ -51,15 +53,17 @@ public class WsGatewayVerticle extends VerticleBase {
       this.dispatcher = new MessageDispatcher(vertx, sessionRegistry, heartbeatTimeoutMs);
     }
 
-    // WebSocket 开启 permessage-deflate（RFC 7692）：
-    // 浏览器在握手时自动协商，payload 在传输层压缩、应用层透明。
-    // 对 JSON body 这类高重复键文本收益最大，且不改变现有二进制帧协议。
-    boolean perMessageDeflate = ConfigHolder.getBoolean("gateway.websocket.perMessageDeflate", true);
+    // protobuf使用deflate收益不高
     HttpServerOptions serverOptions = new HttpServerOptions()
-      .setPerMessageWebSocketCompressionSupported(perMessageDeflate);
+      .setPerMessageWebSocketCompressionSupported(false);
+    // TLS：启用后客户端需使用 wss://
+    PemKeyCertOptions pem = TlsConfig.pemKeyCert();
+    if (pem != null) {
+      serverOptions.setSsl(true).setKeyCertOptions(pem);
+    }
     wsServer = vertx.createHttpServer(serverOptions);
     return wsServer.webSocketHandler(getServerHandler()).listen(wsPort)
-      .onSuccess(ar -> LOG.info("WebSocket 服务器已启动，监听端口：{}", wsPort))
+      .onSuccess(ar -> LOG.info("WebSocket 服务器已启动，监听端口：{}（TLS={}）", wsPort, TlsConfig.enabled()))
       .onFailure(throwable -> LOG.error("WebSocket 服务器启动失败", throwable));
   }
 

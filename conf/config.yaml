@@ -1,3 +1,10 @@
+# 服务端 TLS（TCP/WS 网关与 HTTP API 共用同一张证书）
+# 生产环境请替换为受信 CA 证书；本地/内网可用 scripts/gen-dev-cert.sh 生成自签名证书
+tls:
+  enabled: false
+  certPath: "conf/tls/server.crt"
+  keyPath: "conf/tls/server.key"
+
 api:
   http:
     port: 8888

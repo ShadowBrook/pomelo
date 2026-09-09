@@ -2,6 +2,7 @@ package com.github.moxib.pomelo.gateway;
 
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.ConfigHolder;
+import com.github.moxib.pomelo.config.TlsConfig;
 import com.github.moxib.pomelo.gateway.handler.Connection;
 import com.github.moxib.pomelo.gateway.handler.MessageDispatcher;
 import com.github.moxib.pomelo.gateway.handler.SessionRegistry;
@@ -10,6 +11,8 @@ import io.vertx.core.Handler;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.net.NetServer;
+import io.vertx.core.net.NetServerOptions;
+import io.vertx.core.net.PemKeyCertOptions;
 import io.vertx.core.net.NetSocket;
 import io.vertx.core.parsetools.RecordParser;
 import java.net.SocketException;
@@ -51,12 +54,18 @@ public class TcpGatewayVerticle extends VerticleBase {
       this.sessionRegistry = new SessionRegistry(vertx);
       this.dispatcher = new MessageDispatcher(vertx, sessionRegistry, heartbeatTimeoutMs);
     }
-    tcpServer = vertx.createNetServer();
+    // TLS：启用后客户端需以 TLS 握手连接
+    NetServerOptions serverOptions = new NetServerOptions();
+    PemKeyCertOptions pem = TlsConfig.pemKeyCert();
+    if (pem != null) {
+      serverOptions.setSsl(true).setKeyCertOptions(pem);
+    }
+    tcpServer = vertx.createNetServer(serverOptions);
 
     return tcpServer
       .connectHandler(getTcpHandler())
       .listen(tcpPort)
-      .onSuccess(ar -> LOG.info("TCP Gateway 已启动，监听端口：{}", tcpPort))
+      .onSuccess(ar -> LOG.info("TCP Gateway 已启动，监听端口：{}（TLS={}）", tcpPort, TlsConfig.enabled()))
       .onFailure(throwable -> LOG.error("TCP Gateway 启动失败", throwable));
   }
 
@@ -71,6 +80,7 @@ public class TcpGatewayVerticle extends VerticleBase {
 
   private Handler<NetSocket> getTcpHandler() {
     return socket -> {
+      LOG.debug("TCP 客户端已连接：{}", socket.remoteAddress());
       RecordParser parser = RecordParser.newFixed(4);
       Connection conn = Connection.from(socket);
 
