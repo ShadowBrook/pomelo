@@ -73,6 +73,7 @@ Gateways register per-user routes in a clustered `SessionRouteTable` (Vert.x clu
 
 ## Design Docs
 
+- `docs/2026-09-08-reply-and-forward-message-design.md` — 引用（快照式 ReplySnippet + reply_json 列 + 服务端反查覆盖）与转发（单条零协议改动 / 合并 FORWARD=8 + 签名器嵌套注入）设计（未实施）
 - `docs/2026-09-08-message-model-and-conversation-key-design.md` — 消息扩散模型（单聊写扩散信箱 / 群聊读融合时间线）与会话键（c2c conversation_id / group group_id）设计决策
 - `docs/2026-09-07-seqsvr-subscription-loss-incident.md` — 2026-09-07 seqsvr 订阅丢失事故分析与加固（P1–P9）
 
