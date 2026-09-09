@@ -150,3 +150,22 @@ message GetGroupMsgReadStatusResp {
     string message                   = 2;
     repeated GroupMsgReader readers  = 3;
 }
+
+// ============================================================================
+// 群成员已读游标（一次查询覆盖全群，客户端据此本地计算每条消息的已读人数）
+// ============================================================================
+message GetGroupReadStateReq {
+    int64 group_id = 1;
+}
+
+message MemberReadState {
+    int64 user_id       = 1;
+    // 该成员已读到的最大 seq（单调递增）
+    int64 last_read_seq = 2;
+}
+
+message GetGroupReadStateResp {
+    int32 code    = 1;
+    string message = 2;
+    repeated MemberReadState members = 3;
+}

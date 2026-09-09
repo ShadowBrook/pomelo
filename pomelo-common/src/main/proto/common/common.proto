@@ -123,6 +123,11 @@ enum Cmd {
     // S→C 返回群消息已读用户列表
     CMD_GROUP_MSG_READ_RESP = 0x0099;
 
+    // 群成员已读游标全量查询（一次拉取，客户端本地计算各消息已读人数）
+    CMD_GROUP_READ_STATE_REQ  = 0x009A;
+
+    CMD_GROUP_READ_STATE_RESP = 0x009B;
+
     // 媒体上传
     // C→S 申请上传预签名
     CMD_UPLOAD_REQ    = 0x00A0;
