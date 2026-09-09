@@ -9,6 +9,7 @@ import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.net.NetClient;
+import io.vertx.core.net.NetClientOptions;
 import io.vertx.core.net.NetSocket;
 import io.vertx.core.parsetools.RecordParser;
 
@@ -36,7 +37,12 @@ public class ImClient {
   }
 
   public static Future<ImClient> connect(Vertx vertx, String host, int port) {
-    NetClient client = SharedNetClient.get(vertx);
+    return connect(vertx, host, port, false);
+  }
+
+  /** tls=true 时以 TLS 握手连接网关（服务端 tls.enabled=true 时必须开启） */
+  public static Future<ImClient> connect(Vertx vertx, String host, int port, boolean tls) {
+    NetClient client = SharedNetClient.get(vertx, tls);
     return client.connect(port, host).map(ImClient::new);
   }
 
@@ -130,19 +136,31 @@ public class ImClient {
     socket.close();
   }
 
-  /** 共享 NetClient：Vert.x 推荐一个实例管理多个连接，避免并发连接时每次创建耗尽资源 */
+  /** 共享 NetClient：Vert.x 推荐一个实例管理多个连接，避免并发连接时每次创建耗尽资源（按是否 TLS 各一个） */
   private static final class SharedNetClient {
-    private static volatile NetClient instance;
+    private static volatile NetClient plain;
+    private static volatile NetClient tls;
 
-    static NetClient get(Vertx vertx) {
-      if (instance == null) {
+    static NetClient get(Vertx vertx, boolean useTls) {
+      if (useTls) {
+        if (tls == null) {
+          synchronized (SharedNetClient.class) {
+            if (tls == null) {
+              // 压测场景接受自签名证书
+              tls = vertx.createNetClient(new NetClientOptions().setSsl(true).setTrustAll(true));
+            }
+          }
+        }
+        return tls;
+      }
+      if (plain == null) {
         synchronized (SharedNetClient.class) {
-          if (instance == null) {
-            instance = vertx.createNetClient();
+          if (plain == null) {
+            plain = vertx.createNetClient();
           }
         }
       }
-      return instance;
+      return plain;
     }
   }
 }
