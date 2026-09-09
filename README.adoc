@@ -146,6 +146,15 @@ toc::[]
 
 后端一次返回全群 `user_id → last_read_seq`，客户端本地推导每条消息的已读人数（`lastReadSeq >= seq` 的成员数）。相比按消息逐条查询，请求量从 O(消息数) 降到 O(1)，且覆盖历史消息。
 
+=== 7. 传输层加密（TLS）
+
+网关与 HTTP API 支持 TLS（同一张证书，配置开关驱动）：
+
+* `tls.enabled=true` 后：TCP 9000 走 TLS 握手、WebSocket 9001 走 `wss://`、HTTP API 8888 走 `https://`
+* 证书与私钥通过 `tls.certPath` / `tls.keyPath` 指定，compose 中挂载 `./conf/tls:/certs:ro`
+* 本地/内网联调可用 `./scripts/gen-dev-cert.sh` 生成自签名证书（`deploy.sh` 会自动调用）；生产请替换为受信 CA 证书
+* 默认 `tls.enabled=false`，便于无证书的本地开发；前端按页面协议自动派生 `ws://` / `wss://`，可用 `VITE_WS_URL` 覆盖
+
 == 快速开始
 
 === 一键部署（Docker Compose）
@@ -167,9 +176,9 @@ JAVA_HOME=/path/to/jdk21 ./deploy.sh
 |===
 | 服务 | 端口 | 说明
 
-| HTTP API | 8888 | 注册 / 登录 / 资料 / 好友列表
-| TCP 网关 | 9000 | 自定义二进制协议
-| WebSocket 网关 | 9001 | 同上（二进制帧）
+| HTTP API | 8888 | 注册 / 登录 / 资料 / 好友列表（`https://`）
+| TCP 网关 | 9000 | 自定义二进制协议（TLS）
+| WebSocket 网关 | 9001 | 同上（二进制帧，`wss://`）
 | PostgreSQL | 5432 | 消息 / 群 / 好友（首次启动自动建表）
 | Redis | 6379 | 集群 EventBus / 黑名单 / 路由表
 | 对象存储 | 9002 / 9003 | S3 API / 控制台
@@ -216,6 +225,7 @@ JAVA_HOME=/path/to/jdk21 ./deploy.sh
 | `api.http.port` | HTTP API 端口
 | `database.*` / `redis.*` | 存储连接
 | `jwt.secret` / `jwt.ttlSeconds` | 令牌密钥与有效期
+| `tls.enabled` / `tls.certPath` / `tls.keyPath` | 服务端 TLS 开关与 PEM 证书路径
 | `seqsvr.*` | 发号服务（节点 ID、号段、租约、副本数 W/R、admin 端口）
 | `message.pullLimit` / `friend.searchLimit` | 拉取与搜索上限
 |===
