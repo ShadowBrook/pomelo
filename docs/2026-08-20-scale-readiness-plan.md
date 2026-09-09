@@ -18,7 +18,7 @@ Pomelo 已具备一套横向扩展底座：Gateway 层的 `SessionRouteTable` �
 
 | 组件 | 现状 | 对扩容的意义 |
 |---|---|---|
-| Session 路由 | `SessionRouteTable`（cluster-wide map，userId→nodeId）+ `live-gateways` 节点心跳 TTL + `PushRouter` 精确路由/广播兜底 | Gateway 可水平扩，已基本就绪 |
+| Session 路由 | `SessionRouteTable`（cluster-wide map，userId→nodeId）+ 节点存活复用 cluster manager 的 nodeInfo 目录 + `PushRouter` 精确路由/广播兜底 | Gateway 可水平扩，已基本就绪 |
 | Session 注册 | `SessionRegistry`（每 Gateway 进程内 `ConcurrentHashMap`） | 进程内，无共享状态，天然可扩 |
 | seqsvr 分配 | `AllocManager` 号段租约（卸载立即 / 新增 pending 5s / `ROUTE_OUTDATED` 重试） | 迁移机制已正确，问题是「分配策略」 |
 | seqsvr 路由表 | `MediateManager.generateRouter()` 全网均分 | 增减节点触发全网重排（见 §4.2） |
@@ -285,7 +285,7 @@ mvn -pl pomelo-seqsvr/pomelo-seqsvr-server exec:java \
 
 一个 Redis 同时承担（`conf/config.yaml:11-18,34`）：
 
-1. `vertx-redis-clustermanager`：EventBus 集群 + cluster-wide map（session 路由 + live-gateways 心跳）。
+1. `vertx-redis-clustermanager`：EventBus 集群 + cluster-wide map（session 路由；节点存活复用其 nodeInfo 目录）。
 2. `RedisIdGenerator`：`seq:id:generator` key。
 3. `RedisOnlineStatus`：`im:online:users` set（在线状态查询）。
 4. （若 §4.3 走 B）seqsvr Store。
@@ -319,14 +319,14 @@ mvn -pl pomelo-seqsvr/pomelo-seqsvr-server exec:java \
 
 `SessionRouteTable` + `PushRouter` 精确路由 + 广播兜底已经到位。剩余三处小问题：
 
-1. **非集群模式静默退化**：`SessionRouteTable` 在 `!vertx.isClustered()` 时全部 no-op（`register/resolve` 直接返回空，见 `SessionRouteTable.java:68-70,110-112,170-172`）。多实例若误以非集群模式启动，`PushRouter.resolve()` 恒 null → 每次推送全广播，且无人察觉。
+1. **非集群模式静默退化**：`SessionRouteTable` 在 `!vertx.isClustered()` 时全部 no-op（`register/resolve` 直接返回空，见 `SessionRouteTable` 各方法入口的 `isClustered()` 判断）。多实例若误以非集群模式启动，`PushRouter.resolve()` 恒 null → 每次推送全广播，且无人察觉。
 2. **死节点路由惰性清理**：死节点路由靠 `PushRouter.push` 发现死节点时惰性 `unregister`，无主动清理。快速 scale 的节点 churn 会让广播量上升，每个 gateway 都要过滤无关用户的 push。
 3. **广播放大**：路由 miss / 节点刚死都 `publish("gateway.push")` 打给所有 gateway。
 
 **推荐：启动断言 + 可选主动清理**
 
 1. **启动断言**：多实例部署（非本机单进程）时，若 `!vertx.isClustered()` 直接 fail-fast 或打 error 日志，避免静默退化。这是低成本高收益的防御。
-2. **主动清理（可选）**：监听集群 membership / 复用 live-gateways 心跳超时，批量清掉死节点残留路由（`SessionRouteTable` 已有 `getOnlineUserIds()` 供节点下线清理，可扩展到主动 sweep）。
+2. **主动清理（可选）**：监听集群 membership / 复用 cluster manager 的 nodeInfo 目录过期，批量清掉死节点残留路由（`SessionRouteTable` 已有 `getOnlineUserIds()` 供节点下线清理，可扩展到主动 sweep）。
 3. 广播兜底本身正确，保留；仅监控广播量，出现异常放大再优化。
 
 **落地要点 / 权衡**

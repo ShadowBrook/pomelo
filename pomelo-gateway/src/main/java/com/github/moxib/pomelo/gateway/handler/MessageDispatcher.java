@@ -3,7 +3,6 @@ package com.github.moxib.pomelo.gateway.handler;
 import com.github.moxib.pomelo.codec.ProtobufCodec;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
-import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.config.JwtTokenParser;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.model.PushCodec;
@@ -35,8 +34,6 @@ public class MessageDispatcher {
   private final SessionRouteTable routeTable;
   private final JwtTokenParser jwtParser;
   private final long heartbeatTimeoutMs;
-  private final long nodeTtlMs;
-  private long heartbeatTimerId = -1;
   // TCP/WS Verticle 共享同一 Dispatcher 时 stop() 会被调用两次，需幂等
   private final AtomicBoolean stopped = new AtomicBoolean(false);
 
@@ -45,7 +42,6 @@ public class MessageDispatcher {
     this.sessionRegistry = sessionRegistry;
     this.routeTable = new SessionRouteTable(vertx);
     this.heartbeatTimeoutMs = heartbeatTimeoutMs;
-    this.nodeTtlMs = ConfigHolder.getLong("gateway.cluster.nodeTtlMs", 60000L);
     // AUTH_REQ token 验签解析（与 logic TokenService 复用同一 JwtTokenParser）
     this.jwtParser = new JwtTokenParser(vertx);
     String nodeId = routeTable.getNodeId();
@@ -54,43 +50,21 @@ public class MessageDispatcher {
     // 兜底广播订阅（logic-server 查不到路由时 fallback）
     vertx.eventBus().consumer("gateway.push", msg -> deliverPush(msg.body()));
     LOG.info("Push consumers registered: gateway.push.{} + gateway.push (fallback)", nodeId);
-    // 注册节点存活心跳 + 定期续期在线用户 session 路由
-    startNodeHeartbeat();
   }
 
   /**
-   * 注册本节点存活标记，并启动节点心跳定时器。
-   * 每 nodeTtl/2 续期一次节点存活标记；节点崩溃后标记在 TTL 内自动过期。
-   * 用户 session 路由不在此续期——用户在线由客户端心跳驱动，见 {@link #touchHeartbeat}。
-   */
-  private void startNodeHeartbeat() {
-    if (!vertx.isClustered()) {
-      return;
-    }
-    routeTable.registerNode(nodeTtlMs)
-      .onSuccess(v -> {
-        heartbeatTimerId = vertx.setPeriodic(nodeTtlMs / 2, id -> routeTable.renewNode(nodeTtlMs));
-        LOG.info("节点心跳已启动: nodeId={} ttl={}ms interval={}ms", routeTable.getNodeId(), nodeTtlMs, nodeTtlMs / 2);
-      })
-      .onFailure(e -> LOG.warn("节点心跳注册失败，精确路由将不可靠: {}", e.getMessage()));
-  }
-
-  /**
-   * 节点下线：取消心跳，清理本节点注册的 session 路由和存活标记。
-   * 用户连接随节点关闭断开，重连到其他节点后由新节点重新注册。
+   * 节点下线：清理本节点注册的 session 路由。
+   * 用户连接随节点关闭断开，重连到其他节点后由新节点重新注册；
+   * 节点存活标记由 cluster manager 的 nodeInfo 目录自行过期，无需在此清理。
    */
   public Future<Void> stop() {
     if (!stopped.compareAndSet(false, true)) {
       return Future.succeededFuture();
     }
-    if (heartbeatTimerId >= 0) {
-      vertx.cancelTimer(heartbeatTimerId);
-      heartbeatTimerId = -1;
-    }
     for (String userId : sessionRegistry.getOnlineUserIds()) {
       routeTable.unregister(userId);
     }
-    return routeTable.unregisterNode();
+    return Future.succeededFuture();
   }
 
   /** 构造 PONG 响应（心跳由 gateway 本地应答） */
@@ -102,7 +76,9 @@ public class MessageDispatcher {
       .cmd(CMD_PONG_VALUE)
       .messageId(request.getMessageId())
       .build();
-  }  /** 解析 push 并投递给本地连接的用户（EventBus 上 push 以 PushCodec Buffer 传输） */
+  }
+
+  /** 解析 push 并投递给本地连接的用户（EventBus 上 push 以 PushCodec Buffer 传输） */
   private void deliverPush(Object msgBody) {
     if (!(msgBody instanceof Buffer buf)) {
       LOG.warn("Unknown push body type: {}", msgBody.getClass().getName());
