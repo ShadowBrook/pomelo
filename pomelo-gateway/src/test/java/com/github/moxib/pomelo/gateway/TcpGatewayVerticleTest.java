@@ -111,7 +111,7 @@ public class TcpGatewayVerticleTest {
     CountDownLatch latch = new CountDownLatch(1);
     AtomicReference<NetSocket> socketRef = new AtomicReference<>();
     NetClient client = vertx.createNetClient();
-    client.connect(TCP_PORT, "localhost")
+    client.connect(TCP_PORT, "127.0.0.1")
       .onSuccess(s -> {
         socketRef.set(s);
         latch.countDown();
