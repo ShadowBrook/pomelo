@@ -1,0 +1,63 @@
+api:
+  http:
+    port: 8888
+
+gateway:
+  tcp:
+    port: 9000
+  websocket:
+    port: 9001
+
+redis:
+  uri: "redis://redis:6379"
+  maxPoolSize: 64
+  maxWaitingHandlers: 512
+  onlineSetKey: "im:online:users"
+  cm:
+    endpoint: "redis://redis:6379"
+
+database:
+  host: postgres
+  port: 5432
+  database: pomelo_db
+  user: pomelo
+  password: pomelo123
+  pool:
+    maxSize: 64
+    maxWaitQueueSize: 5000
+    connectionTimeout: 10000
+    idleTimeout: 60
+
+idGenerator:
+  allocationSize: 5000
+  redisKey: "seq:id:generator"
+
+snowflake:
+  workerId: 1
+
+jwt:
+  secret: "pomelo-dev-secret-change-in-production"
+  ttlSeconds: 86400
+  blacklistPrefix: "jwt:blacklist:"
+
+nanoid:
+  size: 21
+
+friend:
+  searchLimit: 20
+
+message:
+  pullLimit: 50
+
+media:
+  # 服务端内部访问 MinIO 的地址（容器部署用 docker 内部 DNS）
+  endpoint: http://silo:9000
+  # 浏览器可达的地址，作为 presigned URL 的 host（开发机跑前端用 localhost 映射端口；生产换成公网/CDN 域名）
+  publicEndpoint: http://localhost:9002
+  bucket: pomelo-media
+  accessKey: pomelo-admin
+  secretKey: pomelo-admin-password
+  putUrlTtlSeconds: 300
+  getUrlTtlSeconds: 604800
+  maxSizeBytes: 104857600
+  allowedExtensions: "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip,webm,ogg"

@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package im.pull;
+
+option java_package = "com.github.moxib.pomelo.proto.pull";
+option java_outer_classname = "PullProto";
+
+import "common/common.proto";
+
+// ============================================================================
+// 消息拉取相关消息体
+// ============================================================================
+message PullReq {
+    // 拉取数量限制
+    int32 limit = 1;
+    // 游标：离线拉取时 = sinceSeq，会话历史拉取时 = beforeTime
+    int64 seq   = 2;
+}
+
+message PullResp {
+    // 响应码
+    int32 code                 = 1;
+    // 响应消息
+    string message             = 2;
+    // 消息列表
+    repeated im.common.MessageContent messages = 3;
+    // 是否还有更多
+    bool has_more              = 4;
+}
+
+// ============================================================================
+// 群消息拉取（请求字段与 PullReq 不同，响应复用 PullResp）
+// ============================================================================
+message PullGroupMsgReq {
+    // 群 ID (Snowflake)
+    int64 group_id    = 1;
+    // 游标（seq 或时间戳，取决于 is_backward）
+    int64 cursor      = 2;
+    // 拉取数量限制
+    int32 limit       = 3;
+    // true=拉更早的历史，false=拉增量
+    bool is_backward  = 4;
+}

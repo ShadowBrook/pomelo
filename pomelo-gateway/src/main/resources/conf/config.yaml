@@ -1,0 +1,55 @@
+api:
+  http:
+    port: 8888
+
+gateway:
+  tcp:
+    port: 9000
+  websocket:
+    port: 9001
+    perMessageDeflate: true
+
+redis:
+  uri: "redis://localhost:6379"
+  maxPoolSize: 4
+  maxWaitingHandlers: 8
+  onlineSetKey: "im:online:users"
+  cm:
+    endpoint: "redis://localhost:6379"
+    keyNamespace: "pomelo"
+
+database:
+  host: localhost
+  port: 5432
+  database: pomelo_db
+  user: pomelo
+  password: pomelo123
+  pool:
+    maxSize: 10
+    maxWaitQueueSize: 50
+    connectionTimeout: 10000
+    idleTimeout: 60
+
+idGenerator:
+  allocationSize: 5000
+  redisKey: "seq:id:generator"
+
+snowflake:
+  workerId: 1
+
+jwt:
+  secret: "pomelo-dev-secret-change-in-production"
+  ttlSeconds: 86400
+  blacklistPrefix: "jwt:blacklist:"
+
+nanoid:
+  size: 21
+
+bcrypt:
+  cost: 12
+
+friend:
+  searchLimit: 20
+
+message:
+  pullLimit: 50

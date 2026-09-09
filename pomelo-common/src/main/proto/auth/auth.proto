@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package im.auth;
+
+option java_package = "com.github.moxib.pomelo.proto.auth";
+option java_outer_classname = "AuthProto";
+
+// ============================================================================
+// 认证相关消息体
+// ============================================================================
+message AuthReq {
+    // 认证令牌
+    string token       = 1;
+    // 设备 ID
+    string device_id   = 2;
+    // 平台类型 (ios/android/web)
+    string platform    = 3;
+    // 应用版本
+    string app_version = 4;
+}
+
+message AuthResp {
+    // 响应码 0=成功
+    int32 code          = 1;
+    // 响应消息
+    string message      = 2;
+    // 用户 ID (Snowflake)
+    int64 user_id       = 3;
+    // 过期时间
+    int64 expire_at     = 4;
+}
+
+// ============================================================================
+// 登出相关消息体
+// ============================================================================
+message LogoutReq {
+    // 登出原因
+    string reason = 1;
+}
+
+message LogoutResp {
+    // 响应码
+    int32 code     = 1;
+    // 响应消息
+    string message = 2;
+}

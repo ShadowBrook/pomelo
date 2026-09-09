@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package im.ctrl;
+
+option java_package = "com.github.moxib.pomelo.proto.ctrl";
+option java_outer_classname = "CtrlProto";
+
+// ============================================================================
+// 控制类型枚举
+// ============================================================================
+enum CtrlType {
+    CTRL_TYPE_UNKNOWN      = 0;
+    // 踢下线
+    CTRL_TYPE_KICK_OFFLINE = 1;
+    // 强制登出
+    CTRL_TYPE_FORCE_LOGOUT = 2;
+    // 通知
+    CTRL_TYPE_NOTIFY       = 3;
+    // 同步
+    CTRL_TYPE_SYNC         = 4;
+}
+
+// ============================================================================
+// 控制命令相关消息体
+// ============================================================================
+message CtrlReq {
+    CtrlType ctrl_type     = 1;
+    // 目标用户
+    string target_user     = 2;
+    // 控制载荷
+    optional bytes payload = 3;
+}
+
+message CtrlResp {
+    // 响应码
+    int32 code     = 1;
+    // 响应消息
+    string message = 2;
+    // 控制载荷响应
+    bytes payload  = 3;
+}
+
+message CtrlNotify {
+    CtrlType ctrl_type = 1;
+    // 推送原因
+    string reason      = 2;
+    // 控制载荷
+    bytes payload      = 3;
+}

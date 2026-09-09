@@ -1,0 +1,218 @@
+# ================================================================
+# pomelo 一体化部署：主应用 + 数据库 + Redis + seqsvr 发号服务
+#
+# 镜像由 Jib Maven Plugin 产出（无需 Dockerfile）：
+#   ./mvnw -pl pomelo-seqsvr/pomelo-seqsvr-store \
+#          -pl pomelo-seqsvr/pomelo-seqsvr-server \
+#          -pl pomelo-seqsvr/pomelo-seqsvr-mediate \
+#          -pl pomelo-logic-server \
+#          -pl pomelo-gateway \
+#          -am package -DskipTests \
+#   && \
+#   for mod in pomelo-seqsvr/pomelo-seqsvr-store \
+#              pomelo-seqsvr/pomelo-seqsvr-mediate \
+#              pomelo-seqsvr/pomelo-seqsvr-server \
+#              pomelo-logic-server \
+#              pomelo-gateway; do \
+#     ./mvnw -pl "$mod" com.google.cloud.tools:jib-maven-plugin:3.4.0:dockerBuild; \
+#   done
+#
+# 然后：
+#   docker compose up -d
+# ================================================================
+services:
+  pomelo:
+    image: pomelo/pomelo
+    container_name: pomelo
+    ports:
+      - "8888:8888"   # HTTP API（Logic-Server）
+    environment:
+      # 集群 EventBus（与 gateway / seqsvr 同 Redis 集群）
+      VERTX_CLUSTER: "true"
+      POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
+      # 数据库配置（通过 POMELO_* 环境变量覆盖 config.yaml 默认值）
+      POMELO_DATABASE_HOST: postgres
+      POMELO_DATABASE_PORT: "5432"
+      POMELO_DATABASE_DATABASE: pomelo_db
+      POMELO_DATABASE_USER: pomelo
+      POMELO_DATABASE_PASSWORD: pomelo123
+      # Redis 配置
+      POMELO_REDIS_URI: "redis://redis:6379"
+      # JVM 参数
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - pomelo-net
+
+  gateway:
+    image: pomelo/gateway
+    container_name: pomelo-gateway
+    ports:
+      - "9000:9000"   # TCP Gateway
+      - "9001:9001"   # WebSocket Gateway
+    environment:
+      VERTX_CLUSTER: "true"
+      POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
+      JAVA_OPTS: "-Xms256m -Xmx512m"
+    depends_on:
+      redis:
+        condition: service_healthy
+      pomelo:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - pomelo-net
+
+  postgres:
+    image: postgres:latest
+    container_name: pomelo-postgres
+    environment:
+      POSTGRES_DB: pomelo_db
+      POSTGRES_USER: pomelo
+      POSTGRES_PASSWORD: pomelo123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+      # 初始化建表脚本
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pomelo -d pomelo_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pomelo-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: pomelo-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - pomelo-net
+
+  # ============ seqsvr 发号服务 ============
+
+  seqsvr-store-1:
+    image: pomelo/seqsvr-store
+    container_name: seqsvr-store-1
+    # StoreSvr 需要写 /data mmap 持久化，Docker named volume 默认 root 所有，
+    # 临时以 root 运行；上行到 K8s 后改用 fsGroup 即可切回 1000:1000
+    user: root
+    environment: &seqsvr-env
+      VERTX_CLUSTER: "true"
+      POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.dataDir=/data -Dseqsvr.store.replicaId=store-1"
+    volumes: [seqsvr-data-1:/data]
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  seqsvr-store-2:
+    image: pomelo/seqsvr-store
+    container_name: seqsvr-store-2
+    user: root
+    environment:
+      <<: *seqsvr-env
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.dataDir=/data -Dseqsvr.store.replicaId=store-2"
+    volumes: [seqsvr-data-2:/data]
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  seqsvr-store-3:
+    image: pomelo/seqsvr-store
+    container_name: seqsvr-store-3
+    user: root
+    environment:
+      <<: *seqsvr-env
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.dataDir=/data -Dseqsvr.store.replicaId=store-3"
+    volumes: [seqsvr-data-3:/data]
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  seqsvr-mediate:
+    image: pomelo/seqsvr-mediate
+    container_name: seqsvr-mediate
+    ports:
+      - "10106:10106"   # admin HTTP：GET /router /nodes
+    environment:
+      VERTX_CLUSTER: "true"
+      POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.store.replicas=seqsvr.store.store-1,seqsvr.store.store-2,seqsvr.store.store-3 -Dseqsvr.store.w=2 -Dseqsvr.store.r=2"
+    depends_on:
+      redis: { condition: service_healthy }
+      seqsvr-store-1: { condition: service_started }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  seqsvr-alloc-1:
+    image: pomelo/seqsvr-alloc
+    container_name: seqsvr-alloc-1
+    environment:
+      VERTX_CLUSTER: "true"
+      POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.nodeId=alloc-1 -Dseqsvr.mediate.enabled=true -Dseqsvr.store.replicas=seqsvr.store.store-1,seqsvr.store.store-2,seqsvr.store.store-3 -Dseqsvr.store.w=2 -Dseqsvr.store.r=2"
+    depends_on:
+      redis: { condition: service_healthy }
+      seqsvr-mediate: { condition: service_started }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  seqsvr-alloc-2:
+    image: pomelo/seqsvr-alloc
+    container_name: seqsvr-alloc-2
+    environment:
+      <<: *seqsvr-env
+      JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.nodeId=alloc-2 -Dseqsvr.mediate.enabled=true -Dseqsvr.store.replicas=seqsvr.store.store-1,seqsvr.store.store-2,seqsvr.store.store-3 -Dseqsvr.store.w=2 -Dseqsvr.store.r=2"
+    depends_on:
+      redis: { condition: service_healthy }
+      seqsvr-mediate: { condition: service_started }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  # ============ Silo 对象存储（MinIO 分支） ============
+
+  silo:
+    image: pgsty/silo:RELEASE.2026-08-06T00-00-00Z
+    container_name: pomelo-silo
+    command: server /data --console-address :9001
+    ports:
+      - "9002:9000"   # S3 API
+      - "9003:9001"   # Web Console
+    environment:
+      MINIO_ROOT_USER: pomelo-admin
+      MINIO_ROOT_PASSWORD: pomelo-admin-password
+    volumes:
+      - silo-data:/data
+    restart: unless-stopped
+    networks:
+      - pomelo-net
+
+volumes:
+  pgdata:
+  seqsvr-data-1:
+  seqsvr-data-2:
+  seqsvr-data-3:
+  silo-data:
+
+networks:
+  pomelo-net:
+    driver: bridge

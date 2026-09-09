@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package im.ack;
+
+option java_package = "com.github.moxib.pomelo.proto.ack";
+option java_outer_classname = "AckProto";
+
+import "common/common.proto";
+
+// ============================================================================
+// ACK 消息确认
+// ============================================================================
+
+message AckReq {
+  // 消息 ID 列表 (snowflake 64-bit)
+  repeated int64 message_ids = 1;
+  // ACK 类型：0=已收到，1=已读
+  common.AckType ack_type    = 2;
+}
+
+message AckResp {
+  // ACK 类型：0=已收到，1=已读
+  common.AckType ack_type = 1;
+}
+
+message AckNotify {
+  // 已确认的消息 ID 列表 (snowflake 64-bit)
+  repeated int64 message_ids = 1;
+  // ACK 类型：0=已收到，1=已读
+  common.AckType ack_type    = 2;
+}

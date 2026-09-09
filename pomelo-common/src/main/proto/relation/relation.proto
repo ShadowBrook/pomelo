@@ -1,0 +1,91 @@
+syntax = "proto3";
+
+package im.relation;
+
+option java_package = "com.github.moxib.pomelo.proto.relation";
+option java_outer_classname = "RelationProto";
+
+// ============================================================================
+// 好友搜索
+// ============================================================================
+message SearchUserReq {
+    // 搜索关键词（userId 或 nickname）
+    string keyword = 1;
+}
+
+message SearchUserResp {
+    int32 code = 1;
+    string message      = 2;
+    repeated UserInfo users = 3;
+
+    message UserInfo {
+        int64 user_id   = 1;
+        string user_name = 2;
+        string nickname  = 3;
+        string avatar    = 4;
+    }
+}
+
+// ============================================================================
+// 好友申请
+// ============================================================================
+message FriendAddReq {
+    // 发起方
+    int64 user_id   = 1;
+    // 目标用户
+    int64 friend_id = 2;
+}
+
+message FriendAddResp {
+    int32 code = 1;
+    string message = 2;
+}
+
+message FriendAddNotify {
+    // 发起方（谁加你）
+    int64 user_id   = 1;
+    string user_name = 2;
+    string nickname  = 3;
+    string avatar    = 4;
+}
+
+// ============================================================================
+// 接受好友申请
+// ============================================================================
+message FriendAcceptReq {
+    // 接受方
+    int64 user_id   = 1;
+    // 发起申请方（接受谁的申请）
+    int64 friend_id = 2;
+}
+
+message FriendAcceptResp {
+    int32 code = 1;
+    string message = 2;
+}
+
+message FriendAcceptNotify {
+    // 接受方（谁接受了你的申请）
+    int64 user_id   = 1;
+    string user_name = 2;
+    string nickname  = 3;
+    string avatar    = 4;
+}
+
+// ============================================================================
+// 删除好友
+// ============================================================================
+message FriendDeleteReq {
+    int64 user_id   = 1;
+    int64 friend_id = 2;
+}
+
+message FriendDeleteResp {
+    int32 code = 1;
+    string message = 2;
+}
+
+message FriendDeleteNotify {
+    // 操作方（谁删了你）
+    int64 user_id = 1;
+}

@@ -1,0 +1,42 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.eclipse/
+.settings/
+
+# Maven build output（Jib 直接从 classes + deps 构建，不需要 fat jar）
+**/target/*
+
+# Node.js (SDK build artifacts)
+node_modules/
+src/test/resources/node_modules/
+package-lock.json
+
+# Docs
+docs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.dockerignore
+docker-compose*.yml
+Dockerfile*
+
+# Claude
+.claude/
+
+# Temp
+*.log
+*.tmp
+*.swp
+*.swo
+
+# 注意：不能排除 src/main/proto/ —— Docker 内执行 mvn 构建时 protobuf-maven-plugin 需要 .proto 源码重新生成

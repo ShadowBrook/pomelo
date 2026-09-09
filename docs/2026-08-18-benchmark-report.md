@@ -1,0 +1,80 @@
+# Pomelo 压力测试报告（2026-08-18）
+
+## 概述
+
+使用 `pomelo-benchmark` 压测工具对 Pomelo IM 进行完整链路压测（HTTP 注册 + TCP IM 协议登录/加好友/发消息），度量各阶段的吞吐（QPS）与延迟（P50/P99/max），暴露系统容量边界。
+
+## 压测环境与配置
+
+| 项 | 值 |
+|------|-----|
+| 部署 | Docker Compose（logic-server / gateway / seqsvr×5 / PostgreSQL / Redis） |
+| 硬件 | macOS，10 核 CPU |
+| 压测参数 | `--users 1000 --friends 500 --messages 100000 --concurrency 1000` |
+| 总耗时 | 18.4 秒（修复前 5 分 24 秒） |
+
+## 各阶段指标
+
+**最新压测指标（2026-08-20，所有瓶颈已修复，并发 1000，全阶段 0 错误）：**
+
+| 阶段 | 总量 | 成功率 | QPS | P50 | P99 | max |
+|------|------|--------|-----|-----|-----|-----|
+| 注册 | 1000 | 100% | 296 | 1.78s | 3.23s | 3.25s |
+| 登录 | 1000 | 100% | 4167 | — | — | 240ms 总耗时 |
+| 加好友申请 | 500 | 100% | 2031 | 123ms | 144ms | 144ms |
+| 接受好友 | 500 | 100% | 2029 | 58ms | 92ms | 93ms |
+| 发消息 | 100000 | 100% | 7816 | 114ms | 475ms | 600ms |
+
+> **修复前对比**（首次压测，bcrypt + PG 池未调优）：注册 QPS 3 / 登录 3509 / 加好友 1257 / 发消息成功率 16%（84% 失败）。本次压测总耗时 18.4 秒（修复前 5 分 24 秒）。
+
+## 历史瓶颈分析（均已修复）
+
+### 1. 注册 — bcrypt cost=12 是 CPU 瓶颈 ✅ 已解决
+
+每用户 bcrypt 哈希约 2.5 秒（cost=12），10 核 CPU 并发 1000 时严重排队（P50=209 秒）。**已修复**：改用 Vert.x `HashingStrategy`（PBKDF2），单次哈希降到 ~0.2s，注册 QPS 从 3 提升到 296。
+
+### 2. 发消息 — PG 连接池等待队列过小（84% 失败） ✅ 已解决
+
+```
+ERROR: Connection pool reached max wait queue size of 512
+```
+
+- PG 单条 INSERT 实测仅 0.3ms（`EXPLAIN ANALYZE`），`pgbench` 64 连接实测可支撑 7 万 tps——**并非 PG 写入慢**
+- 真实根因：Vert.x PgPool 的 `maxWaitQueueSize=512` 过小，并发 750+ 时等待队列打满，超出部分立即失败
+- **已修复**：`maxWaitQueueSize` 512 → 5000，1000 并发发消息从 84% 失败 → 0 错误（真实吞吐 7816/s）
+
+## 排查过程中修复的真实问题（均验证生效）
+
+| 问题 | 根因 | 修复 | 效果 |
+|------|------|------|------|
+| 登录 0/1000 | Vert.x 每次连接创建新 NetClient，并发 1000 时资源耗尽 | 共享单个 NetClient（Vert.x 推荐用法） | 登录 0 → **1000/1000**（3509 qps） |
+| 登录 Redis 排队 | Redis 连接池 `maxPoolSize=4` 过小 | 调大到 64 / maxWaitingHandlers 512 | 登录恢复 |
+| 加好友/发消息 500 | PG 连接池 `maxSize=10` 过小 | 调大到 64 / maxWaitQueueSize 512 | 加好友/接受好友 0 错误 |
+| 发消息 84% 失败 | Vert.x PgPool `maxWaitQueueSize=512` 过小，并发 750+ 时等待队列打满 | 调大到 5000 | 发消息 1000 并发 **0 错误**（qps 7816） |
+| 发消息 route outdated | `RangeId.calcSectionID` 的 `id >= idBegin + size` int 溢出（id 空间接近 2^31） | 改 long 运算 + `MediateManager.generateRouter` 同步修复 | 早期 10% 失败消除 |
+
+**配置修改**（`conf/config.yaml`，实际生效文件）：
+- `redis.maxPoolSize`: 4 → 64，`redis.maxWaitingHandlers`: 8 → 512
+- `database.pool.maxSize`: 10 → 64，`database.pool.maxWaitQueueSize`: 50 → 5000
+
+## 优化建议
+
+### 发消息 ✅ 已解决（2026-08-20）
+根因是 Vert.x PgPool 的 `maxWaitQueueSize=512` 过小（`pgbench` 64 连接实测可支撑 7 万 tps，但 Vert.x 池并发 750+ 时等待队列打满）。调大到 5000 后，1000 并发发消息 100% 成功（qps 7816）。
+
+### 注册 ✅ 已解决（2026-08-20）
+密码加密从 bcrypt 换成 Vert.x `HashingStrategy`（PBKDF2），注册 QPS 从 3 提升到 **296**（98 倍），单次哈希从 ~2.5s 降到 ~0.2s。**异步注册**仍可作为下一步优化（注册请求先返回，后台完成密码哈希）。
+
+## 结论
+
+核心业务（登录 / 加好友 / 消息收发基础链路）在并发 1000 下均正常（登录 4167 / 加好友 2031 / 接受好友 2029 QPS，0 错误）。原始瓶颈两处均已解决：
+
+- ~~**注册**：bcrypt cost=12 的 CPU 密集度~~ ✅ 已修复（HashingStrategy / PBKDF2）
+- ~~**发消息**：PG 连接池打满~~ ✅ 已修复（maxWaitQueueSize 512 → 5000）
+
+压测工具在此过程中发现并修复了 6 个独立缺陷（NetClient 共享、Redis/PG 连接池、seqsvr int 溢出、bcrypt 慢哈希、PgPool maxWaitQueueSize 过小）。
+
+## 相关文件
+
+- 压测工具：`pomelo-benchmark/`（实现规划见 `docs/superpowers/plans/2026-08-18-benchmark-tool.md`）
+- 运行方式：`./mvnw -pl pomelo-benchmark -am install -DskipTests && ./mvnw -pl pomelo-benchmark exec:java -Dexec.args="--host localhost --users N --friends F --messages M --concurrency C"`

@@ -1,0 +1,34 @@
+package com.github.moxib.pomelo.logic.service;
+
+import com.github.moxib.pomelo.common.ErrorCode;
+import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.logic.model.requests.CtrlRequest;
+import com.github.moxib.pomelo.proto.ctrl.CtrlProto;
+import io.vertx.core.Future;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
+
+public class CtrlService extends ServiceBase {
+
+  private static final Logger LOG = LoggerFactory.getLogger(CtrlService.class);
+
+  public CtrlService() {
+  }
+
+  public Future<ImMessage> process(ImMessage message) {
+    try {
+      CtrlRequest req = decode(message, CtrlRequest.class);
+      LOG.info("收到控制命令请求，ctrlType: {}", req.ctrlType());
+
+      CtrlProto.CtrlResp respBody = CtrlProto.CtrlResp.newBuilder()
+        .setCode(0).setMessage("success").build();
+
+      return Future.succeededFuture(buildResponse(message, CMD_CTRL_RESP_VALUE, respBody));
+    } catch (Exception e) {
+      LOG.error("处理控制命令请求失败", e);
+      return Future.succeededFuture(buildErrorResp(message, CMD_CTRL_RESP_VALUE, ErrorCode.INTERNAL_ERROR, "处理控制命令失败：" + e.getMessage()));
+    }
+  }
+}

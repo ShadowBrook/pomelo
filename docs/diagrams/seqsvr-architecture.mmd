@@ -1,0 +1,31 @@
+flowchart TD
+  subgraph BIZ["业务侧：pomelo-logic-server"]
+    C2C["C2CService.doSend()"]
+    SDK["SeqClientService（客户端 SDK）<br/>本地缓存路由表 + routeVersion"]
+    C2C -->|"fetchNextSequence(recipientId)"| SDK
+  end
+
+  subgraph ALLOC["AllocSvr ×N（发号服务，号段租约持有者）"]
+    AV["SeqAllocVerticle<br/>EventBus: seqsvr.alloc.[nodeId.]fetchNext / getCurrent<br/>admin /health 健康端点"]
+    AM["AllocManager（核心算法）<br/>curSeqs：每 id 稀疏 Map<br/>sectionMaxSeqs + active / pending sections"]
+    AV --> AM
+  end
+
+  subgraph MED["MediateSvr（仲裁，控制面低 QPS）"]
+    MV["MediateVerticle<br/>register / unregister / heartbeat / getRouter<br/>admin /router /nodes"]
+    MM["MediateManager<br/>全量 section 均匀分块 + 贪心迁移<br/>router.version 单调递增"]
+    MV --> MM
+  end
+
+  subgraph ST["StoreSvr ×M≥3（持久化层，NRW：W=2 R=2）"]
+    SV["StoreVerticle（每副本一个 replicaId）<br/>seqsvr.store.[replicaId.]saveMaxSeq 等 4 个 RPC"]
+    SM["StoreManager<br/>mmap set_x_y.db：每 section 8 字节 max_seq<br/>router_x_y.dat：路由表 JSON"]
+    SV --> SM
+  end
+
+  SDK -->|"① 按缓存路由表定向到归属节点<br/>seqsvr.alloc.nodeN.fetchNext {id, version}"| AV
+  SDK -.->|"兜底地址 seqsvr.alloc.fetchNext<br/>（无路由表 / 目标节点传输失败）"| AV
+  SDK -.->|"连续路由过期 ≥3 次：向 Mediate<br/>getRouter 拉全量路由"| MV
+  AV <-->|"租约同步每 4s loadRouteTable（R=2）<br/>号段溢出 saveMaxSeq（W=2）<br/>恢复 / 激活时 loadMaxSeqs"| SV
+  AV -->|"启动注册 / 周期心跳 /<br/>优雅下线 unregister"| MV
+  MV -->|"saveRouteTable（W=2）"| SV

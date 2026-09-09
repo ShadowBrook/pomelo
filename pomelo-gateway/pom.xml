@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>com.github.moxib</groupId>
+    <artifactId>pomelo</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>pomelo-gateway</artifactId>
+  <packaging>jar</packaging>
+
+  <dependencies>
+    <dependency>
+      <groupId>com.github.moxib</groupId>
+      <artifactId>pomelo-common</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-web</artifactId>
+    </dependency>
+    <!-- AUTH_REQ token 验签解析（gateway 从 JWT 提取 userId/id/userName/nickname 注册 session） -->
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-auth-jwt</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.github.shadowbrook</groupId>
+      <artifactId>vertx-redis-clustermanager</artifactId>
+      <version>0.0.2</version>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-junit5</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.github.moxib</groupId>
+      <artifactId>pomelo-logic-server</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+      </plugin>
+      <!-- Jib 打 Docker 镜像：无需 Dockerfile，Maven 一步产出 OCI 镜像 -->
+      <plugin>
+        <groupId>com.google.cloud.tools</groupId>
+        <artifactId>jib-maven-plugin</artifactId>
+        <version>3.4.0</version>
+        <configuration>
+          <from>
+            <image>eclipse-temurin:21-jre</image>
+            <platforms>
+              <platform>
+                <architecture>arm64</architecture>
+                <os>linux</os>
+              </platform>
+            </platforms>
+          </from>
+          <to>
+            <image>pomelo/gateway</image>
+          </to>
+          <container>
+            <user>1000:1000</user>
+            <mainClass>com.github.moxib.pomelo.gateway.GatewayMain</mainClass>
+            <entrypoint>sh,-c,exec java $JAVA_OPTS -cp @/app/jib-classpath-file com.github.moxib.pomelo.gateway.GatewayMain</entrypoint>
+            <environment>
+              <JAVA_OPTS>-Xms256m -Xmx512m</JAVA_OPTS>
+            </environment>
+            <workingDirectory>/app</workingDirectory>
+          </container>
+          <extraDirectories>
+            <paths>
+              <path>
+                <from>${maven.multiModuleProjectDirectory}/conf</from>
+                <into>/app/conf</into>
+              </path>
+            </paths>
+          </extraDirectories>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
