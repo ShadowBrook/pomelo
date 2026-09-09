@@ -120,6 +120,8 @@ public class ProtobufCodec<T> implements MessageCodec<T> {
     registerProto(CommonProto.Cmd.CMD_GROUP_ACK_RESP_VALUE, GroupMgmtProto.GroupAckResp.parser(), GroupMgmtProto.GroupAckResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_MSG_READ_REQ_VALUE, GroupMgmtProto.GetGroupMsgReadStatusReq.parser(), GroupMgmtProto.GetGroupMsgReadStatusReq.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_MSG_READ_RESP_VALUE, GroupMgmtProto.GetGroupMsgReadStatusResp.parser(), GroupMgmtProto.GetGroupMsgReadStatusResp.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_READ_STATE_REQ_VALUE, GroupMgmtProto.GetGroupReadStateReq.parser(), GroupMgmtProto.GetGroupReadStateReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_READ_STATE_RESP_VALUE, GroupMgmtProto.GetGroupReadStateResp.parser(), GroupMgmtProto.GetGroupReadStateResp.class);
 
     // 媒体上传
     registerProto(CommonProto.Cmd.CMD_UPLOAD_REQ_VALUE, UploadProto.UploadReq.parser(), UploadProto.UploadReq.class);

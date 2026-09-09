@@ -12,6 +12,7 @@ import com.github.moxib.pomelo.logic.model.requests.CreateGroupRequest;
 import com.github.moxib.pomelo.logic.model.requests.GetGroupInfoRequest;
 import com.github.moxib.pomelo.logic.model.requests.GetGroupMembersRequest;
 import com.github.moxib.pomelo.logic.model.requests.GroupMsgReadRequest;
+import com.github.moxib.pomelo.logic.model.requests.GroupReadStateRequest;
 import com.github.moxib.pomelo.logic.model.requests.InviteToGroupRequest;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
@@ -45,7 +46,8 @@ public class GroupManagementService extends ServiceBase {
       CMD_GROUP_GET_INFO_REQ_VALUE, this::handleGetGroupInfo,
       CMD_GROUP_GET_MEMBERS_REQ_VALUE, this::handleGetMembers,
       CMD_GROUP_GET_MY_GROUPS_REQ_VALUE, this::handleGetMyGroups,
-      CMD_GROUP_MSG_READ_REQ_VALUE, this::handleGetMsgReadStatus
+      CMD_GROUP_MSG_READ_REQ_VALUE, this::handleGetMsgReadStatus,
+      CMD_GROUP_READ_STATE_REQ_VALUE, this::handleGetGroupReadState
     );
   }
 
@@ -297,6 +299,34 @@ public class GroupManagementService extends ServiceBase {
               return buildResponse(message, CMD_GROUP_MSG_READ_RESP_VALUE, resp.build());
             });
         });
+      });
+  }
+
+  /**
+   * 全群成员已读游标：一次返回 user_id → last_read_seq，客户端本地计算各消息已读人数。
+   */
+  private Future<ImMessage> handleGetGroupReadState(ImMessage message) {
+    GroupReadStateRequest req = decode(message, GroupReadStateRequest.class);
+    if (req == null || req.groupId() == null || req.groupId().isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_READ_STATE_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "groupId 不能为空"));
+    }
+    long groupId = Long.parseLong(req.groupId());
+
+    return membershipDenial(message, CMD_GROUP_READ_STATE_RESP_VALUE, getUserIdFromHeaders(message), groupId)
+      .compose(denial -> {
+        if (denial != null) {
+          return Future.succeededFuture(denial);
+        }
+        return groupRepo.findMemberReadStates(groupId)
+          .map(states -> {
+            GroupMgmtProto.GetGroupReadStateResp.Builder resp =
+              GroupMgmtProto.GetGroupReadStateResp.newBuilder().setCode(0).setMessage("success");
+            states.forEach((userId, lastReadSeq) -> resp.addMembers(
+              GroupMgmtProto.MemberReadState.newBuilder()
+                .setUserId(userId).setLastReadSeq(lastReadSeq).build()));
+            return buildResponse(message, CMD_GROUP_READ_STATE_RESP_VALUE, resp.build());
+          });
       });
   }
 

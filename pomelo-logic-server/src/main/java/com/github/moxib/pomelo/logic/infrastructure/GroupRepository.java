@@ -5,6 +5,7 @@ import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
 import io.vertx.core.Future;
 
 import java.util.List;
+import java.util.Map;
 
 public interface GroupRepository {
 
@@ -47,6 +48,12 @@ public interface GroupRepository {
   Future<GroupMsgWithSender> findByGroupSenderAndClientMsgId(long groupId, long senderId, long clientMsgId);
 
   Future<List<GroupMsgWithSender>> pullMessages(long groupId, long cursor, int limit, boolean backward);
+
+  /**
+   * 全群成员的已读游标（user_id → last_read_seq）。
+   * 一次查询覆盖全群，调用方据此本地计算任意 seq 的已读人数，避免按消息逐条查询。
+   */
+  Future<Map<Long, Long>> findMemberReadStates(long groupId);
 
   /**
    * 查询群消息的已读用户列表。

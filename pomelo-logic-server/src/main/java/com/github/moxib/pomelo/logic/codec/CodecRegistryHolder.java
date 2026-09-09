@@ -11,6 +11,7 @@ import com.github.moxib.pomelo.logic.model.requests.GetGroupInfoRequest;
 import com.github.moxib.pomelo.logic.model.requests.GetGroupMembersRequest;
 import com.github.moxib.pomelo.logic.model.requests.GroupAckRequest;
 import com.github.moxib.pomelo.logic.model.requests.GroupMsgReadRequest;
+import com.github.moxib.pomelo.logic.model.requests.GroupReadStateRequest;
 import com.github.moxib.pomelo.logic.model.requests.GroupPullMsgRequest;
 import com.github.moxib.pomelo.logic.model.requests.InviteToGroupRequest;
 import com.github.moxib.pomelo.logic.model.requests.LoginRequest;
@@ -96,6 +97,8 @@ public final class CodecRegistryHolder {
       GroupMgmtProto.GetMyGroupsReq.parser(), req -> null, Object.class);
     r.registerProtobuf(CMD_GROUP_MSG_READ_REQ_VALUE,
       GroupMgmtProto.GetGroupMsgReadStatusReq.parser(), GroupMsgReadRequest::fromProto, GroupMsgReadRequest.class);
+    r.registerProtobuf(CMD_GROUP_READ_STATE_REQ_VALUE, GroupMgmtProto.GetGroupReadStateReq.parser(),
+      GroupReadStateRequest::fromProto, GroupReadStateRequest.class);
 
     // 媒体上传预签名
     r.registerProtobuf(CMD_UPLOAD_REQ_VALUE, UploadProto.UploadReq.parser(),

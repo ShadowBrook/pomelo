@@ -11,7 +11,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class PgGroupRepository implements GroupRepository {
 
@@ -97,6 +99,10 @@ public class PgGroupRepository implements GroupRepository {
     SELECT id, sender_id, group_id, msg_type, content, seq, created_at
     FROM im_message_group WHERE group_id = $1 AND sender_id = $2 AND client_msg_id = $3
     ORDER BY id DESC LIMIT 1
+    """;
+
+  private static final String FIND_MEMBER_READ_STATES_SQL = """
+    SELECT user_id, last_read_seq FROM im_group_member WHERE group_id = $1
     """;
 
   private static final String FIND_MSG_READERS_SQL = """
@@ -275,6 +281,19 @@ public class PgGroupRepository implements GroupRepository {
           row.getString("content"),
           row.getLong("seq"),
           row.getLong("created_at"));
+      });
+  }
+
+  @Override
+  public Future<Map<Long, Long>> findMemberReadStates(long groupId) {
+    return pool.preparedQuery(FIND_MEMBER_READ_STATES_SQL)
+      .execute(Tuple.of(groupId))
+      .map(rows -> {
+        Map<Long, Long> out = new HashMap<>();
+        for (Row row : rows) {
+          out.put(row.getLong("user_id"), row.getLong("last_read_seq"));
+        }
+        return out;
       });
   }
 
