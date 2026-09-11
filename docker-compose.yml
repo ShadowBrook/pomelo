@@ -44,8 +44,9 @@ services:
       POMELO_TLS_KEY_PATH: "/certs/server.key"
       # JVM 参数
       JAVA_OPTS: "-Xms256m -Xmx512m"
-    # JWT 签名密钥（HS256 密钥即签发权）：由 deploy.sh 随机生成，不入库
-    env_file: [./conf/jwt.env]
+    # JWT 签名密钥（HS256 密钥即签发权）与 LiveKit token 签名密钥：
+    # 均由 deploy.sh 随机生成，不入库
+    env_file: [./conf/jwt.env, ./conf/livekit.env]
     volumes: [./conf/tls:/certs:ro]
     depends_on:
       postgres:
@@ -219,6 +220,25 @@ services:
     restart: unless-stopped
     networks:
       - pomelo-net
+
+  # ============ LiveKit SFU（音视频通话媒体面） ============
+
+  livekit:
+    image: livekit/livekit-server:v1.13.6
+    container_name: pomelo-livekit
+    # 配置见 conf/livekit.yaml；API 密钥经 LIVEKIT_KEYS 注入（deploy.sh 生成 conf/livekit.env）
+    command: --config /etc/livekit/livekit.yaml
+    ports:
+      - "7880:7880"                      # 信令 WS（生产收进反代 wss）
+      - "7881:7881/tcp"                  # WebRTC TCP 回退
+      - "3478:3478/udp"                  # TURN/UDP
+      - "50000-60000:50000-60000/udp"    # WebRTC 媒体 UDP
+    volumes: [./conf/livekit.yaml:/etc/livekit/livekit.yaml:ro]
+    env_file: [./conf/livekit.env]
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [pomelo-net]
 
 volumes:
   pgdata:

@@ -56,3 +56,15 @@ friend:
 message:
   pullLimit: 50
   maxPullLimit: 200
+
+call:
+  ringTimeoutMs: 45000
+  maxDurationMs: 7200000
+
+livekit:
+  publicUrl: "ws://localhost:7880"
+  host: "http://livekit:7880"
+  apiKey: "devkey"
+  secret: "pomelo-livekit-dev-secret-change-in-production"
+  allowDefaultSecret: false
+  tokenTtlSeconds: 900
