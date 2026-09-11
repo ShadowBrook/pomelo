@@ -77,7 +77,7 @@ public class LogicVerticle extends VerticleBase {
         var livekitRooms = new LiveKitRoomClient(vertx, livekitTokens);
         callService = new CallService(vertx, pushRouter, groupRepo,
           new PgCallRepository(vertx), new RedisCallStateStore(RedisFactory.get(vertx)),
-          livekitTokens, livekitRooms, snowflake);
+          livekitTokens, livekitRooms, snowflake, messageRepo, seqClient);
 
         var bus = vertx.eventBus();
         bus.consumer("logic.c2c",     (Message<Buffer> msg) -> dispatch(msg, c2cService::process));

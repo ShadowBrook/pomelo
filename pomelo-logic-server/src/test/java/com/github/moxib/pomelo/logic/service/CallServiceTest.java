@@ -8,12 +8,17 @@ import com.github.moxib.pomelo.logic.infrastructure.GroupMsgReader;
 import com.github.moxib.pomelo.logic.infrastructure.GroupMsgWithSender;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.InMemoryCallStateStore;
+import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
 import com.github.moxib.pomelo.logic.model.CallSession;
 import com.github.moxib.pomelo.logic.model.GroupInfo;
 import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
+import com.github.moxib.pomelo.logic.model.MessageRecord;
+import com.github.moxib.pomelo.logic.model.UserIdInfo;
+import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.call.CallProto;
+import com.github.moxib.pomelo.proto.common.CommonProto;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -49,6 +54,7 @@ class CallServiceTest {
 
   private InMemoryCallStateStore store;
   private RecordingCallRepository callRepo;
+  private RecordingMessageRepository msgRepo;
   private RecordingRoomManager rooms;
   private CapturingPushRouter pushRouter;
   private LiveKitTokenService tokens;
@@ -70,13 +76,23 @@ class CallServiceTest {
   void setUp() {
     store = new InMemoryCallStateStore();
     callRepo = new RecordingCallRepository();
+    msgRepo = new RecordingMessageRepository();
     rooms = new RecordingRoomManager();
     // 真实签发器（测试密钥经包私有构造器注入）：webhook 验签也依赖它
     tokens = new LiveKitTokenService("devkey", "test-secret-not-for-deployment", 900, "ws://lk:7880");
     pushRouter = new CapturingPushRouter();
     service = new CallService(vertx, pushRouter, friendsOf(CALLER, CALLEE),
       callRepo, store, tokens, rooms, new SnowflakeIdGenerator(1),
-      RING_TIMEOUT, 3_600_000L);
+      msgRepo, seqClient(), RING_TIMEOUT, 3_600_000L);
+  }
+
+  private static SeqClientService seqClient() {
+    return new SeqClientService(vertx) {
+      @Override
+      public Future<Long> fetchNextSequence(long id) {
+        return Future.succeededFuture(1L);
+      }
+    };
   }
 
   // ------------------------------------------------------------------
@@ -121,6 +137,22 @@ class CallServiceTest {
       ended++;
       return Future.succeededFuture();
     }
+  }
+
+  /** 记录系统消息写入（通话记录） */
+  private static class RecordingMessageRepository implements MessageRepository {
+    final List<MessageRecord> saved = new ArrayList<>();
+    @Override public Future<Boolean> save(MessageRecord record) {
+      saved.add(record);
+      return Future.succeededFuture(true);
+    }
+    @Override public Future<Void> batchUpdateStatus(long recipientId, List<Long> ids, int newStatus) { return Future.succeededFuture(); }
+    @Override public Future<List<MessageRecord>> pullPending(long recipientId, long sinceSeq, int limit) { return Future.succeededFuture(List.of()); }
+    @Override public Future<MessageRecord> findById(long messageId) { return Future.succeededFuture(null); }
+    @Override public Future<List<MessageRecord>> findByIds(long recipientId, List<Long> ids) { return Future.succeededFuture(List.of()); }
+    @Override public Future<MessageRecord> findBySenderAndClientMsgId(long senderId, long clientMsgId) { return Future.succeededFuture(null); }
+    @Override public Future<List<MessageRecord>> pullConversation(String conversationId, long beforeTime, int limit) { return Future.succeededFuture(List.of()); }
+    @Override public Future<Map<Long, UserIdInfo>> findUserIdsByIds(List<Long> ids) { return Future.succeededFuture(Map.of()); }
   }
 
   private static class RecordingRoomManager implements CallRoomManager {
@@ -171,7 +203,7 @@ class CallServiceTest {
   private static CallProto.CallEventPush lastPush(CapturingPushRouter router, long toUserId) {
     for (int i = router.pushes.size() - 1; i >= 0; i--) {
       PushEnvelope env = router.pushes.get(i);
-      if (env.getTargetUserId().equals(String.valueOf(toUserId))) {
+      if (env.getCmd() == CMD_CALL_EVENT_PUSH_VALUE && env.getTargetUserId().equals(String.valueOf(toUserId))) {
         try {
           return CallProto.CallEventPush.parseFrom(env.getBody());
         } catch (Exception e) {
@@ -370,7 +402,7 @@ class CallServiceTest {
   }
 
   @Test
-  @DisplayName("END：通话中挂断 → 对端收到 hangup 推送")
+  @DisplayName("通话中用户主动挂断 → 发送 END(HANGUP) 并写入双方通话记录系统消息")
   void hangupNotifiesPeer() throws Exception {
     String callId = invite();
     accept(callId, CALLEE);
@@ -380,6 +412,17 @@ class CallServiceTest {
     assertEquals(3, push.getEvent());
     assertEquals(END_REASON_HANGUP_VALUE, push.getReasonValue());
     assertEquals(1, callRepo.ended);
+
+    // 系统消息：双方收件箱各一条，MSG_TYPE_SYSTEM，内容含时长
+    assertEquals(2, msgRepo.saved.size());
+    for (MessageRecord record : msgRepo.saved) {
+      assertEquals(CommonProto.MsgType.MSG_TYPE_SYSTEM_VALUE, record.getMsgType());
+      assertTrue(record.getContent().contains("\"kind\":\"call\""));
+      assertTrue(record.getContent().contains("\"answered\":true"));
+    }
+    // 一条发给主叫（sender=被叫），一条发给被叫（sender=主叫）
+    assertTrue(msgRepo.saved.stream().anyMatch(r -> r.getSenderId() == CALLEE && r.getRecipientId() == CALLER));
+    assertTrue(msgRepo.saved.stream().anyMatch(r -> r.getSenderId() == CALLER && r.getRecipientId() == CALLEE));
   }
 
   @Test

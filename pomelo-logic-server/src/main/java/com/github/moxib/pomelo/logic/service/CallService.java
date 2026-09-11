@@ -6,14 +6,20 @@ import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.logic.infrastructure.CallRepository;
 import com.github.moxib.pomelo.logic.infrastructure.CallStateStore;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
+import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.model.CallSession;
+import com.github.moxib.pomelo.logic.model.MessageRecord;
 import com.github.moxib.pomelo.logic.model.requests.CallAcceptRequest;
 import com.github.moxib.pomelo.logic.model.requests.CallEndRequest;
 import com.github.moxib.pomelo.logic.model.requests.CallInviteRequest;
 import com.github.moxib.pomelo.logic.model.requests.CallTokenRequest;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.call.CallProto;
+import com.github.moxib.pomelo.proto.chat.ChatProto;
+import com.github.moxib.pomelo.proto.common.CommonProto;
+import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
+import com.google.protobuf.ByteString;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
@@ -57,6 +63,8 @@ public class CallService extends ServiceBase {
   private final CallTokenIssuer tokens;
   private final CallRoomManager rooms;
   private final SnowflakeIdGenerator snowflake;
+  private final MessageRepository messageRepo;
+  private final SeqClientService seqClient;
 
   private final long ringTimeoutMs;
   private final long maxDurationMs;
@@ -73,8 +81,10 @@ public class CallService extends ServiceBase {
   public CallService(Vertx vertx, PushRouter pushRouter, GroupRepository groupRepo,
                      CallRepository callRepo, CallStateStore store,
                      CallTokenIssuer tokens, CallRoomManager rooms,
-                     SnowflakeIdGenerator snowflake) {
+                     SnowflakeIdGenerator snowflake,
+                     MessageRepository messageRepo, SeqClientService seqClient) {
     this(vertx, pushRouter, groupRepo, callRepo, store, tokens, rooms, snowflake,
+      messageRepo, seqClient,
       ConfigHolder.getLong("call.ringTimeoutMs", 45_000L),
       ConfigHolder.getLong("call.maxDurationMs", 7_200_000L));
   }
@@ -84,6 +94,7 @@ public class CallService extends ServiceBase {
                      CallRepository callRepo, CallStateStore store,
                      CallTokenIssuer tokens, CallRoomManager rooms,
                      SnowflakeIdGenerator snowflake,
+                     MessageRepository messageRepo, SeqClientService seqClient,
                      long ringTimeoutMs, long maxDurationMs) {
     this.vertx = vertx;
     this.pushRouter = pushRouter;
@@ -93,6 +104,8 @@ public class CallService extends ServiceBase {
     this.tokens = tokens;
     this.rooms = rooms;
     this.snowflake = snowflake;
+    this.messageRepo = messageRepo;
+    this.seqClient = seqClient;
     this.ringTimeoutMs = ringTimeoutMs;
     this.maxDurationMs = maxDurationMs;
     this.roomEmptyTimeoutSec = (int) Math.max(60, maxDurationMs / 1000);
@@ -356,16 +369,82 @@ public class CallService extends ServiceBase {
   private Future<Void> finishCall(CallSession session, int reason, long endedBy) {
     cancelTimers(session.callId);
     cleanupKeys(session);
+    long durationMs = session.answeredAt > 0 ? Math.max(0, System.currentTimeMillis() - session.answeredAt) : 0;
     LOG.info("通话结束: callId={} reason={} endedBy={} durationMs={}",
-      session.callId, reason, endedBy,
-      session.answeredAt > 0 ? System.currentTimeMillis() - session.answeredAt : 0);
+      session.callId, reason, endedBy, durationMs);
 
     Future<Void> notify = notifyPeer(session, reason, endedBy);
     return Future.all(
       rooms.deleteRoom(session.room),
       callRepo.markEnded(session.callId, System.currentTimeMillis(), reason),
-      notify
+      notify,
+      // 通话记录以系统消息形式写入双方收件箱（尽力而为，失败不影响收尾）
+      writeCallRecords(session, reason, durationMs).recover(err -> {
+        LOG.warn("通话记录消息写入失败 callId={}: {}", session.callId, err.getMessage());
+        return Future.succeededFuture();
+      })
     ).mapEmpty();
+  }
+
+  /**
+   * 通话记录落为双方收件箱各一条系统消息（MSG_TYPE_SYSTEM，内容为 JSON）：
+   * 走正常的 seq/离线拉取/推送链路，刷新与跨设备都能在会话窗口看到记录。
+   */
+  private Future<Void> writeCallRecords(CallSession session, int reason, long durationMs) {
+    boolean answered = session.answeredAt > 0;
+    String content = new JsonObject()
+      .put("kind", "call")
+      .put("mediaType", session.mediaType)
+      .put("answered", answered)
+      .put("durationMs", durationMs)
+      .put("reason", reason)
+      .put("callId", session.callId)
+      .encode();
+    return writeCallRecord(session.callerId, session.calleeId, content)
+      .compose(v -> writeCallRecord(session.calleeId, session.callerId, content))
+      .mapEmpty();
+  }
+
+  private Future<Void> writeCallRecord(long from, long to, String content) {
+    return seqClient.fetchNextSequence(to).compose(seq -> {
+      long id = snowflake.nextId();
+      MessageRecord record = MessageRecord.builder()
+        .id(id)
+        .senderId(from)
+        .recipientId(to)
+        .conversationId(MessageRecord.buildConversationId(from, to))
+        .msgType(CommonProto.MsgType.MSG_TYPE_SYSTEM_VALUE)
+        .content(content)
+        .seq(seq)
+        .status(0)
+        .createdAt(System.currentTimeMillis())
+        .clientMsgId(id)
+        .build();
+      return messageRepo.save(record)
+        .compose(inserted -> {
+          if (inserted) {
+            pushCallRecordNotify(record);
+          }
+          return Future.<Void>succeededFuture();
+        });
+    });
+  }
+
+  /** 在线的一方经 C2CNotify 实时收到记录（离线则由拉取补齐） */
+  private void pushCallRecordNotify(MessageRecord record) {
+    CommonProto.MessageContent message = CommonProto.MessageContent.newBuilder()
+      .setMsgTypeValue(record.getMsgType())
+      .setContent(ByteString.copyFromUtf8(record.getContent() != null ? record.getContent() : ""))      .setTimestamp(record.getCreatedAt())
+      .build();
+    ChatProto.C2CNotify notify = ChatProto.C2CNotify.newBuilder()
+      .setSenderId(record.getSenderId())
+      .setRecipientId(record.getRecipientId())
+      .setMessage(message)
+      .setSeq(record.getSeq())
+      .setMessageId(record.getId())
+      .build();
+    pushRouter.push(new PushEnvelope(String.valueOf(record.getRecipientId()),
+      CMD_C2C_NOTIFY_VALUE, notify.toByteArray()));
   }
 
   private Future<Void> notifyPeer(CallSession session, int reason, long endedBy) {
