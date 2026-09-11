@@ -6,6 +6,8 @@ import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +28,9 @@ class SeqSvrPerfBenchmark {
 
   @Test
   void benchmark() throws Exception {
+    // 独立临时目录：避免基准的 mmap 落盘到模块目录（data/seqsvr）污染工作区
+    Path dataDir = Files.createTempDirectory("seqsvr-bench-");
+    System.setProperty("seqsvr.dataDir", dataDir.toString());
     Vertx vertx = Vertx.vertx();
     try {
       CountDownLatch deployed = new CountDownLatch(1);
@@ -72,6 +77,7 @@ class SeqSvrPerfBenchmark {
       CountDownLatch closed = new CountDownLatch(1);
       vertx.close().onComplete(ar -> closed.countDown());
       closed.await(5, TimeUnit.SECONDS);
+      System.clearProperty("seqsvr.dataDir");
     }
   }
 

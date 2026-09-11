@@ -54,8 +54,11 @@ public class AllocManager {
   public static final long SYNC_LEASE_TIMEOUT_MS = 4000;
   /**
    * 停服阈值：距上次成功读取 Store 超过该时长即停止发号。
-   * 2026-09-07 事故 P9：从 5s 放宽到 15s（≈3× 同步周期），宿主短暂停顿不再直接打掉服务；
-   * 与 pending 激活延迟语义解耦。
+   * 2026-09-07 事故 P9：从 5s 放宽到 15s（≈3× 同步周期），宿主短暂停顿不再直接打掉服务。
+   * <p>
+   * 该值是"旧 owner 停止发号的时间上界"（与 Store 失联的节点收不到新路由表，只能等租约超时），
+   * 因此放宽它会同步放大 {@link #pendingActivateDelayMs}，两者必须保持
+   * {@code pendingActivateDelayMs > leaseTimeoutMs} 的序关系，否则迁移期双写。
    */
   public static final long LEASE_TIMEOUT_MS = 15000;
 
@@ -67,9 +70,18 @@ public class AllocManager {
   private final long leaseTimeoutMs;
   private final long syncLeaseMs;
   /**
-   * 新增号段 pending → active 的延迟。
-   * 必须大于旧 owner 在路由变更后继续发号的最大窗口（≈ syncLeaseMs），
-   * 取 2× 同步周期留出一个完整周期的余量，避免迁移期双写。
+   * 新增号段 pending → active 的延迟 = 停服阈值 + 一个同步周期。
+   * <p>
+   * 不变量：必须大于"旧 owner 停止发号的时间上界"，否则新旧 owner 会同时服务同一 section，
+   * 同一个 id 可能拿到重复 seq（收件人同步水位错乱）。旧 owner 停止发号有两种途径，
+   * 取其中更大的那个上界：
+   * <ul>
+   *   <li>健康节点：一个同步周期内读到新路由表并立即卸载号段（≈ syncLeaseMs）；</li>
+   *   <li>与 Store 失联的节点（宿主停顿 / 网络分区）：收不到新路由表，只能等租约超时停服
+   *       （= leaseTimeoutMs）。</li>
+   * </ul>
+   * 故取 {@code leaseTimeoutMs + syncLeaseMs}：既覆盖失联节点，又留一个周期的路由传播余量。
+   * 注意放宽停服阈值会同步推后新号段可用时间，这是"迁移期不双写"的必要代价。
    */
   private final long pendingActivateDelayMs;
   // Mediate 模式：路由表为空时不自举单节点，等待 Mediate 分配号段（避免多节点启动时双写）
@@ -134,7 +146,8 @@ public class AllocManager {
     this.maxIdSize = maxIdSize;
     this.leaseTimeoutMs = leaseTimeoutMs;
     this.syncLeaseMs = syncLeaseMs;
-    this.pendingActivateDelayMs = 2 * syncLeaseMs;
+    // 必须大于旧 owner 停止发号的时间上界，详见字段注释
+    this.pendingActivateDelayMs = leaseTimeoutMs + syncLeaseMs;
     this.waitForRouter = waitForRouter;
     this.state = AllocState.NONE;
     this.router = new Router(0, Collections.emptyList());
