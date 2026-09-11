@@ -34,7 +34,7 @@ public class BenchmarkMain {
     Vertx vertx = Vertx.vertx();
     try {
       // 阶段 1：批量注册用户
-      UserRegistry registry = new UserRegistry(vertx, cfg.host, cfg.apiPort);
+      UserRegistry registry = new UserRegistry(vertx, cfg.host, cfg.apiPort, cfg.tls);
       Metrics regMetrics = new Metrics("注册", cfg.users);
       List<UserRegistry.UserInfo> users = registry.register(cfg.users, cfg.concurrency, regMetrics)
         .toCompletionStage().toCompletableFuture().join();

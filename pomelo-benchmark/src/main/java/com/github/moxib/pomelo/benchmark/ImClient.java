@@ -146,8 +146,10 @@ public class ImClient {
         if (tls == null) {
           synchronized (SharedNetClient.class) {
             if (tls == null) {
-              // 压测场景接受自签名证书
-              tls = vertx.createNetClient(new NetClientOptions().setSsl(true).setTrustAll(true));
+              // 压测场景接受自签名证书；trustAll 时必须同时关闭主机名校验，
+              // 否则 Vert.x 以 "Missing hostname verification algorithm" 拒绝建连
+              tls = vertx.createNetClient(new NetClientOptions()
+                .setSsl(true).setTrustAll(true).setHostnameVerificationAlgorithm(""));
             }
           }
         }

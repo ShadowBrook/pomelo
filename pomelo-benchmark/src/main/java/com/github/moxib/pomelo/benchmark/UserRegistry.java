@@ -23,9 +23,13 @@ public class UserRegistry {
 
   private final WebClient client;
 
-  public UserRegistry(Vertx vertx, String host, int port) {
-    this.client = WebClient.create(vertx,
-      new WebClientOptions().setDefaultHost(host).setDefaultPort(port));
+  /**
+   * @param tls 服务端 api 开启 TLS 时必须为 true（自签名证书走 trustAll）
+   */
+  public UserRegistry(Vertx vertx, String host, int port, boolean tls) {
+    this.client = WebClient.create(vertx, new WebClientOptions()
+      .setDefaultHost(host).setDefaultPort(port)
+      .setSsl(tls).setTrustAll(tls));
   }
 
   /**
