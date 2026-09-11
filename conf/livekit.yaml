@@ -14,10 +14,10 @@ rtc:
   port_range_end: 40100
   # 向客户端广播的节点 IP：容器自身 IP（172.18.x）在 Docker Desktop 上从宿主机不可路由，
   # 信令能通但媒体必然超时（could not establish pc connection）。
-  # 127.0.0.1 = 本机浏览器经 Docker 端口代理可达（本机双端测试）；
-  # 跨设备测试/部署时改为宿主机局域网 IP，或生产用 use_external_ip: true
+  # 当前指向开发机局域网 IP：本机与局域网手机均可经 Docker 发布的 UDP 端口直达。
+  # 注意：IP 变化（DHCP）后需重启 livekit 容器；生产用 use_external_ip: true
   node_ip:
-    ipv4: "127.0.0.1"
+    ipv4: "192.168.0.103"
   # 生产跨网部署必须打开：服务器自动探测公网 IP 注入 ICE 候选；
   # 本机/内网开发保持 false，否则把探测到的外网 IP 发给内网客户端反而打不通
   use_external_ip: false

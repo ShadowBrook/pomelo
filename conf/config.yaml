@@ -81,8 +81,10 @@ call:
   maxDurationMs: 7200000
 
 livekit:
-  # 浏览器可达的 SFU 信令地址（room.connect 的 url）；生产换 wss://域名/livekit
-  publicUrl: "ws://localhost:7880"
+  # 浏览器可达的 SFU 信令地址（room.connect 的 url）。
+  # 开发：走前端 Vite 的 /lk 同源代理（手机 https 页面同样可用，无混合内容问题）；
+  # 局域网 IP 变化后需同步修改并重启 logic。生产换 wss://域名/livekit
+  publicUrl: "wss://192.168.0.103:5173/lk"
   # 服务端内部访问的 Twirp API 地址（容器部署用 docker 内部 DNS）
   host: "http://livekit:7880"
   apiKey: "devkey"
