@@ -55,7 +55,7 @@ public class LogicVerticle extends VerticleBase {
 
         var presigner = new MinioObjectPresigner();
         var mediaUrlSigner = new MinioMediaUrlSigner(presigner);
-        uploadService = new UploadService(presigner, snowflake);
+        uploadService = new UploadService(presigner);
 
         c2cService = new C2CService(pushRouter, messageRepo, seqClient, snowflake, mediaUrlSigner);
         ackService = new AckService(pushRouter, messageRepo);

@@ -107,6 +107,8 @@ public class ProtobufCodec<T> implements MessageCodec<T> {
     registerProto(CommonProto.Cmd.CMD_GROUP_CREATE_RESP_VALUE, GroupMgmtProto.CreateGroupResp.parser(), GroupMgmtProto.CreateGroupResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_INVITE_REQ_VALUE, GroupMgmtProto.InviteToGroupReq.parser(), GroupMgmtProto.InviteToGroupReq.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_INVITE_RESP_VALUE, GroupMgmtProto.InviteToGroupResp.parser(), GroupMgmtProto.InviteToGroupResp.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_KICK_REQ_VALUE, GroupMgmtProto.KickMemberReq.parser(), GroupMgmtProto.KickMemberReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_KICK_RESP_VALUE, GroupMgmtProto.KickMemberResp.parser(), GroupMgmtProto.KickMemberResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_GET_INFO_REQ_VALUE, GroupMgmtProto.GetGroupInfoReq.parser(), GroupMgmtProto.GetGroupInfoReq.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_GET_INFO_RESP_VALUE, GroupMgmtProto.GetGroupInfoResp.parser(), GroupMgmtProto.GetGroupInfoResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_GET_MEMBERS_REQ_VALUE, GroupMgmtProto.GetGroupMembersReq.parser(), GroupMgmtProto.GetGroupMembersReq.class);

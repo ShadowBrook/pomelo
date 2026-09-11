@@ -6,6 +6,7 @@ import com.github.moxib.pomelo.seqsvr.proto.RouterNode;
 import com.github.moxib.pomelo.seqsvr.proto.SeqSvrConstants;
 import com.github.moxib.pomelo.seqsvr.rpc.StoreAccessor;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,6 +43,15 @@ public class MediateManager {
 
   private final Map<String, NodeInfo> nodes = new HashMap<>();
   private volatile Router router;
+  /**
+   * 版本号计数器：每次生成自增，与持久化结果解耦。
+   * 若按"上一次成功发布的路由表 + 1"取版本，并发注册（第一次落盘尚未完成）会生成
+   * 两张同版本号但内容不同的路由表，节点按"版本相同即跳过"忽略真正的新表，
+   * 导致号段被两个节点同时服务。
+   */
+  private int nextVersion;
+  /** 持久化串行链：保证生成顺序与落盘顺序一致，避免旧版本后写覆盖新版本 */
+  private Future<Void> persistChain = Future.succeededFuture();
 
   private static class NodeInfo {
     final RouterNode node;
@@ -74,6 +84,8 @@ public class MediateManager {
       .onSuccess(loaded -> {
         if (loaded != null && !loaded.getNodeList().isEmpty()) {
           this.router = loaded;
+          // 版本号必须严格大于已发布版本，避免重启后生成与存量同版本的路由表
+          this.nextVersion = Math.max(nextVersion, loaded.getVersion());
           LOG.info("MediateManager loaded persisted router: version={}, nodes={}",
             loaded.getVersion(), loaded.getNodeList().size());
         }
@@ -152,10 +164,18 @@ public class MediateManager {
   /**
    * 生成新路由表并持久化，持久化成功后才更新内存并对外发布。
    * 持久化失败保持内存旧版本并返回失败——调用方（注册 RPC）失败后由 AllocSvr 重试注册。
+   * <p>
+   * 持久化串行化：并发注册/下线时，后一次生成必须等前一次落盘结束再写，
+   * 否则两次写盘可能乱序（旧版本后落盘覆盖新版本），出现"集群在用 vN、Store 落盘 vN-1"
+   * 的版本倒退，mediate 重启后旧版本复活。
    */
   private Future<Router> regenerateAndPersist() {
     Router newRouter = generateRouter();
-    return store.saveRouteTable(newRouter)
+    Future<Void> gate = persistChain;
+    Promise<Void> release = Promise.promise();
+    persistChain = gate.compose(v -> release.future());
+    Future<Router> persisted = gate
+      .compose(v -> store.saveRouteTable(newRouter))
       .map(v -> {
         this.router = newRouter;
         LOG.info("Router regenerated: version={}, nodes={}",
@@ -164,13 +184,18 @@ public class MediateManager {
       })
       .onFailure(err -> LOG.error("saveRouteTable failed, keeping previous router (old version={}): {}",
         router.getVersion(), err.getMessage()));
+    // 无论成败都释放串行链，失败由调用方（注册 RPC）重试
+    persisted.onComplete(ar -> release.complete());
+    return persisted;
   }
 
   private Router generateRouter() {
+    int version = Math.max(++nextVersion, router.getVersion() + 1);
+    nextVersion = version;
     if (nodes.isEmpty()) {
       // 版本必须单调递增：全部节点失联被移除时归零会让持有旧版本的客户端
       // 永久拒绝后续新路由表（2026-09-07 线上事故根因之一）
-      return new Router(router.getVersion() + 1, Collections.emptyList());
+      return new Router(version, Collections.emptyList());
     }
 
     // 存活节点按 nodeId 排序，保证路由表确定性
@@ -195,7 +220,7 @@ public class MediateManager {
       RouterNode node = nodes.get(id).node;
       nodeList.add(new RouterNode(node.getNodeId(), node.getIp(), node.getPort(), toRanges(owned.get(id))));
     }
-    return new Router(router.getVersion() + 1, nodeList);
+    return new Router(version, nodeList);
   }
 
   /**

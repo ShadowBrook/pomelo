@@ -14,12 +14,14 @@ import com.github.moxib.pomelo.logic.model.requests.GetGroupMembersRequest;
 import com.github.moxib.pomelo.logic.model.requests.GroupMsgReadRequest;
 import com.github.moxib.pomelo.logic.model.requests.GroupReadStateRequest;
 import com.github.moxib.pomelo.logic.model.requests.InviteToGroupRequest;
+import com.github.moxib.pomelo.logic.model.requests.KickMemberRequest;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
 import io.vertx.core.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
@@ -28,6 +30,11 @@ import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 public class GroupManagementService extends ServiceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(GroupManagementService.class);
+
+  /** 群成员角色：普通成员 / 管理员 / 群主（与 im_group_member.role 一致） */
+  private static final int ROLE_MEMBER = 0;
+  private static final int ROLE_ADMIN = 1;
+  private static final int ROLE_OWNER = 2;
 
   private final GroupRepository groupRepo;
   private final SnowflakeIdGenerator snowflake;
@@ -43,6 +50,7 @@ public class GroupManagementService extends ServiceBase {
     this.dispatchMap = Map.of(
       CMD_GROUP_CREATE_REQ_VALUE, this::handleCreateGroup,
       CMD_GROUP_INVITE_REQ_VALUE, this::handleInviteToGroup,
+      CMD_GROUP_KICK_REQ_VALUE, this::handleKickMember,
       CMD_GROUP_GET_INFO_REQ_VALUE, this::handleGetGroupInfo,
       CMD_GROUP_GET_MEMBERS_REQ_VALUE, this::handleGetMembers,
       CMD_GROUP_GET_MY_GROUPS_REQ_VALUE, this::handleGetMyGroups,
@@ -99,7 +107,7 @@ public class GroupManagementService extends ServiceBase {
       .build();
 
     return groupRepo.createGroup(group)
-      .compose(v -> groupRepo.addMember(snowflake.nextId(), id, ownerNumericId, 2, now))
+      .compose(v -> groupRepo.addMember(snowflake.nextId(), id, ownerNumericId, ROLE_OWNER, now))
       .map(v -> {
         GroupMgmtProto.CreateGroupResp respBody = GroupMgmtProto.CreateGroupResp.newBuilder()
           .setCode(0).setMessage("success").setGroup(toProtoGroupInfo(group)).build();
@@ -153,9 +161,10 @@ public class GroupManagementService extends ServiceBase {
                 ErrorCode.CONFLICT, "用户已在群中"));
             }
             long now = System.currentTimeMillis();
-            return groupRepo.addMember(snowflake.nextId(), numericGroupId, inviteeNumericId, 0, now)
+            return groupRepo.addMember(snowflake.nextId(), numericGroupId, inviteeNumericId, ROLE_MEMBER, now)
               .map(v -> {
-                pushMemberChangeNotify(numericGroupId, inviteeNumericId, operatorNumericId);
+                pushMemberChangeNotify(numericGroupId, inviteeNumericId, operatorNumericId,
+                  GroupMgmtProto.GroupMemberChangeNotify.ChangeType.INVITED);
                 GroupMgmtProto.InviteToGroupResp respBody = GroupMgmtProto.InviteToGroupResp.newBuilder()
                   .setCode(0).setMessage("success").build();
                 LOG.info("成员已邀请: groupId={} invitee={}", groupId, inviteeId);
@@ -167,22 +176,98 @@ public class GroupManagementService extends ServiceBase {
     });
   }
 
-  private void pushMemberChangeNotify(long groupId, long inviteeId, long operatorId) {
-    groupRepo.findMembers(groupId).onSuccess(members -> {
-      GroupMgmtProto.GroupMemberChangeNotify notify = GroupMgmtProto.GroupMemberChangeNotify.newBuilder()
-        .setGroupId(groupId)
-        .setType(GroupMgmtProto.GroupMemberChangeNotify.ChangeType.INVITED)
-        .setUserId(inviteeId)
-        .setOperatorId(operatorId)
-        .build();
-      byte[] body = notify.toByteArray();
-      for (GroupMemberRecord member : members) {
-        String targetUserId = String.valueOf(member.getUserId());
-        PushEnvelope env = new PushEnvelope(targetUserId, CMD_GROUP_MEMBER_CHANGE_NOTIFY_VALUE, body);
-        pushRouter.push(env);
+  private void pushMemberChangeNotify(long groupId, long userId, long operatorId,
+                                      GroupMgmtProto.GroupMemberChangeNotify.ChangeType type) {
+    groupRepo.findMembers(groupId)
+      .onSuccess(members -> pushMemberChangeNotify(groupId, userId, operatorId, type, members))
+      .onFailure(e -> LOG.warn("获取群成员失败 groupId={}: {}", groupId, e.getMessage()));
+  }
+
+  /**
+   * 按给定的成员列表推送变更通知。
+   * 移除成员时传入「移除前」的成员列表，让被移除者也收到通知（其客户端据此退群）。
+   */
+  private void pushMemberChangeNotify(long groupId, long userId, long operatorId,
+                                      GroupMgmtProto.GroupMemberChangeNotify.ChangeType type,
+                                      List<GroupMemberRecord> members) {
+    GroupMgmtProto.GroupMemberChangeNotify notify = GroupMgmtProto.GroupMemberChangeNotify.newBuilder()
+      .setGroupId(groupId)
+      .setType(type)
+      .setUserId(userId)
+      .setOperatorId(operatorId)
+      .build();
+    byte[] body = notify.toByteArray();
+    for (GroupMemberRecord member : members) {
+      String targetUserId = String.valueOf(member.getUserId());
+      PushEnvelope env = new PushEnvelope(targetUserId, CMD_GROUP_MEMBER_CHANGE_NOTIFY_VALUE, body);
+      pushRouter.push(env);
+    }
+    LOG.debug("成员变更推送完成: groupId={} type={} userId={}", groupId, type, userId);
+  }
+
+  /**
+   * 移除群成员。权限：群主可移除管理员与普通成员，管理员只能移除普通成员，群主不可被移除。
+   * 被移除者也会收到 KICKED 推送，客户端据此退群。
+   */
+  private Future<ImMessage> handleKickMember(ImMessage message) {
+    String operatorId = getUserIdFromHeaders(message);
+    if (operatorId == null || operatorId.isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_KICK_RESP_VALUE,
+        ErrorCode.UNAUTHORIZED, "未认证用户"));
+    }
+
+    KickMemberRequest req = decode(message, KickMemberRequest.class);
+    if (req == null || req.groupId() == null || req.groupId().isEmpty()
+      || req.userId() == null || req.userId().isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_KICK_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "groupId 和 userId 不能为空"));
+    }
+
+    long numericGroupId = Long.parseLong(req.groupId());
+    long targetNumericId = Long.parseLong(req.userId());
+    long operatorNumericId = Long.parseLong(operatorId);
+    if (targetNumericId == operatorNumericId) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_KICK_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "不能移除自己"));
+    }
+
+    return groupRepo.findMembers(numericGroupId).compose(members -> {
+      GroupMemberRecord operator = findMember(members, operatorNumericId);
+      if (operator == null) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_KICK_RESP_VALUE,
+          ErrorCode.UNAUTHORIZED, "你不是该群成员，无权移除"));
       }
-      LOG.debug("成员变更推送完成: groupId={} type=INVITED invitee={}", groupId, inviteeId);
-    }).onFailure(e -> LOG.warn("获取群成员失败 groupId={}: {}", groupId, e.getMessage()));
+      GroupMemberRecord target = findMember(members, targetNumericId);
+      if (target == null) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_KICK_RESP_VALUE,
+          ErrorCode.NOT_FOUND, "该用户不在群中"));
+      }
+      if (target.getRole() == ROLE_OWNER) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_KICK_RESP_VALUE,
+          ErrorCode.UNAUTHORIZED, "不能移除群主"));
+      }
+      if (operator.getRole() <= target.getRole()) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_KICK_RESP_VALUE,
+          ErrorCode.UNAUTHORIZED, "无权移除该成员"));
+      }
+      return groupRepo.removeMember(numericGroupId, targetNumericId).map(v -> {
+        pushMemberChangeNotify(numericGroupId, targetNumericId, operatorNumericId,
+          GroupMgmtProto.GroupMemberChangeNotify.ChangeType.KICKED, members);
+        GroupMgmtProto.KickMemberResp respBody = GroupMgmtProto.KickMemberResp.newBuilder()
+          .setCode(0).setMessage("success").build();
+        LOG.info("成员已移除: groupId={} userId={} operator={}", numericGroupId, targetNumericId, operatorNumericId);
+        return buildResponse(message, CMD_GROUP_KICK_RESP_VALUE, respBody);
+      });
+    });
+  }
+
+  private static GroupMemberRecord findMember(List<GroupMemberRecord> members, long userId) {
+    for (GroupMemberRecord member : members) {
+      if (member.getUserId() == userId) {
+        return member;
+      }
+    }
+    return null;
   }
 
   private Future<ImMessage> handleGetGroupInfo(ImMessage message) {

@@ -6,6 +6,7 @@ import com.github.moxib.pomelo.seqsvr.proto.RouterNode;
 import com.github.moxib.pomelo.seqsvr.proto.SeqSvrConstants;
 import com.github.moxib.pomelo.seqsvr.rpc.StoreAccessor;
 import io.vertx.core.Future;
+import io.vertx.core.Promise;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -132,6 +133,70 @@ class MediateManagerTest {
     assertEquals(r2.getVersion(), store.saved.getVersion());
   }
 
+  /**
+   * 可控挂起的 Store：saveRouteTable 直到 {@link #releaseAll()} 才完成，
+   * 用于构造"前一次注册落盘尚未完成时第二次注册到达"的并发窗口。
+   */
+  private static class LatchedStore extends MemStore {
+    private final List<Promise<Void>> inFlight = new ArrayList<>();
+    private final List<Integer> committedVersions = new ArrayList<>();
+
+    @Override
+    public Future<Void> saveRouteTable(Router router) {
+      Promise<Void> pending = Promise.promise();
+      inFlight.add(pending);
+      return pending.future().map(v -> {
+        saved = router;
+        committedVersions.add(router.getVersion());
+        return null;
+      });
+    }
+
+    void releaseAll() {
+      List<Promise<Void>> batch = new ArrayList<>(inFlight);
+      inFlight.clear();
+      for (Promise<Void> pending : batch) {
+        pending.complete();
+      }
+    }
+
+    int inFlightCount() {
+      return inFlight.size();
+    }
+  }
+
+  @Test
+  @DisplayName("并发注册：版本号不得复用，且落盘顺序与版本号一致")
+  void concurrentRegistrationsMustNotShareVersion() throws Exception {
+    LatchedStore latched = new LatchedStore();
+    MediateManager m = new MediateManager(latched, new RangeId(0, MAX));
+
+    // 第一次注册的持久化挂起未完成时，第二次注册到达（真实并发注册窗口）
+    Future<Router> first = m.register(node("node-1"));
+    Future<Router> second = m.register(node("node-2"));
+    assertEquals(1, latched.inFlightCount(),
+      "持久化必须串行：同一时刻只允许一次落盘在途，否则版本可能乱序覆盖");
+
+    long deadline = System.currentTimeMillis() + 5000;
+    while ((!first.isComplete() || !second.isComplete()) && System.currentTimeMillis() < deadline) {
+      latched.releaseAll();
+      Thread.sleep(10);
+    }
+    assertTrue(first.isComplete() && second.isComplete(), "两次注册都应完成");
+
+    // 同一版本号一旦对应两张不同路由表，节点会按"版本相同即跳过"忽略真正的新表，
+    // 号段被两个节点同时服务（seq 重复）
+    assertNotEquals(first.result().getVersion(), second.result().getVersion(),
+      "并发注册不得生成同版本号的路由表");
+    assertTrue(second.result().getVersion() > first.result().getVersion(), "版本应单调递增");
+    assertEquals(List.of(first.result().getVersion(), second.result().getVersion()),
+      latched.committedVersions, "落盘顺序必须与版本号顺序一致");
+    assertEquals(second.result().getVersion(), m.getRouter().getVersion(),
+      "内存路由表应为最后一次生成的路由表");
+    assertEquals(2, m.getRouter().getNodeList().size());
+    assertFalse(rangesOverlap(m.getRouter()), "并发注册后号段不应重叠");
+  }
+
   @Test
   @DisplayName("单节点注册：独占全部分区")
   void testSingleNodeOwnsAll() {
@@ -220,10 +285,12 @@ class MediateManagerTest {
     assertTrue(first.failed(), "持久化失败时注册应失败");
     assertEquals(0, m.getRouter().getVersion(), "内存路由不得更新为未持久化的版本");
 
-    // Store 恢复后重新注册成功，且返回的路由与落盘一致
+    // Store 恢复后重新注册成功，且返回的路由与落盘一致。
+    // 版本号在生成时即自增（不因持久化失败回退）：跳号无害，但绝不复用同版本号
     store.failSave = false;
     Router ok = m.register(node("node-1")).result();
-    assertEquals(1, ok.getVersion());
-    assertEquals(1, store.saved.getVersion(), "成功路径必须先落盘");
+    assertTrue(ok.getVersion() > 0, "重试成功后版本应为正数");
+    assertSame(ok, m.getRouter(), "成功后内存路由应为本轮发布的路由");
+    assertEquals(ok.getVersion(), store.saved.getVersion(), "成功路径必须先落盘");
   }
 }

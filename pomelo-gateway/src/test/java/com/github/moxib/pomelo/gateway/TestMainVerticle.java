@@ -27,16 +27,16 @@ public class TestMainVerticle {
 
   @Test
   void gatewayVerticleDeploysSuccessfully(Vertx vertx, VertxTestContext ctx) {
+    // 显式等待 undeploy 与 Vertx 关闭完成：避免与本 JVM 内后续测试类的
+    // Vertx 生命周期重叠（会导致下一个测试的首次连接得不到响应）
     vertx.deployVerticle(new WsGatewayVerticle())
+      .compose(id -> vertx.undeploy(id))
       .onComplete(ar -> {
-        ctx.verify(() -> {
-          if (ar.succeeded()) {
-            vertx.undeploy(ar.result());
-            ctx.completeNow();
-          } else {
-            ctx.failNow(ar.cause());
-          }
-        });
+        if (ar.succeeded()) {
+          ctx.completeNow();
+        } else {
+          ctx.failNow(ar.cause());
+        }
       });
   }
 }

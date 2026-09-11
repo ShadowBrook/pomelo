@@ -20,7 +20,7 @@ class UploadServiceTest {
     @Override public String presignGet(String k) { return "http://get/" + k; }
   };
 
-  private final UploadService service = new UploadService(fake, new SnowflakeIdGenerator(1));
+  private final UploadService service = new UploadService(fake);
 
   private ImMessage pbReq(int mediaType, String fileName, long size, String userId) {
     UploadProto.UploadReq body = UploadProto.UploadReq.newBuilder()
@@ -54,7 +54,8 @@ class UploadServiceTest {
     UploadProto.UploadResp body = uploadResp(resp);
     assertEquals(0, body.getCode());
     String key = body.getObjectKey();
-    assertTrue(key.matches("image/100/\\d{8}/\\d+\\.jpg"), "key 格式不符: " + key);
+    assertTrue(ObjectKeys.isWellFormed(key), "key 格式不符: " + key);
+    assertEquals("100", ObjectKeys.ownerOf(key), "key 内的上传者必须是认证用户");
     assertEquals("http://put/" + key, body.getPresignedUrl());
     assertTrue(body.getExpireAt() > 0);
   }

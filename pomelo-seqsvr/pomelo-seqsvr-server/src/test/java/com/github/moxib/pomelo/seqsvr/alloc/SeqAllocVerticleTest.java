@@ -4,6 +4,7 @@ import com.github.moxib.pomelo.seqsvr.proto.SeqSvrConstants;
 import com.github.moxib.pomelo.seqsvr.rpc.SeqSvrAddresses;
 import com.github.moxib.pomelo.seqsvr.store.StoreVerticle;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientResponse;
 import io.vertx.core.json.JsonObject;
 import org.junit.jupiter.api.AfterEach;
@@ -203,8 +204,10 @@ class SeqAllocVerticleTest {
     CountDownLatch done = new CountDownLatch(1);
     AtomicReference<Integer> statusRef = new AtomicReference<>();
     AtomicReference<JsonObject> bodyRef = new AtomicReference<>();
-    vertx.createHttpClient()
-      .request(io.vertx.core.http.HttpMethod.GET, adminPort, "127.0.0.1", "/health")
+    // 持有 HttpClient 强引用：Vert.x 5 会在客户端被 GC 时关闭其连接，
+    // 随用随弃会让请求中途失败（表现为偶发 statusCode=null）
+    HttpClient httpClient = vertx.createHttpClient();
+    httpClient.request(io.vertx.core.http.HttpMethod.GET, adminPort, "127.0.0.1", "/health")
       .compose(req -> req.send())
       .onComplete(ar -> {
         if (ar.succeeded()) {

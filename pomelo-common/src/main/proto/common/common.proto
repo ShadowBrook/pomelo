@@ -96,6 +96,10 @@ enum Cmd {
     CMD_GROUP_INVITE_REQ    = 0x0072;
     // S→C 邀请入群响应
     CMD_GROUP_INVITE_RESP   = 0x0073;
+    // C→S 移除群成员请求（群主/管理员）
+    CMD_GROUP_KICK_REQ      = 0x0074;
+    // S→C 移除群成员响应
+    CMD_GROUP_KICK_RESP     = 0x0075;
     // C→S 获取群信息请求
     CMD_GROUP_GET_INFO_REQ  = 0x0086;
     // S→C 获取群信息响应

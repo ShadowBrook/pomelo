@@ -39,6 +39,20 @@ fi
 
 PL=$(IFS=,; echo "${SERVICES[*]}")
 
+echo "==> [0/4] 生成开发用 TLS 自签名证书（已存在则跳过）"
+./scripts/gen-dev-cert.sh
+
+# JWT 签名密钥：HS256 的密钥即签发权，仓库内置密钥公开可见，必须换成随机值。
+# 生成一次后复用（换值会使已签发 token 全部失效），文件不入库。
+JWT_ENV_FILE="conf/jwt.env"
+if [ ! -f "$JWT_ENV_FILE" ]; then
+  umask 077
+  printf 'POMELO_JWT_SECRET=%s\n' "$(openssl rand -hex 32)" > "$JWT_ENV_FILE"
+  echo "==> 已生成 JWT 密钥：$JWT_ENV_FILE（请勿提交到仓库）"
+else
+  echo "==> 复用已有 JWT 密钥：$JWT_ENV_FILE"
+fi
+
 echo "==> [1/4] install 依赖到本地 .m2（-am 自动包含上游依赖）"
 ./mvnw install -pl "$PL" -am -DskipTests -q
 

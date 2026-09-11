@@ -34,7 +34,7 @@ public class BenchmarkMain {
     Vertx vertx = Vertx.vertx();
     try {
       // 阶段 1：批量注册用户
-      UserRegistry registry = new UserRegistry(vertx, cfg.host, cfg.apiPort);
+      UserRegistry registry = new UserRegistry(vertx, cfg.host, cfg.apiPort, cfg.tls);
       Metrics regMetrics = new Metrics("注册", cfg.users);
       List<UserRegistry.UserInfo> users = registry.register(cfg.users, cfg.concurrency, regMetrics)
         .toCompletionStage().toCompletableFuture().join();
@@ -98,7 +98,7 @@ public class BenchmarkMain {
       int i = idx.getAndIncrement();
       if (i >= n) return;
       UserRegistry.UserInfo u = users.get(i);
-      ImClient.connect(vertx, cfg.host, cfg.tcpPort)
+      ImClient.connect(vertx, cfg.host, cfg.tcpPort, cfg.tls)
         .onSuccess(c -> System.out.println("[login] 连接成功 i=" + i))
         .onFailure(e -> System.err.println("[login] 连接失败 i=" + i + ": " + e.getMessage()))
         .compose(c -> c.login(u.token(), u.userId(), u.userName()).map(r -> {
@@ -232,12 +232,13 @@ public class BenchmarkMain {
     Future<Void> run(int idx, long startNanos);
   }
 
-  private record Config(String host, int apiPort, int tcpPort,
+  private record Config(String host, int apiPort, int tcpPort, boolean tls,
                         int users, int friends, int messages, int concurrency) {
     static Config parse(String[] args) {
       String host = "localhost";
       int apiPort = 8888;
       int tcpPort = 9000;
+      boolean tls = false;
       int users = 100;
       int friends = 50;
       int messages = 1000;
@@ -247,6 +248,7 @@ public class BenchmarkMain {
           case "--host" -> host = args[++i];
           case "--api-port" -> apiPort = Integer.parseInt(args[++i]);
           case "--tcp-port" -> tcpPort = Integer.parseInt(args[++i]);
+          case "--tls" -> tls = true;
           case "--users" -> users = Integer.parseInt(args[++i]);
           case "--friends" -> friends = Integer.parseInt(args[++i]);
           case "--messages" -> messages = Integer.parseInt(args[++i]);
@@ -254,7 +256,7 @@ public class BenchmarkMain {
           default -> System.err.println("忽略未知参数: " + args[i]);
         }
       }
-      return new Config(host, apiPort, tcpPort, users, friends, messages, concurrency);
+      return new Config(host, apiPort, tcpPort, tls, users, friends, messages, concurrency);
     }
   }
 }

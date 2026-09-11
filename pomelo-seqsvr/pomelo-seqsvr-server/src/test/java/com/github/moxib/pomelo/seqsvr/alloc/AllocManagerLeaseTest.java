@@ -68,8 +68,13 @@ class AllocManagerLeaseTest {
   }
 
   private AllocManager newAlloc(RangeId nodeRange) throws Exception {
+    return newAlloc(nodeRange, AllocManager.LEASE_TIMEOUT_MS, AllocManager.SYNC_LEASE_TIMEOUT_MS);
+  }
+
+  private AllocManager newAlloc(RangeId nodeRange, long leaseTimeoutMs, long syncLeaseMs) throws Exception {
     RouterNode myNode = new RouterNode("node-1", "127.0.0.1", 0, Collections.singletonList(nodeRange));
-    AllocManager m = new AllocManager(store, new RangeId(0, SeqSvrConstants.DEBUG_MAX_ID_SIZE), myNode, SeqSvrConstants.DEBUG_MAX_ID_SIZE);
+    AllocManager m = new AllocManager(store, new RangeId(0, SeqSvrConstants.DEBUG_MAX_ID_SIZE), myNode,
+      SeqSvrConstants.DEBUG_MAX_ID_SIZE, leaseTimeoutMs, false, syncLeaseMs);
     await(m.init());
     return m;
   }
@@ -169,8 +174,8 @@ class AllocManagerLeaseTest {
     assertThrows(IllegalArgumentException.class, () -> narrow.fetchNextSequence(SECTION, 0),
       "pending 中不应服务该号段");
 
-    // 超过租约周期后激活。生产环境 4s sync 会持续刷新租约心跳，这里同步推进心跳，避免误触租约超时
-    long activationTime = now + AllocManager.LEASE_TIMEOUT_MS + 1000;
+    // 超过 pending 激活延迟后激活。生产环境 4s sync 会持续刷新租约心跳，这里同步推进心跳，避免误触租约超时
+    long activationTime = now + narrow.getPendingActivateDelayMs() + 1;
     narrow.backdateLeaseForTest(activationTime);
     narrow.checkLease(activationTime);
     assertFalse(narrow.getPendingSections().containsKey(1), "激活后不再 pending");
@@ -189,12 +194,14 @@ class AllocManagerLeaseTest {
   }
 
   @Test
-  @DisplayName("租约常量：停服阈值 15s，pending 激活延迟 = 2× 同步周期，两者解耦（2026-09-07 事故 P9）")
-  void testLeaseConstantsDecoupled() throws Exception {
+  @DisplayName("租约常量：停服阈值 15s，pending 激活延迟必须严格大于停服阈值")
+  void testLeaseConstantsKeepMigrationInvariant() throws Exception {
     AllocManager m = newAlloc(new RangeId(0, SECTION));
     assertEquals(15000, AllocManager.LEASE_TIMEOUT_MS, "停服阈值应放宽到 15s");
-    assertEquals(2 * AllocManager.SYNC_LEASE_TIMEOUT_MS, m.getPendingActivateDelayMs(),
-      "pending 激活延迟应为同步周期的 2 倍，保证旧 owner 已停止发号");
+    assertEquals(AllocManager.LEASE_TIMEOUT_MS + AllocManager.SYNC_LEASE_TIMEOUT_MS,
+      m.getPendingActivateDelayMs(), "pending 激活延迟 = 停服阈值 + 一个同步周期");
+    assertTrue(m.getPendingActivateDelayMs() > AllocManager.LEASE_TIMEOUT_MS,
+      "不变量：新号段必须等旧 owner 停服上界过去后才能服务，否则迁移期双写同一 section");
   }
 
   @Test
@@ -217,20 +224,42 @@ class AllocManagerLeaseTest {
   }
 
   @Test
-  @DisplayName("pending 激活延迟取 2× 同步周期，不随停服阈值放大")
-  void testPendingActivationDelayIndependentOfLeaseThreshold() throws Exception {
-    AllocManager narrow = newAlloc(new RangeId(0, SECTION));
+  @DisplayName("pending 激活延迟随停服阈值放大（放宽停服阈值不得缩短迁移保护窗口）")
+  void testPendingActivationDelayScalesWithLeaseThreshold() throws Exception {
+    AllocManager shortLease = newAlloc(new RangeId(0, SECTION), 1000, 200);
+    AllocManager longLease = newAlloc(new RangeId(0, SECTION), 20000, 200);
+
+    assertEquals(1200, shortLease.getPendingActivateDelayMs(), "短租约下 = 1000 + 200");
+    assertEquals(20200, longLease.getPendingActivateDelayMs(), "长租约下 = 20000 + 200");
+    assertTrue(shortLease.getPendingActivateDelayMs() > 1000, "短租约也必须大于停服阈值");
+    assertTrue(longLease.getPendingActivateDelayMs() > 20000,
+      "停服阈值放宽到 20s 时保护窗口必须同步放大到 20s 以上");
+  }
+
+  @Test
+  @DisplayName("pending 号段在激活延迟内不服务，到期才激活（迁移保护窗口）")
+  void testPendingActivationBoundary() throws Exception {
+    AllocManager m = newAlloc(new RangeId(0, SECTION), 1000, 200);
     RouterNode wide = new RouterNode("node-1", "127.0.0.1", 0,
       Collections.singletonList(new RangeId(0, 2 * SECTION)));
     long now = System.currentTimeMillis();
-    narrow.updateRouter(new Router(2, Collections.singletonList(wide)));
-    assertTrue(narrow.getPendingSections().containsKey(1), "扩容后 section 1 应为 pending");
+    m.updateRouter(new Router(2, Collections.singletonList(wide)));
+    assertTrue(m.getPendingSections().containsKey(1), "扩容后 section 1 应为 pending");
 
-    // 恰好 2× 同步周期：pending 应激活（若实现误用停服阈值 15s，此断言失败）
-    long t = now + narrow.getPendingActivateDelayMs();
-    narrow.backdateLeaseForTest(t);
-    narrow.checkLease(t);
-    assertFalse(narrow.getPendingSections().containsKey(1), "5s 后 pending 应激活");
-    assertTrue(narrow.getActiveSections().contains(1), "5s 后应服务新号段");
+    // 差 1ms 到期：仍不得服务（此时旧 owner 可能还没停服）
+    long beforeDue = now + m.getPendingActivateDelayMs() - 1;
+    m.backdateLeaseForTest(beforeDue);
+    m.checkLease(beforeDue);
+    assertTrue(m.getPendingSections().containsKey(1), "未到激活延迟不应激活");
+    assertThrows(IllegalArgumentException.class, () -> m.fetchNextSequence(SECTION, 0),
+      "pending 中不应服务该号段");
+
+    // 到期：激活并开始服务
+    long due = now + m.getPendingActivateDelayMs();
+    m.backdateLeaseForTest(due);
+    m.checkLease(due);
+    assertFalse(m.getPendingSections().containsKey(1), "到期后不应再 pending");
+    assertTrue(m.getActiveSections().contains(1), "到期后应服务新号段");
+    assertTrue(m.fetchNextSequence(SECTION, 0).getSeq() > 0, "激活后应能发号");
   }
 }

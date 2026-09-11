@@ -24,6 +24,8 @@ public class SessionRegistry {
   private final ConcurrentMap<String, Session> sessions = new ConcurrentHashMap<>();
   /** connection → userId，用于断连快速清理与认证身份判定 */
   private final ConcurrentMap<Connection, String> connectionToUserId = new ConcurrentHashMap<>();
+  /** connection → 认证截止定时器 id（仅未认证连接存在） */
+  private final ConcurrentMap<Connection, Long> authDeadlines = new ConcurrentHashMap<>();
 
   public SessionRegistry(Vertx vertx) {
     this.vertx = vertx;
@@ -48,6 +50,7 @@ public class SessionRegistry {
       }
     }
     connectionToUserId.put(connection, userId);
+    cancelAuthDeadline(connection);
     LOG.info("用户 {} (id={}) 上线, 当前在线: {}", userId, id, sessions.size());
   }
 
@@ -69,6 +72,7 @@ public class SessionRegistry {
    * 不得误删新设备已注册的会话。
    */
   public String unregisterByConnection(Connection connection) {
+    cancelAuthDeadline(connection);
     String userId = connectionToUserId.remove(connection);
     if (userId == null) {
       return null;
@@ -132,6 +136,38 @@ public class SessionRegistry {
   /** 本节点所有在线 userId（供节点下线清理 session 路由使用） */
   public Set<String> getOnlineUserIds() {
     return sessions.keySet();
+  }
+
+  // ---- 认证截止 ----
+
+  /**
+   * 为刚接受的连接挂一次性认证截止定时器。
+   * 连接建立后不发任何数据、也不完成 AUTH 的 socket 否则会永久占用 FD；
+   * 认证成功（{@link #register}）或断连即取消。
+   */
+  public void startAuthDeadline(Connection connection, long timeoutMs) {
+    if (timeoutMs <= 0) {
+      return;
+    }
+    long timerId = vertx.setTimer(timeoutMs, id -> {
+      authDeadlines.remove(connection);
+      if (connectionToUserId.containsKey(connection)) {
+        return;
+      }
+      LOG.warn("连接认证超时 {}ms，断开: {}", timeoutMs, connection.remoteAddress());
+      connection.close();
+    });
+    Long previous = authDeadlines.put(connection, timerId);
+    if (previous != null) {
+      vertx.cancelTimer(previous);
+    }
+  }
+
+  private void cancelAuthDeadline(Connection connection) {
+    Long timerId = authDeadlines.remove(connection);
+    if (timerId != null) {
+      vertx.cancelTimer(timerId);
+    }
   }
 
   // ---- 心跳超时 ----
