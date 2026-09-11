@@ -8,6 +8,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class WorkerIdResolverTest {
 
@@ -53,12 +54,39 @@ class WorkerIdResolverTest {
   }
 
   @Test
-  @DisplayName("全部未命中 fallback 到配置默认 1")
-  void testFallbackToConfigDefault() {
+  @DisplayName("全部未命中且未显式放行 → 启动失败（不回退常量）")
+  void testFailsInsteadOfSilentlyFallingBack() {
     Future<Integer> r = WorkerIdResolver.resolve(null, List.of(
       v -> Future.succeededFuture(null),
       v -> Future.failedFuture("boom")
     ));
-    assertEquals(1, r.result().intValue());
+    assertTrue(r.failed(),
+      "多节点同时回退到同一常量会生成重复 Snowflake ID，必须拒绝启动而不是静默降级");
+  }
+
+  @Test
+  @DisplayName("单节点显式放行时才允许静态 workerId")
+  void testStaticWorkerIdRequiresExplicitOptIn() {
+    withProperty("snowflake.allowStaticWorkerId", "true", () -> {
+      Future<Integer> r = WorkerIdResolver.resolve(null, List.of(
+        v -> Future.succeededFuture(null),
+        v -> Future.failedFuture("boom")
+      ));
+      assertEquals(1, r.result().intValue());
+    });
+  }
+
+  private static void withProperty(String key, String value, Runnable action) {
+    String previous = System.getProperty(key);
+    System.setProperty(key, value);
+    try {
+      action.run();
+    } finally {
+      if (previous == null) {
+        System.clearProperty(key);
+      } else {
+        System.setProperty(key, previous);
+      }
+    }
   }
 }

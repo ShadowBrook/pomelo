@@ -45,12 +45,12 @@ public class MinioMediaUrlSigner implements MediaUrlSigner {
     try {
       JsonObject obj = new JsonObject(content);
       String key = obj.getString("key");
-      if (key == null || key.isBlank()) {
+      if (!ObjectKeys.isWellFormed(key)) {
         return content;
       }
       obj.put("url", presigner.presignGet(key));
       String thumb = obj.getString("thumb");
-      if (thumb != null && !thumb.isBlank()) {
+      if (ObjectKeys.isWellFormed(thumb)) {
         obj.put("thumbUrl", presigner.presignGet(thumb));
       }
       return obj.encode();
@@ -94,7 +94,7 @@ public class MinioMediaUrlSigner implements MediaUrlSigner {
       JsonObject reply = obj.getJsonObject("reply");
       if (reply != null) {
         String th = reply.getString("thumb");
-        if (th != null && !th.isBlank()) {
+        if (ObjectKeys.isWellFormed(th)) {
           reply.put("thumbUrl", presigner.presignGet(th));
         }
       }
@@ -107,11 +107,11 @@ public class MinioMediaUrlSigner implements MediaUrlSigner {
 
   private void signMediaObject(JsonObject media) {
     String k = media.getString("key");
-    if (k != null && !k.isBlank()) {
+    if (ObjectKeys.isWellFormed(k)) {
       media.put("url", presigner.presignGet(k));
     }
     String th = media.getString("thumb");
-    if (th != null && !th.isBlank()) {
+    if (ObjectKeys.isWellFormed(th)) {
       media.put("thumbUrl", presigner.presignGet(th));
     }
   }

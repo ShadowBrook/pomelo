@@ -3,7 +3,6 @@ package com.github.moxib.pomelo.logic.service;
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.ConfigHolder;
-import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.ObjectPresigner;
 import com.github.moxib.pomelo.logic.model.requests.UploadRequest;
 import com.github.moxib.pomelo.proto.common.CommonProto;
@@ -12,8 +11,6 @@ import io.vertx.core.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -26,13 +23,11 @@ public class UploadService extends ServiceBase {
   private static final String DEFAULT_EXTENSIONS = "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip,webm,ogg";
 
   private final ObjectPresigner presigner;
-  private final SnowflakeIdGenerator snowflake;
   private final long maxSizeBytes;
   private final Set<String> allowedExtensions;
 
-  public UploadService(ObjectPresigner presigner, SnowflakeIdGenerator snowflake) {
+  public UploadService(ObjectPresigner presigner) {
     this.presigner = presigner;
-    this.snowflake = snowflake;
     this.maxSizeBytes = ConfigHolder.getLong("media.maxSizeBytes", 104857600L);
     this.allowedExtensions = loadAllowedExtensions();
   }
@@ -78,9 +73,7 @@ public class UploadService extends ServiceBase {
   }
 
   private String buildObjectKey(int mediaType, String userId, String ext) {
-    String typeDir = mediaTypeDir(mediaType);
-    String day = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
-    return typeDir + "/" + userId + "/" + day + "/" + snowflake.nextId() + "." + ext;
+    return ObjectKeys.newKey(mediaTypeDir(mediaType), userId, ext);
   }
 
   private static String mediaTypeDir(int mediaType) {

@@ -48,7 +48,7 @@ public class C2CService extends ServiceBase {
       String recipientUserId = req.recipientId();
       String content = msg.content();
       int msgType = msg.msgType();
-      long clientMsgId = req.messageId() != 0 ? req.messageId() : parseWireMessageId(message);
+      long clientMsgId = resolveClientMsgId(req.messageId(), message);
       long timestamp = req.timestamp() != 0 ? req.timestamp() : System.currentTimeMillis();
 
       if (senderUserId == null || senderUserId.isEmpty() || recipientUserId == null || recipientUserId.isEmpty()) {
@@ -66,6 +66,12 @@ public class C2CService extends ServiceBase {
       long recipientId = Long.parseLong(recipientUserId);
       if (recipientId == 0) {
         return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.NOT_FOUND, "接收者不存在"));
+      }
+
+      // 媒体对象归属校验：不校验则任意用户可借自发的消息给他人对象换取下载链接
+      String mediaError = MediaKeyGuard.validate(msgType, content, senderUserId);
+      if (mediaError != null) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_C2C_RESP_VALUE, ErrorCode.BAD_REQUEST, mediaError));
       }
 
       C2CReqContext ctx = C2CReqContext.builder()
@@ -183,8 +189,12 @@ public class C2CService extends ServiceBase {
     return hdrUserId != null ? hdrUserId : bodySenderId;
   }
 
-  private long parseWireMessageId(ImMessage message) {
-    try { return Long.parseLong(message.getMessageId()); }
-    catch (NumberFormatException e) { return System.currentTimeMillis(); }
+  /**
+   * 幂等键兜底用 Snowflake 而非墙钟毫秒：毫秒级兜底会在同毫秒内碰撞，
+   * 触发唯一键冲突被吞、消息静默丢失（详见 {@link ServiceBase#parseClientMsgId}）。
+   */
+  private long resolveClientMsgId(long bodyMessageId, ImMessage message) {
+    long cid = parseClientMsgId(bodyMessageId, message.getMessageId());
+    return cid != 0 ? cid : snowflake.nextId();
   }
 }

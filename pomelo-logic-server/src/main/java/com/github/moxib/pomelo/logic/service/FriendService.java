@@ -49,14 +49,25 @@ public class FriendService extends ServiceBase {
   private final int searchLimit;
 
   public FriendService(Vertx vertx, PushRouter pushRouter) {
+    this(PgPoolFactory.get(vertx), pushRouter, ConfigHolder.getInt("friend.searchLimit", 20));
+  }
+
+  /** 供测试注入连接池 */
+  FriendService(Pool pgPool, PushRouter pushRouter, int searchLimit) {
     this.pushRouter = pushRouter;
-    this.pgPool = PgPoolFactory.get(vertx);
-    this.searchLimit = ConfigHolder.getInt("friend.searchLimit", 20);
+    this.pgPool = pgPool;
+    this.searchLimit = searchLimit;
   }
 
   public Future<ImMessage> process(ImMessage message) {
     int cmd = message.getCmd();
     try {
+      // 身份只信 gateway 规范化后的 varHeader；缺失即未认证，不允许进入任何好友操作
+      String userId = getUserIdFromHeaders(message);
+      if (userId == null || userId.isBlank()) {
+        return Future.succeededFuture(buildErrorResp(message, friendRespCmdFor(cmd),
+          ErrorCode.UNAUTHORIZED, "未认证用户"));
+      }
       if (cmd == CMD_FRIEND_SEARCH_REQ_VALUE)       return handleSearch(message);
       else if (cmd == CMD_FRIEND_ADD_REQ_VALUE)     return handleAdd(message);
       else if (cmd == CMD_FRIEND_ACCEPT_REQ_VALUE)  return handleAccept(message);
@@ -151,9 +162,14 @@ public class FriendService extends ServiceBase {
 
   private record ResolvedIds(long userId, long friendId) {}
 
+  /**
+   * 解析好友操作参数。操作者（userId）只取 gateway 规范化后的 varHeader，
+   * body 中的 userId 由客户端自由填写、可用于冒充他人（伪造申请/删除他人好友关系），一律忽略；
+   * friendId 是操作对象，仍由 body 提供。
+   */
   private Parsed parseFriendReq(ImMessage message) {
     FriendOpRequest req = decode(message, FriendOpRequest.class);
-    return new Parsed(req.userId(), req.friendId());
+    return new Parsed(getUserIdFromHeaders(message), req.friendId());
   }
 
   private ResolvedIds resolveBoth(Parsed p) {

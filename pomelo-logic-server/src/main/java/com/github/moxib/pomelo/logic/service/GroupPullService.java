@@ -2,6 +2,7 @@ package com.github.moxib.pomelo.logic.service;
 
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
+import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.logic.infrastructure.GroupMsgWithSender;
 import com.github.moxib.pomelo.logic.infrastructure.GroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
@@ -31,12 +32,15 @@ public class GroupPullService extends ServiceBase {
   private final GroupRepository groupRepo;
   private final MessageRepository messageRepo;
   private final MediaUrlSigner mediaUrlSigner;
+  private final int maxPullLimit;
 
   public GroupPullService(GroupRepository groupRepo, MessageRepository messageRepo,
                           MediaUrlSigner mediaUrlSigner) {
     this.groupRepo = groupRepo;
     this.messageRepo = messageRepo;
     this.mediaUrlSigner = mediaUrlSigner;
+    // 群历史每条都要做一次 presign（HMAC + JSON 重编码），超大 limit 会在事件循环上放大 CPU
+    this.maxPullLimit = ConfigHolder.getInt("message.maxPullLimit", 200);
   }
 
   public Future<ImMessage> process(ImMessage message) {
@@ -53,7 +57,7 @@ public class GroupPullService extends ServiceBase {
           ErrorCode.BAD_REQUEST, "groupId 不能为空"));
       }
       String groupId = req.groupId();
-      int limit = req.limit() > 0 ? req.limit() : DEFAULT_LIMIT;
+      int limit = resolvePullLimit(req.limit(), DEFAULT_LIMIT, maxPullLimit);
       boolean backward = req.isBackward();
       long rawCursor = req.cursor();
 

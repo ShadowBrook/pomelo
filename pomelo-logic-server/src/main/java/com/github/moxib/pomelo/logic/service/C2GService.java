@@ -65,10 +65,11 @@ public class C2GService extends ServiceBase {
       }
       String content = msg.content();
       int msgType = msg.msgType();
-      long clientMsgId = req.messageId() != 0 ? req.messageId() : 0;
+      long clientMsgId = parseClientMsgId(req.messageId(), message.getMessageId());
       if (clientMsgId == 0) {
-        try { clientMsgId = Long.parseLong(message.getMessageId()); }
-        catch (NumberFormatException e) { clientMsgId = System.currentTimeMillis(); }
+        // 兜底用 Snowflake 而非墙钟毫秒：毫秒级兜底会在同毫秒内碰撞，
+        // 触发唯一键冲突被吞、消息静默丢失（详见 ServiceBase#parseClientMsgId）
+        clientMsgId = snowflake.nextId();
       }
 
       if (senderUserId == null || senderUserId.isEmpty()) {
@@ -80,6 +81,12 @@ public class C2GService extends ServiceBase {
       if (senderNumericId == 0) {
         return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE,
           ErrorCode.UNAUTHORIZED, "发送者不存在"));
+      }
+
+      // 媒体对象归属校验：不校验则任意群成员可借群消息给他人对象换取下载链接
+      String mediaError = MediaKeyGuard.validate(msgType, content, senderUserId);
+      if (mediaError != null) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_C2G_RESP_VALUE, ErrorCode.BAD_REQUEST, mediaError));
       }
 
       long numericGroupId = Long.parseLong(groupId);

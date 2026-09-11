@@ -157,7 +157,9 @@ class C2CServiceTest {
     C2CService service = new C2CService(capturingPush, stubRepo(), seqClient,
       new SnowflakeIdGenerator(1), (msgType, content) -> content + "?signed");
 
-    ImMessage req = pbC2CReq(100L, 200L, 2, "{\"key\":\"image/100/x.jpg\"}");
+    // key 必须是服务端签发形态且归属发送者（见 MediaKeyGuard），否则消息在落库前就被拒
+    ImMessage req = pbC2CReq(100L, 200L, 2,
+      "{\"key\":\"image/100/20260910/0123456789abcdef0123456789abcdef.jpg\"}");
 
     CountDownLatch done = new CountDownLatch(1);
     service.process(req).onComplete(ar -> done.countDown());

@@ -30,11 +30,13 @@ public class PullService extends ServiceBase {
   private final MessageRepository messageRepo;
   private final MediaUrlSigner mediaUrlSigner;
   private final int defaultPullLimit;
+  private final int maxPullLimit;
 
   public PullService(MessageRepository messageRepo, MediaUrlSigner mediaUrlSigner) {
     this.messageRepo = messageRepo;
     this.mediaUrlSigner = mediaUrlSigner;
     this.defaultPullLimit = ConfigHolder.getInt("message.pullLimit", 50);
+    this.maxPullLimit = ConfigHolder.getInt("message.maxPullLimit", 200);
   }
 
   public Future<ImMessage> process(ImMessage message) {
@@ -47,7 +49,7 @@ public class PullService extends ServiceBase {
         ? req.peerId()
         : (headerPeerId != null && !headerPeerId.isEmpty() && !"0".equals(headerPeerId) ? headerPeerId : null);
       long cursor = req.seq();
-      int limit = req.limit() > 0 ? req.limit() : defaultPullLimit;
+      int limit = resolvePullLimit(req.limit(), defaultPullLimit, maxPullLimit);
 
       if (userId == null || userId.isEmpty()) {
         return Future.succeededFuture(buildErrorResp(message, CMD_PULL_RESP_VALUE, ErrorCode.UNAUTHORIZED, "未认证用户"));

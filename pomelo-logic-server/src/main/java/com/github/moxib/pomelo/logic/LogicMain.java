@@ -45,6 +45,10 @@ public class LogicMain extends VerticleBase {
     Vertx vertx = ClusterHelper.createVertx();
     vertx.deployVerticle(new LogicMain())
       .onSuccess(id -> LOG.info("Logic-Server started: deploymentId={}, clustered={}", id, vertx.isClustered()))
-      .onFailure(e -> LOG.error("Logic-Server startup failed", e));
+      .onFailure(e -> {
+        // 启动失败必须退出：否则进程残留为"半启动节点"，既不服务也不释放资源
+        LOG.error("Logic-Server startup failed", e);
+        vertx.close().onComplete(ar -> System.exit(1));
+      });
   }
 }
