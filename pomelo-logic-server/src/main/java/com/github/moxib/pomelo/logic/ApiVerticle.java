@@ -94,6 +94,8 @@ public class ApiVerticle extends VerticleBase {
         router.get("/api/user/:userId/profile").handler(this::profile);
         router.get("/api/friends/:userId").handler(this::friends);
         router.get("/api/friends/:userId/pending").handler(this::pending);
+        // LiveKit webhook 兜底（participant_left/room_finished）：验签在 CallService 侧完成
+        router.post("/api/livekit/webhook").handler(this::livekitWebhook);
 
         // TLS：启用后客户端需使用 https://
         HttpServerOptions serverOptions = new HttpServerOptions();
@@ -115,6 +117,20 @@ public class ApiVerticle extends VerticleBase {
 
   private void health(RoutingContext ctx) {
     ctx.json(new JsonObject().put("status", "ok"));
+  }
+
+  /**
+   * POST /api/livekit/webhook — LiveKit 事件兜底。
+   * 原始 body + Authorization 头经 EventBus 转给 CallService 验签处理，
+   * 回复值为 HTTP 状态码。此端点不校验 JWT 登录态（LiveKit 的签名即凭证）。
+   */
+  private void livekitWebhook(RoutingContext ctx) {
+    String body = ctx.body().asString();
+    String auth = ctx.request().getHeader("Authorization");
+    vertx.eventBus().<Integer>request("logic.call.webhook",
+        new JsonObject().put("body", body == null ? "" : body).put("auth", auth))
+      .onSuccess(reply -> ctx.response().setStatusCode(reply.body()).end())
+      .onFailure(e -> ctx.response().setStatusCode(503).end());
   }
 
   /** POST /api/user/register — userName + password，返回 Snowflake userId */

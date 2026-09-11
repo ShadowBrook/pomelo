@@ -2,6 +2,7 @@ package com.github.moxib.pomelo.codec;
 
 import com.github.moxib.pomelo.proto.ack.AckProto;
 import com.github.moxib.pomelo.proto.auth.AuthProto;
+import com.github.moxib.pomelo.proto.call.CallProto;
 import com.github.moxib.pomelo.proto.chat.ChatProto;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.proto.ctrl.CtrlProto;
@@ -128,6 +129,17 @@ public class ProtobufCodec<T> implements MessageCodec<T> {
     // 媒体上传
     registerProto(CommonProto.Cmd.CMD_UPLOAD_REQ_VALUE, UploadProto.UploadReq.parser(), UploadProto.UploadReq.class);
     registerProto(CommonProto.Cmd.CMD_UPLOAD_RESP_VALUE, UploadProto.UploadResp.parser(), UploadProto.UploadResp.class);
+
+    // 音视频通话
+    registerProto(CommonProto.Cmd.CMD_CALL_INVITE_REQ_VALUE, CallProto.CallInviteReq.parser(), CallProto.CallInviteReq.class);
+    registerProto(CommonProto.Cmd.CMD_CALL_INVITE_RESP_VALUE, CallProto.CallInviteResp.parser(), CallProto.CallInviteResp.class);
+    registerProto(CommonProto.Cmd.CMD_CALL_ACCEPT_REQ_VALUE, CallProto.CallAcceptReq.parser(), CallProto.CallAcceptReq.class);
+    registerProto(CommonProto.Cmd.CMD_CALL_ACCEPT_RESP_VALUE, CallProto.CallAcceptResp.parser(), CallProto.CallAcceptResp.class);
+    registerProto(CommonProto.Cmd.CMD_CALL_END_REQ_VALUE, CallProto.CallEndReq.parser(), CallProto.CallEndReq.class);
+    registerProto(CommonProto.Cmd.CMD_CALL_END_RESP_VALUE, CallProto.CallEndResp.parser(), CallProto.CallEndResp.class);
+    registerProto(CommonProto.Cmd.CMD_CALL_EVENT_PUSH_VALUE, CallProto.CallEventPush.parser(), CallProto.CallEventPush.class);
+    registerProto(CommonProto.Cmd.CMD_CALL_TOKEN_REQ_VALUE, CallProto.CallTokenReq.parser(), CallProto.CallTokenReq.class);
+    registerProto(CommonProto.Cmd.CMD_CALL_TOKEN_RESP_VALUE, CallProto.CallTokenResp.parser(), CallProto.CallTokenResp.class);
   }
 
   /**

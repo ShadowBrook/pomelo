@@ -138,6 +138,26 @@ enum Cmd {
     // S→C 返回上传预签名 URL
     CMD_UPLOAD_RESP   = 0x00A1;
 
+    // 音视频通话（信令走 IM 通道，媒体直连 LiveKit SFU；0xB0 段避开 UPLOAD 0xA0）
+    // C→S 发起通话
+    CMD_CALL_INVITE_REQ  = 0x00B0;
+    // S→C 发起通话响应
+    CMD_CALL_INVITE_RESP = 0x00B1;
+    // C→S 接听
+    CMD_CALL_ACCEPT_REQ  = 0x00B2;
+    // S→C 接听响应
+    CMD_CALL_ACCEPT_RESP = 0x00B3;
+    // C→S 结束通话（取消/拒绝/挂断）
+    CMD_CALL_END_REQ     = 0x00B4;
+    // S→C 结束响应
+    CMD_CALL_END_RESP    = 0x00B5;
+    // S→C 通话事件推送（振铃/接通/结束）
+    CMD_CALL_EVENT_PUSH  = 0x00B6;
+    // C→S 重新获取入会材料
+    CMD_CALL_TOKEN_REQ   = 0x00B7;
+    // S→C 入会材料响应
+    CMD_CALL_TOKEN_RESP  = 0x00B8;
+
     // S→C 通用错误响应
     CMD_ERROR = 0xFFFF;
 }

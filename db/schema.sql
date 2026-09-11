@@ -178,3 +178,26 @@ COMMENT ON COLUMN im_friend.status      IS '0=待接受, 1=已接受';
 COMMENT ON COLUMN im_friend.created_at  IS '创建时间 (Unix毫秒)';
 
 CREATE INDEX idx_friend_user ON im_friend (user_id);
+
+
+-- 7. 音视频通话记录表
+CREATE TABLE IF NOT EXISTS im_call (
+    id          TEXT      PRIMARY KEY,          -- callId（snowflake-随机后缀，与 Redis 态/房间名互证）
+    room        TEXT      NOT NULL,             -- LiveKit 房间名
+    caller_id   BIGINT    NOT NULL,             -- 主叫 im_user.id
+    callee_id   BIGINT    NOT NULL,             -- 被叫 im_user.id
+    media_type  SMALLINT  NOT NULL DEFAULT 0,   -- 0=音频, 1=视频
+    state       SMALLINT  NOT NULL DEFAULT 0,   -- 0=振铃中, 1=接通, 2=已结束
+    created_at  BIGINT    NOT NULL,             -- 发起时间 (Unix毫秒)
+    answered_at BIGINT,                         -- 接通时间 (Unix毫秒)
+    ended_at    BIGINT,                         -- 结束时间 (Unix毫秒)
+    end_reason  SMALLINT                        -- 结束原因 (CallEndReason 枚举值)
+);
+
+COMMENT ON TABLE  im_call              IS '音视频通话记录表';
+COMMENT ON COLUMN im_call.media_type   IS '0=音频, 1=视频';
+COMMENT ON COLUMN im_call.state        IS '0=振铃中, 1=接通, 2=已结束';
+COMMENT ON COLUMN im_call.end_reason   IS '1=取消 2=拒绝 3=挂断 4=忙线 5=超时 6=对端掉线';
+
+CREATE INDEX idx_im_call_caller ON im_call (caller_id, created_at DESC);
+CREATE INDEX idx_im_call_callee ON im_call (callee_id, created_at DESC);

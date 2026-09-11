@@ -1,0 +1,107 @@
+syntax = "proto3";
+
+package im.call;
+
+option java_package = "com.github.moxib.pomelo.proto.call";
+option java_outer_classname = "CallProto";
+
+// ============================================================================
+// 音视频通话：信令走 IM 通道（信令/状态机在 logic），媒体直连 LiveKit SFU。
+// logic 只下发入会材料（room + access token + 信令地址），不经手媒体。
+// ============================================================================
+
+// 通话媒体类型
+enum CallMediaType {
+    CALL_MEDIA_AUDIO = 0;
+    CALL_MEDIA_VIDEO = 1;
+}
+
+// 通话结束原因
+enum CallEndReason {
+    END_REASON_UNKNOWN = 0;
+    // 主叫在接通前取消
+    END_REASON_CANCEL = 1;
+    // 被叫拒绝
+    END_REASON_REJECT = 2;
+    // 通话中正常挂断
+    END_REASON_HANGUP = 3;
+    // 被叫忙线（正在其他通话中），通话未建立
+    END_REASON_BUSY = 4;
+    // 振铃超时无人接听
+    END_REASON_TIMEOUT = 5;
+    // 对端连接异常掉线（LiveKit webhook 兜底结束）
+    END_REASON_PEER_DROP = 6;
+}
+
+// C→S 发起通话
+message CallInviteReq {
+    // 被叫用户 ID (Snowflake)
+    int64 peer_id = 1;
+    CallMediaType media_type = 2;
+}
+
+// S→C 发起通话响应（callId 供后续 accept/end/token 使用）
+message CallInviteResp {
+    int32 code     = 1;
+    string message = 2;
+    string call_id = 3;
+}
+
+// C→S 接听
+message CallAcceptReq {
+    string call_id = 1;
+}
+
+// S→C 接听响应（携带被叫入会材料）
+message CallAcceptResp {
+    int32 code     = 1;
+    string message = 2;
+    // LiveKit 房间名
+    string room    = 3;
+    // 被叫的 LiveKit access token
+    string token   = 4;
+    // LiveKit 信令地址（浏览器 room.connect 的 url）
+    string ws_url  = 5;
+}
+
+// C→S 结束通话（振铃中=取消/拒绝，接通后=挂断，reason 由服务端按角色与状态裁定）
+message CallEndReq {
+    string call_id = 1;
+    CallEndReason reason = 2;
+}
+
+message CallEndResp {
+    int32 code     = 1;
+    string message = 2;
+}
+
+// S→C 通话事件推送
+message CallEventPush {
+    string call_id = 1;
+    // 事件类型：1=ringing(来电) 2=accepted(对方已接听) 3=ended(通话结束)
+    int32 event    = 2;
+    CallMediaType media_type = 3;
+    // 对端信息：ringing 时=主叫，accepted/ended 时=操作方
+    int64 peer_id = 4;
+    string peer_user_name = 5;
+    string peer_nickname = 6;
+    // event=ended 时的结束原因
+    CallEndReason reason = 7;
+    // event=accepted 时携带主叫入会材料
+    string room   = 8;
+    string token  = 9;
+    string ws_url = 10;
+}
+
+// C→S 重新获取入会材料（断线重连回房间）
+message CallTokenReq {
+    string call_id = 1;
+}
+
+message CallTokenResp {
+    int32 code     = 1;
+    string message = 2;
+    string room    = 3;
+    string token   = 4;
+    string ws_url  = 5;
+}

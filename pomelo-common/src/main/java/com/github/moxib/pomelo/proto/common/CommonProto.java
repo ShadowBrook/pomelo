@@ -469,6 +469,79 @@ public final class CommonProto {
     CMD_UPLOAD_RESP(161),
     /**
      * <pre>
+     * 音视频通话（信令走 IM 通道，媒体直连 LiveKit SFU；0xB0 段避开 UPLOAD 0xA0）
+     * C→S 发起通话
+     * </pre>
+     *
+     * <code>CMD_CALL_INVITE_REQ = 176;</code>
+     */
+    CMD_CALL_INVITE_REQ(176),
+    /**
+     * <pre>
+     * S→C 发起通话响应
+     * </pre>
+     *
+     * <code>CMD_CALL_INVITE_RESP = 177;</code>
+     */
+    CMD_CALL_INVITE_RESP(177),
+    /**
+     * <pre>
+     * C→S 接听
+     * </pre>
+     *
+     * <code>CMD_CALL_ACCEPT_REQ = 178;</code>
+     */
+    CMD_CALL_ACCEPT_REQ(178),
+    /**
+     * <pre>
+     * S→C 接听响应
+     * </pre>
+     *
+     * <code>CMD_CALL_ACCEPT_RESP = 179;</code>
+     */
+    CMD_CALL_ACCEPT_RESP(179),
+    /**
+     * <pre>
+     * C→S 结束通话（取消/拒绝/挂断）
+     * </pre>
+     *
+     * <code>CMD_CALL_END_REQ = 180;</code>
+     */
+    CMD_CALL_END_REQ(180),
+    /**
+     * <pre>
+     * S→C 结束响应
+     * </pre>
+     *
+     * <code>CMD_CALL_END_RESP = 181;</code>
+     */
+    CMD_CALL_END_RESP(181),
+    /**
+     * <pre>
+     * S→C 通话事件推送（振铃/接通/结束）
+     * </pre>
+     *
+     * <code>CMD_CALL_EVENT_PUSH = 182;</code>
+     */
+    CMD_CALL_EVENT_PUSH(182),
+    /**
+     * <pre>
+     * C→S 重新获取入会材料
+     * </pre>
+     *
+     * <code>CMD_CALL_TOKEN_REQ = 183;</code>
+     */
+    CMD_CALL_TOKEN_REQ(183),
+    /**
+     * <pre>
+     * S→C 入会材料响应
+     * </pre>
+     *
+     * <code>CMD_CALL_TOKEN_RESP = 184;</code>
+     */
+    CMD_CALL_TOKEN_RESP(184),
+    /**
+     * <pre>
      * S→C 通用错误响应
      * </pre>
      *
@@ -921,6 +994,79 @@ public final class CommonProto {
     public static final int CMD_UPLOAD_RESP_VALUE = 161;
     /**
      * <pre>
+     * 音视频通话（信令走 IM 通道，媒体直连 LiveKit SFU；0xB0 段避开 UPLOAD 0xA0）
+     * C→S 发起通话
+     * </pre>
+     *
+     * <code>CMD_CALL_INVITE_REQ = 176;</code>
+     */
+    public static final int CMD_CALL_INVITE_REQ_VALUE = 176;
+    /**
+     * <pre>
+     * S→C 发起通话响应
+     * </pre>
+     *
+     * <code>CMD_CALL_INVITE_RESP = 177;</code>
+     */
+    public static final int CMD_CALL_INVITE_RESP_VALUE = 177;
+    /**
+     * <pre>
+     * C→S 接听
+     * </pre>
+     *
+     * <code>CMD_CALL_ACCEPT_REQ = 178;</code>
+     */
+    public static final int CMD_CALL_ACCEPT_REQ_VALUE = 178;
+    /**
+     * <pre>
+     * S→C 接听响应
+     * </pre>
+     *
+     * <code>CMD_CALL_ACCEPT_RESP = 179;</code>
+     */
+    public static final int CMD_CALL_ACCEPT_RESP_VALUE = 179;
+    /**
+     * <pre>
+     * C→S 结束通话（取消/拒绝/挂断）
+     * </pre>
+     *
+     * <code>CMD_CALL_END_REQ = 180;</code>
+     */
+    public static final int CMD_CALL_END_REQ_VALUE = 180;
+    /**
+     * <pre>
+     * S→C 结束响应
+     * </pre>
+     *
+     * <code>CMD_CALL_END_RESP = 181;</code>
+     */
+    public static final int CMD_CALL_END_RESP_VALUE = 181;
+    /**
+     * <pre>
+     * S→C 通话事件推送（振铃/接通/结束）
+     * </pre>
+     *
+     * <code>CMD_CALL_EVENT_PUSH = 182;</code>
+     */
+    public static final int CMD_CALL_EVENT_PUSH_VALUE = 182;
+    /**
+     * <pre>
+     * C→S 重新获取入会材料
+     * </pre>
+     *
+     * <code>CMD_CALL_TOKEN_REQ = 183;</code>
+     */
+    public static final int CMD_CALL_TOKEN_REQ_VALUE = 183;
+    /**
+     * <pre>
+     * S→C 入会材料响应
+     * </pre>
+     *
+     * <code>CMD_CALL_TOKEN_RESP = 184;</code>
+     */
+    public static final int CMD_CALL_TOKEN_RESP_VALUE = 184;
+    /**
+     * <pre>
      * S→C 通用错误响应
      * </pre>
      *
@@ -1008,6 +1154,15 @@ public final class CommonProto {
         case 155: return CMD_GROUP_READ_STATE_RESP;
         case 160: return CMD_UPLOAD_REQ;
         case 161: return CMD_UPLOAD_RESP;
+        case 176: return CMD_CALL_INVITE_REQ;
+        case 177: return CMD_CALL_INVITE_RESP;
+        case 178: return CMD_CALL_ACCEPT_REQ;
+        case 179: return CMD_CALL_ACCEPT_RESP;
+        case 180: return CMD_CALL_END_REQ;
+        case 181: return CMD_CALL_END_RESP;
+        case 182: return CMD_CALL_EVENT_PUSH;
+        case 183: return CMD_CALL_TOKEN_REQ;
+        case 184: return CMD_CALL_TOKEN_RESP;
         case 65535: return CMD_ERROR;
         default: return null;
       }
@@ -3289,7 +3444,7 @@ java.lang.String defaultValue) {
       "\003 \001(\003\022/\n\003ext\030\004 \003(\0132\".im.common.MessageCo" +
       "ntent.ExtEntry\032*\n\010ExtEntry\022\013\n\003key\030\001 \001(\t\022" +
       "\r\n\005value\030\002 \001(\t:\0028\001\"*\n\tErrorBody\022\014\n\004code\030" +
-      "\001 \001(\005\022\017\n\007message\030\002 \001(\t*\324\n\n\003Cmd\022\017\n\013CMD_UN" +
+      "\001 \001(\005\022\017\n\007message\030\002 \001(\t*\272\014\n\003Cmd\022\017\n\013CMD_UN" +
       "KNOWN\020\000\022\020\n\014CMD_AUTH_REQ\020\001\022\021\n\rCMD_AUTH_RE" +
       "SP\020\002\022\022\n\016CMD_LOGOUT_REQ\020\003\022\023\n\017CMD_LOGOUT_R" +
       "ESP\020\004\022\017\n\013CMD_C2C_REQ\020\020\022\020\n\014CMD_C2C_RESP\020\021" +
@@ -3323,15 +3478,21 @@ java.lang.String defaultValue) {
       "CMD_GROUP_MSG_READ_RESP\020\231\001\022\035\n\030CMD_GROUP_" +
       "READ_STATE_REQ\020\232\001\022\036\n\031CMD_GROUP_READ_STAT" +
       "E_RESP\020\233\001\022\023\n\016CMD_UPLOAD_REQ\020\240\001\022\024\n\017CMD_UP" +
-      "LOAD_RESP\020\241\001\022\017\n\tCMD_ERROR\020\377\377\003*\324\001\n\007MsgTyp" +
-      "e\022\024\n\020MSG_TYPE_UNKNOWN\020\000\022\021\n\rMSG_TYPE_TEXT" +
-      "\020\001\022\022\n\016MSG_TYPE_IMAGE\020\002\022\022\n\016MSG_TYPE_VOICE" +
-      "\020\003\022\022\n\016MSG_TYPE_VIDEO\020\004\022\021\n\rMSG_TYPE_FILE\020" +
-      "\005\022\022\n\016MSG_TYPE_EMOJI\020\006\022\024\n\020MSG_TYPE_FORWAR" +
-      "D\020\010\022\022\n\016MSG_TYPE_REPLY\020\t\022\023\n\017MSG_TYPE_SYST" +
-      "EM\020c*!\n\007AckType\022\014\n\010RECEIVED\020\000\022\010\n\004SEEN\020\001B" +
-      "3\n$com.github.moxib.pomelo.proto.commonB" +
-      "\013CommonProtob\006proto3"
+      "LOAD_RESP\020\241\001\022\030\n\023CMD_CALL_INVITE_REQ\020\260\001\022\031" +
+      "\n\024CMD_CALL_INVITE_RESP\020\261\001\022\030\n\023CMD_CALL_AC" +
+      "CEPT_REQ\020\262\001\022\031\n\024CMD_CALL_ACCEPT_RESP\020\263\001\022\025" +
+      "\n\020CMD_CALL_END_REQ\020\264\001\022\026\n\021CMD_CALL_END_RE" +
+      "SP\020\265\001\022\030\n\023CMD_CALL_EVENT_PUSH\020\266\001\022\027\n\022CMD_C" +
+      "ALL_TOKEN_REQ\020\267\001\022\030\n\023CMD_CALL_TOKEN_RESP\020" +
+      "\270\001\022\017\n\tCMD_ERROR\020\377\377\003*\324\001\n\007MsgType\022\024\n\020MSG_T" +
+      "YPE_UNKNOWN\020\000\022\021\n\rMSG_TYPE_TEXT\020\001\022\022\n\016MSG_" +
+      "TYPE_IMAGE\020\002\022\022\n\016MSG_TYPE_VOICE\020\003\022\022\n\016MSG_" +
+      "TYPE_VIDEO\020\004\022\021\n\rMSG_TYPE_FILE\020\005\022\022\n\016MSG_T" +
+      "YPE_EMOJI\020\006\022\024\n\020MSG_TYPE_FORWARD\020\010\022\022\n\016MSG" +
+      "_TYPE_REPLY\020\t\022\023\n\017MSG_TYPE_SYSTEM\020c*!\n\007Ac" +
+      "kType\022\014\n\010RECEIVED\020\000\022\010\n\004SEEN\020\001B3\n$com.git" +
+      "hub.moxib.pomelo.proto.commonB\013CommonPro" +
+      "tob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
