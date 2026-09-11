@@ -81,3 +81,4 @@
   - P0-4 双端互通必须人工验证（容器已提供，验证步骤在 P0-1 注释）。
   - `im_call` 只建表未接查询接口（通话记录页属 Phase 4）；会话列表预览走前端本地生成（P2-4）。
 - 全量回归：common 48、logic 103（新增 23 例全绿；7 例失败仍全部为既有的 RedisIdGeneratorTest，与基线一致）、seqsvr 三模块 40、gateway 20 全绿。`conf/livekit.env` 已在本地生成并验证 compose 配置合法。
+- 部署修复（2026-09-11）：媒体 UDP 段从 50000-60000 改为 **40000-40100**——macOS 临时端口范围（49152-65535）与之重叠，Docker Desktop 逐端口绑定映射时与系统 UDP 会话相撞（`bind: address already in use`），导致 livekit 容器起不来。另：`im_call` 建表脚本只在全新初始化的 `docker-entrypoint` 执行，**存量库需手工补表**（本次部署已补）。

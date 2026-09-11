@@ -7,9 +7,11 @@ port: 7880
 rtc:
   # UDP 不通时的 TCP 回退
   tcp_port: 7881
-  # WebRTC 媒体 UDP 端口范围（compose 已做同名映射，扩缩需两端同步）
-  port_range_start: 50000
-  port_range_end: 60000
+  # WebRTC 媒体 UDP 端口范围（compose 已做同名映射，扩缩需两端同步）。
+  # 刻意选在 macOS/Linux 临时端口范围（49152-65535）之外：Docker Desktop 会逐端口
+  # 绑定映射段，落在临时范围内会与系统自身的 UDP 会话相撞（bind: address already in use）
+  port_range_start: 40000
+  port_range_end: 40100
   # 生产跨网部署必须打开：服务器自动探测公网 IP 注入 ICE 候选；
   # 本机/内网开发保持 false，否则把探测到的外网 IP 发给内网客户端反而打不通
   use_external_ip: false

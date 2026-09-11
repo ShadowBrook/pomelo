@@ -232,7 +232,7 @@ services:
       - "7880:7880"                      # 信令 WS（生产收进反代 wss）
       - "7881:7881/tcp"                  # WebRTC TCP 回退
       - "3478:3478/udp"                  # TURN/UDP
-      - "50000-60000:50000-60000/udp"    # WebRTC 媒体 UDP
+      - "40000-40100:40000-40100/udp"    # WebRTC 媒体 UDP（避开系统临时端口段）
     volumes: [./conf/livekit.yaml:/etc/livekit/livekit.yaml:ro]
     env_file: [./conf/livekit.env]
     depends_on:
