@@ -25,14 +25,38 @@ public class JwtTokenParser {
 
   private static final Logger LOG = LoggerFactory.getLogger(JwtTokenParser.class);
 
+  /** 仓库内置开发密钥；不可用于对外部署 */
+  public static final String DEV_DEFAULT_SECRET = "pomelo-dev-secret-change-in-production";
+
   private final JWTAuth jwtAuth;
   private final int tokenTtlSeconds;
 
   public JwtTokenParser(Vertx vertx) {
     this.tokenTtlSeconds = ConfigHolder.getInt("jwt.ttlSeconds", 86400);
-    String secret = ConfigHolder.getString("jwt.secret", "pomelo-dev-secret-change-in-production");
+    String secret = ConfigHolder.getString("jwt.secret", DEV_DEFAULT_SECRET);
+    requireUsableSecret(secret);
     this.jwtAuth = JWTAuth.create(vertx, new JWTAuthOptions()
       .addPubSecKey(new PubSecKeyOptions().setAlgorithm("HS256").setBuffer(secret)));
+  }
+
+  /**
+   * 拒绝用仓库内置密钥启动。HS256 是对称算法，密钥即签发权——任何拿到仓库的人
+   * 都能为任意 userId 签发合法 token，完成完整账户冒充。
+   * <p>
+   * 生产必须注入独立密钥（{@code POMELO_JWT_SECRET} 或配置 {@code jwt.secret}）；
+   * 只有本地开发才允许在配置里显式写 {@code jwt.allowDefaultSecret: true}。
+   */
+  private static void requireUsableSecret(String secret) {
+    boolean builtIn = secret == null || secret.isBlank() || DEV_DEFAULT_SECRET.equals(secret);
+    if (!builtIn) {
+      return;
+    }
+    if (!ConfigHolder.getBoolean("jwt.allowDefaultSecret", false)) {
+      throw new IllegalStateException(
+        "jwt.secret 缺失或仍是仓库内置开发密钥，拒绝启动：请注入 POMELO_JWT_SECRET；"
+          + "仅本地开发可设置 jwt.allowDefaultSecret=true");
+    }
+    LOG.warn("JWT 正在使用仓库内置开发密钥，该密钥公开可见，禁止用于对外部署");
   }
 
   /** 验签并解析 token，成功返回完整 claims（sub=userId, id, userName, nickname） */

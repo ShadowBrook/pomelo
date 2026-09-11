@@ -14,6 +14,11 @@ gateway:
     port: 9000
   websocket:
     port: 9001
+  auth:
+    # 连接建立后在此时间内未完成认证即断开（未认证连接不参与心跳，需要独立兜底）
+    timeoutMs: 30000
+  # 连接不活跃上限：客户端心跳默认 30s，超过该值说明连接已不可用
+  idleTimeoutSeconds: 120
 
 redis:
   uri: "redis://redis:6379"
@@ -40,10 +45,21 @@ idGenerator:
   redisKey: "seq:id:generator"
 
 snowflake:
+  # 仅在 workerId 无法从环境变量/Redis 租约解析时使用，且必须显式打开 allowStaticWorkerId；
+  # 多节点共用同一 workerId 会生成重复 ID（用户主键/消息主键）
   workerId: 1
+  allowStaticWorkerId: false
+  # workerId 租约续期间隔（租约 TTL 固定 60s，续期带归属 CAS）
+  leaseRenewIntervalMs: 30000
 
 jwt:
+  # 内置密钥仅为占位：JwtTokenParser 会拒绝用它启动（HS256 密钥即签发权，
+  # 公开密钥等于允许任何人为任意 userId 签发 token）。
+  # 部署由 deploy.sh 生成 conf/jwt.env 并经 env_file 注入 POMELO_JWT_SECRET；
+  # 本地 IDE 直跑需自行 export POMELO_JWT_SECRET，或在本地配置里改
+  # allowDefaultSecret: true 显式放行（切勿随镜像发布）。
   secret: "pomelo-dev-secret-change-in-production"
+  allowDefaultSecret: false
   ttlSeconds: 86400
   blacklistPrefix: "jwt:blacklist:"
 
@@ -55,6 +71,8 @@ friend:
 
 message:
   pullLimit: 50
+  # 单次拉取的硬上限：请求里的 limit 在此截断，避免一条指令把全量历史读进内存
+  maxPullLimit: 200
 
 media:
   # 服务端内部访问 MinIO 的地址（容器部署用 docker 内部 DNS）

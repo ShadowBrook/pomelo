@@ -44,6 +44,8 @@ services:
       POMELO_TLS_KEY_PATH: "/certs/server.key"
       # JVM 参数
       JAVA_OPTS: "-Xms256m -Xmx512m"
+    # JWT 签名密钥（HS256 密钥即签发权）：由 deploy.sh 随机生成，不入库
+    env_file: [./conf/jwt.env]
     volumes: [./conf/tls:/certs:ro]
     depends_on:
       postgres:
@@ -68,6 +70,8 @@ services:
       POMELO_TLS_CERT_PATH: "/certs/server.crt"
       POMELO_TLS_KEY_PATH: "/certs/server.key"
       JAVA_OPTS: "-Xms256m -Xmx512m"
+    # 与 logic 侧共用同一密钥，否则网关验签不过
+    env_file: [./conf/jwt.env]
     volumes: [./conf/tls:/certs:ro]
     depends_on:
       redis:

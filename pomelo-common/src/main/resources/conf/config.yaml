@@ -35,9 +35,12 @@ idGenerator:
 
 snowflake:
   workerId: 1
+  allowStaticWorkerId: false
+  leaseRenewIntervalMs: 30000
 
 jwt:
   secret: "pomelo-dev-secret-change-in-production"
+  allowDefaultSecret: false
   ttlSeconds: 86400
   blacklistPrefix: "jwt:blacklist:"
 
@@ -52,3 +55,4 @@ friend:
 
 message:
   pullLimit: 50
+  maxPullLimit: 200

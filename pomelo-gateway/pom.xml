@@ -109,6 +109,16 @@
           </extraDirectories>
         </configuration>
       </plugin>
+      <plugin>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <systemPropertyVariables>
+            <!-- 单测直接构造 MessageDispatcher/部署 Verticle，不会加载 conf/config.yaml；
+                 不提供密钥的话 JwtTokenParser 的「拒绝内置密钥启动」护栏会误伤测试 -->
+            <jwt.secret>test-only-secret-not-for-deployment</jwt.secret>
+          </systemPropertyVariables>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
 </project>
