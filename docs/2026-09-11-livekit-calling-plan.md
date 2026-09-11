@@ -68,6 +68,13 @@
 
 ## 实施记录
 
+### 2026-09-12（Phase 2 完成并真链路验证）
+
+- 前端 `feat/webrtc-calling` 分支两个提交：SDK 信令层（bundle 重生成 + CALL 命令/推送分发）与 UI 层（useCallStore 状态机 + CallOverlay + 头部拨打入口 + WebAudio 铃声）。
+- **真链路冒烟（真实后端 + 真浏览器）**：登录态注入 → 聊天窗点击语音通话 → 后端日志 `通话振铃` → LiveKit 建房（房间名 snowflake+随机后缀）→ 45s 振铃超时（reason=5）→ 浮层自动收尾 → `im_call` 落库 → 会话预览"[语音通话] 未接听"。全链路无一处手工干预。
+- 环境坑（已记录）：dev server 端口漂移（5174）与 `.env.development` 钉死的 `VITE_WS_URL=ws://localhost:5173/ws` 不一致导致 WS 假性中断，重启回 5173 解决。
+- 待办：双浏览器双账号的"真实接听"场景（需要第二个人/第二个浏览器会话点接听），属 Phase 3 联调矩阵。
+
 ### 2026-09-11
 
 - 拉出分支 `feat/webrtc-calling`。
