@@ -27,6 +27,7 @@ public class TcpGatewayVerticle extends VerticleBase {
   private static final Logger LOG = LoggerFactory.getLogger(TcpGatewayVerticle.class);
 
   private int tcpPort;
+  private long authTimeoutMs;
   private NetServer tcpServer;
   private SessionRegistry sessionRegistry;
   private MessageDispatcher dispatcher;
@@ -47,6 +48,7 @@ public class TcpGatewayVerticle extends VerticleBase {
   @Override
   public Future<?> start() {
     this.tcpPort = ConfigHolder.getInt("gateway.tcp.port", 9000);
+    this.authTimeoutMs = ConfigHolder.getLong("gateway.auth.timeoutMs", 30000L);
     LOG.info("启动 TCP Gateway，端口：{}", tcpPort);
 
     if (sessionRegistry == null) {
@@ -56,6 +58,8 @@ public class TcpGatewayVerticle extends VerticleBase {
     }
     // TLS：启用后客户端需以 TLS 握手连接
     NetServerOptions serverOptions = new NetServerOptions();
+    // 空闲兜底：已认证连接靠客户端心跳（默认 30s）+ 心跳超时回收，这里再设一层不活跃上限
+    serverOptions.setIdleTimeout(ConfigHolder.getInt("gateway.idleTimeoutSeconds", 120));
     PemKeyCertOptions pem = TlsConfig.pemKeyCert();
     if (pem != null) {
       serverOptions.setSsl(true).setKeyCertOptions(pem);
@@ -83,6 +87,8 @@ public class TcpGatewayVerticle extends VerticleBase {
       LOG.debug("TCP 客户端已连接：{}", socket.remoteAddress());
       RecordParser parser = RecordParser.newFixed(4);
       Connection conn = Connection.from(socket);
+      // 未认证连接必须有限期，否则空闲 socket 可无限期占用 FD/内存
+      sessionRegistry.startAuthDeadline(conn, authTimeoutMs);
 
       Handler<Buffer> handler = new Handler<>() {
         int size = -1;

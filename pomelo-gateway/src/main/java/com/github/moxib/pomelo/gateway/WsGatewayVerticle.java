@@ -27,6 +27,7 @@ public class WsGatewayVerticle extends VerticleBase {
   private static final Logger LOG = LoggerFactory.getLogger(WsGatewayVerticle.class);
 
   private int wsPort;
+  private long authTimeoutMs;
   private HttpServer wsServer;
   private SessionRegistry sessionRegistry;
   private MessageDispatcher dispatcher;
@@ -47,6 +48,7 @@ public class WsGatewayVerticle extends VerticleBase {
   @Override
   public Future<?> start() throws Exception {
     this.wsPort = ConfigHolder.getInt("gateway.websocket.port", 9001);
+    this.authTimeoutMs = ConfigHolder.getLong("gateway.auth.timeoutMs", 30000L);
     if (sessionRegistry == null) {
       long heartbeatTimeoutMs = ConfigHolder.getLong("gateway.heartbeat.timeoutMs", 90000L);
       this.sessionRegistry = new SessionRegistry(vertx);
@@ -55,7 +57,9 @@ public class WsGatewayVerticle extends VerticleBase {
 
     // protobuf使用deflate收益不高
     HttpServerOptions serverOptions = new HttpServerOptions()
-      .setPerMessageWebSocketCompressionSupported(false);
+      .setPerMessageWebSocketCompressionSupported(false)
+      // 空闲兜底：已认证连接靠客户端心跳（默认 30s）+ 心跳超时回收，这里再设一层不活跃上限
+      .setIdleTimeout(ConfigHolder.getInt("gateway.idleTimeoutSeconds", 120));
     // TLS：启用后客户端需使用 wss://
     PemKeyCertOptions pem = TlsConfig.pemKeyCert();
     if (pem != null) {
@@ -78,6 +82,8 @@ public class WsGatewayVerticle extends VerticleBase {
   private Handler<ServerWebSocket> getServerHandler() {
     return ws -> {
       Connection conn = Connection.from(ws);
+      // 未认证连接必须有限期，否则空闲 socket 可无限期占用 FD/内存
+      sessionRegistry.startAuthDeadline(conn, authTimeoutMs);
       // WS 二进制帧与 TCP 共用同一 4 字节长度前缀协议，
       // 统一走 RecordParser：正确处理帧分片与粘包，避免对整帧到达的错误假设
       RecordParser parser = RecordParser.newFixed(4);

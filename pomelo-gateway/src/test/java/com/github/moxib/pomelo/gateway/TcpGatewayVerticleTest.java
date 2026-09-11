@@ -35,6 +35,11 @@ public class TcpGatewayVerticleTest {
 
   private Vertx vertx;
   private TcpGatewayVerticle tcpGatewayVerticle;
+  /**
+   * 持有 NetClient 强引用：Vert.x 5 会在客户端对象被 GC 时自动关闭其全部连接，
+   * 随用随弃（局部变量）会让测试中途的连接被回收，表现为偶发 10s 超时。
+   */
+  private final List<NetClient> netClients = new ArrayList<>();
 
   @BeforeEach
   void setUp() throws InterruptedException {
@@ -111,6 +116,8 @@ public class TcpGatewayVerticleTest {
     CountDownLatch latch = new CountDownLatch(1);
     AtomicReference<NetSocket> socketRef = new AtomicReference<>();
     NetClient client = vertx.createNetClient();
+    // 保留引用，避免客户端被 GC 回收导致连接中途关闭（见 netClients 字段说明）
+    netClients.add(client);
     client.connect(TCP_PORT, "127.0.0.1")
       .onSuccess(s -> {
         socketRef.set(s);

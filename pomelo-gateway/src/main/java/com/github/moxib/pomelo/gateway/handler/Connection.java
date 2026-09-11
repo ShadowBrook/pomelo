@@ -1,6 +1,8 @@
 package com.github.moxib.pomelo.gateway.handler;
 
+import io.vertx.core.Context;
 import io.vertx.core.Future;
+import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.ServerWebSocket;
 import io.vertx.core.net.NetSocket;
@@ -33,23 +35,25 @@ public interface Connection {
   void close();
 
   /**
-   * 从 NetSocket 创建 Connection
+   * 从 NetSocket 创建 Connection。
+   * 在连接处理器内调用，{@link Vertx#currentContext()} 即该连接所属事件循环，
+   * 写入队列据此把跨 context 的写入（如 logic 推送）归一到同一线程。
    *
    * @param netSocket TCP 连接
    * @return Connection 实例
    */
   static Connection from(NetSocket netSocket) {
-    return new NetSocketConnection(netSocket);
+    return new NetSocketConnection(netSocket, Vertx.currentContext());
   }
 
   /**
-   * 从 ServerWebSocket 创建 Connection
+   * 从 ServerWebSocket 创建 Connection（同 {@link #from(NetSocket)}，捕获当前 context）
    *
    * @param webSocket WebSocket 连接
    * @return Connection 实例
    */
   static Connection from(ServerWebSocket webSocket) {
-    return new WebSocketConnection(webSocket);
+    return new WebSocketConnection(webSocket, Vertx.currentContext());
   }
 
   /**
@@ -59,9 +63,9 @@ public interface Connection {
     private final NetSocket netSocket;
     private final BoundedWriteQueue writes;
 
-    public NetSocketConnection(NetSocket netSocket) {
+    public NetSocketConnection(NetSocket netSocket, Context context) {
       this.netSocket = netSocket;
-      this.writes = new BoundedWriteQueue(netSocket, netSocket::close);
+      this.writes = new BoundedWriteQueue(netSocket, netSocket::close, context);
     }
 
     @Override
@@ -87,9 +91,9 @@ public interface Connection {
     private final ServerWebSocket webSocket;
     private final BoundedWriteQueue writes;
 
-    public WebSocketConnection(ServerWebSocket webSocket) {
+    public WebSocketConnection(ServerWebSocket webSocket, Context context) {
       this.webSocket = webSocket;
-      this.writes = new BoundedWriteQueue(webSocket, () -> webSocket.close());
+      this.writes = new BoundedWriteQueue(webSocket, () -> webSocket.close(), context);
     }
 
     @Override
