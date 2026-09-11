@@ -90,3 +90,4 @@
 - 全量回归：common 48、logic 103（新增 23 例全绿；7 例失败仍全部为既有的 RedisIdGeneratorTest，与基线一致）、seqsvr 三模块 40、gateway 20 全绿。`conf/livekit.env` 已在本地生成并验证 compose 配置合法。
 - 部署修复（2026-09-11）：媒体 UDP 段从 50000-60000 改为 **40000-40100**——macOS 临时端口范围（49152-65535）与之重叠，Docker Desktop 逐端口绑定映射时与系统 UDP 会话相撞（`bind: address already in use`），导致 livekit 容器起不来。另：`im_call` 建表脚本只在全新初始化的 `docker-entrypoint` 执行，**存量库需手工补表**（本次部署已补）。
 - ICE 修复（2026-09-11）：双端互通首测失败（信令通、PC 15s 超时）。根因：LiveKit 向客户端广播容器自身 IP（172.18.x），Docker Desktop 上该网段从宿主机不可路由。修复：`rtc.node_ip.ipv4: "127.0.0.1"`（本机测试经 Docker 端口代理；跨设备改局域网 IP，生产用 `use_external_ip: true`）。修复后真浏览器验证通过：双端入会、互订音频 track。
+- ICE 修复二（2026-09-12）：`rtc.node_ip.ipv4` 在 YAML 中不生效（容器内无该网卡，配置被忽略；此前 127.0.0.1 能通是 STUN srflx + NAT 打环的巧合）。改用 CLI 参数 `--node-ip 192.168.0.103` 强制宣告宿主机局域网 IP，启动日志确认生效。服务端候选日志（publisherCandidates）是定位此类问题的最短路径。

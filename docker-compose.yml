@@ -226,8 +226,11 @@ services:
   livekit:
     image: livekit/livekit-server:v1.13.6
     container_name: pomelo-livekit
-    # 配置见 conf/livekit.yaml；API 密钥经 LIVEKIT_KEYS 注入（deploy.sh 生成 conf/livekit.env）
-    command: --config /etc/livekit/livekit.yaml
+    # --node-ip：向客户端宣告的 ICE 候选地址。容器内网段（172.18.x）从局域网设备不可路由，
+    # 必须宣告宿主机局域网 IP（媒体 UDP 段 40000-40100 已由 compose 映射到宿主机）。
+    # IP 变化（DHCP）后需同步修改并 `docker compose up -d livekit`。
+    # 生产跨网部署改为 use_external_ip: true（livekit.yaml）+ 域名/TURN，去掉本参数
+    command: --config /etc/livekit/livekit.yaml --node-ip 192.168.0.103
     ports:
       - "7880:7880"                      # 信令 WS（生产收进反代 wss）
       - "7881:7881/tcp"                  # WebRTC TCP 回退

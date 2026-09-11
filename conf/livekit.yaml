@@ -12,12 +12,9 @@ rtc:
   # 绑定映射段，落在临时范围内会与系统自身的 UDP 会话相撞（bind: address already in use）
   port_range_start: 40000
   port_range_end: 40100
-  # 向客户端广播的节点 IP：容器自身 IP（172.18.x）在 Docker Desktop 上从宿主机不可路由，
-  # 信令能通但媒体必然超时（could not establish pc connection）。
-  # 当前指向开发机局域网 IP：本机与局域网手机均可经 Docker 发布的 UDP 端口直达。
-  # 注意：IP 变化（DHCP）后需重启 livekit 容器；生产用 use_external_ip: true
-  node_ip:
-    ipv4: "192.168.0.103"
+  # ICE 候选的节点 IP 不在本文件配置——YAML 的 rtc.node_ip.ipv4 在 Docker 场景下
+  # 不会生效（容器内无该网卡，配置被忽略），必须用 compose 的 --node-ip 参数宣告
+  # 宿主机局域网 IP（见 docker-compose.yml，IP 变化后同步修改并 up -d livekit）。
   # 生产跨网部署必须打开：服务器自动探测公网 IP 注入 ICE 候选；
   # 本机/内网开发保持 false，否则把探测到的外网 IP 发给内网客户端反而打不通
   use_external_ip: false
