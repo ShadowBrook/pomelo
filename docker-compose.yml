@@ -25,7 +25,7 @@ services:
     image: pomelo/pomelo
     container_name: pomelo
     ports:
-      - "8888:8888"   # HTTP API（Logic-Server）
+      - "127.0.0.1:8888:8888"   # HTTP API（对外只经反代，不直接暴露）
     environment:
       # 集群 EventBus（与 gateway / seqsvr 同 Redis 集群）
       VERTX_CLUSTER: "true"
@@ -61,8 +61,8 @@ services:
     image: pomelo/gateway
     container_name: pomelo-gateway
     ports:
-      - "9000:9000"   # TCP Gateway
-      - "9001:9001"   # WebSocket Gateway
+      - "127.0.0.1:9000:9000"   # TCP Gateway（Web 端不用；原生客户端接入时再放开）
+      - "127.0.0.1:9001:9001"   # WebSocket Gateway（对外只经反代 wss）
     environment:
       VERTX_CLUSTER: "true"
       POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
@@ -91,7 +91,7 @@ services:
       POSTGRES_USER: pomelo
       POSTGRES_PASSWORD: pomelo123
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql
       # 初始化建表脚本
@@ -109,7 +109,7 @@ services:
     image: redis:7-alpine
     container_name: pomelo-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -167,7 +167,7 @@ services:
     image: pomelo/seqsvr-mediate
     container_name: seqsvr-mediate
     ports:
-      - "10106:10106"   # admin HTTP：GET /router /nodes
+      - "127.0.0.1:10106:10106"   # admin HTTP：GET /router /nodes
     environment:
       VERTX_CLUSTER: "true"
       POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
@@ -210,8 +210,8 @@ services:
     container_name: pomelo-silo
     command: server /data --console-address :9001
     ports:
-      - "9002:9000"   # S3 API
-      - "9003:9001"   # Web Console
+      - "127.0.0.1:9002:9000"   # S3 API（外部设备经反代媒体子域访问，见 deploy/demo）
+      - "127.0.0.1:9003:9001"   # Web Console
     environment:
       MINIO_ROOT_USER: pomelo-admin
       MINIO_ROOT_PASSWORD: pomelo-admin-password
@@ -226,16 +226,16 @@ services:
   livekit:
     image: livekit/livekit-server:v1.13.6
     container_name: pomelo-livekit
-    # --node-ip：向客户端宣告的 ICE 候选地址。容器内网段（172.18.x）从局域网设备不可路由，
-    # 必须宣告宿主机局域网 IP（媒体 UDP 段 40000-40100 已由 compose 映射到宿主机）。
-    # IP 变化（DHCP）后需同步修改并 `docker compose up -d livekit`。
+    # --node-ip：向客户端宣告的 ICE 候选地址。容器内网段（172.18.x）从宿主机浏览器不可路由，
+    # 本机访问宣告 127.0.0.1（媒体 UDP 段 40000-40100 已由 compose 映射到宿主机）。
+    # 局域网设备访问时改成宿主机局域网 IP 并 `docker compose up -d livekit`；
     # 生产跨网部署改为 use_external_ip: true（livekit.yaml）+ 域名/TURN，去掉本参数
-    command: --config /etc/livekit/livekit.yaml --node-ip 192.168.0.103
+    command: --config /etc/livekit/livekit.yaml --node-ip 127.0.0.1
     ports:
-      - "7880:7880"                      # 信令 WS（生产收进反代 wss）
-      - "7881:7881/tcp"                  # WebRTC TCP 回退
+      - "127.0.0.1:7880:7880"            # 信令 WS（对外只经反代 wss，见 deploy/demo/Caddyfile）
+      - "7881:7881/tcp"                  # WebRTC TCP 回退（ICE 直连，必须公网可达）
       - "3478:3478/udp"                  # TURN/UDP
-      - "40000-40100:40000-40100/udp"    # WebRTC 媒体 UDP（避开系统临时端口段）
+      - "30000-30100:30000-30100/udp"    # WebRTC 媒体 UDP（避开 macOS/Linux 临时端口段，见 conf/livekit.yaml）
     volumes: [./conf/livekit.yaml:/etc/livekit/livekit.yaml:ro]
     env_file: [./conf/livekit.env]
     depends_on:

@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.security.SecureRandom;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -392,16 +393,18 @@ public class CallService extends ServiceBase {
    */
   private Future<Void> writeCallRecords(CallSession session, int reason, long durationMs) {
     boolean answered = session.answeredAt > 0;
-    String content = new JsonObject()
+    // outgoing 相对收件人标记方向（发起方那份为 true）：客户端气泡按它决定落在哪一侧
+    JsonObject base = new JsonObject()
       .put("kind", "call")
       .put("mediaType", session.mediaType)
       .put("answered", answered)
       .put("durationMs", durationMs)
       .put("reason", reason)
-      .put("callId", session.callId)
-      .encode();
-    return writeCallRecord(session.callerId, session.calleeId, content)
-      .compose(v -> writeCallRecord(session.calleeId, session.callerId, content))
+      .put("callId", session.callId);
+    return writeCallRecord(session.callerId, session.calleeId,
+        base.copy().put("outgoing", false).encode())
+      .compose(v -> writeCallRecord(session.calleeId, session.callerId,
+        base.copy().put("outgoing", true).encode()))
       .mapEmpty();
   }
 
@@ -421,30 +424,44 @@ public class CallService extends ServiceBase {
         .clientMsgId(id)
         .build();
       return messageRepo.save(record)
-        .compose(inserted -> {
-          if (inserted) {
-            pushCallRecordNotify(record);
-          }
-          return Future.<Void>succeededFuture();
-        });
+        .compose(inserted -> inserted ? pushCallRecordNotify(record) : Future.<Void>succeededFuture());
     });
   }
 
-  /** 在线的一方经 C2CNotify 实时收到记录（离线则由拉取补齐） */
-  private void pushCallRecordNotify(MessageRecord record) {
-    CommonProto.MessageContent message = CommonProto.MessageContent.newBuilder()
-      .setMsgTypeValue(record.getMsgType())
-      .setContent(ByteString.copyFromUtf8(record.getContent() != null ? record.getContent() : ""))      .setTimestamp(record.getCreatedAt())
-      .build();
-    ChatProto.C2CNotify notify = ChatProto.C2CNotify.newBuilder()
-      .setSenderId(record.getSenderId())
-      .setRecipientId(record.getRecipientId())
-      .setMessage(message)
-      .setSeq(record.getSeq())
-      .setMessageId(record.getId())
-      .build();
-    pushRouter.push(new PushEnvelope(String.valueOf(record.getRecipientId()),
-      CMD_C2C_NOTIFY_VALUE, notify.toByteArray()));
+  /**
+   * 在线的一方经 C2CNotify 实时收到记录（离线则由拉取补齐）。
+   * ext 补 senderUserName/senderNickname（与 C2CService/拉取路径一致），
+   * 否则接收方气泡头像/预览会回退成数字 ID；查询失败降级为无 ext。
+   */
+  private Future<Void> pushCallRecordNotify(MessageRecord record) {
+    return messageRepo.findUserIdsByIds(List.of(record.getSenderId()))
+      .recover(err -> {
+        LOG.warn("通话记录发送者信息查询失败 senderId={}: {}", record.getSenderId(), err.getMessage());
+        return Future.succeededFuture(Map.of());
+      })
+      .compose(idToInfo -> {
+        var senderInfo = idToInfo.get(record.getSenderId());
+        CommonProto.MessageContent.Builder mc = CommonProto.MessageContent.newBuilder()
+          .setMsgTypeValue(record.getMsgType())
+          .setContent(ByteString.copyFromUtf8(record.getContent() != null ? record.getContent() : ""))
+          .setTimestamp(record.getCreatedAt());
+        if (senderInfo != null && senderInfo.userName() != null && !senderInfo.userName().isEmpty()) {
+          mc.putExt("senderUserName", senderInfo.userName());
+        }
+        if (senderInfo != null && senderInfo.nickname() != null && !senderInfo.nickname().isEmpty()) {
+          mc.putExt("senderNickname", senderInfo.nickname());
+        }
+        ChatProto.C2CNotify notify = ChatProto.C2CNotify.newBuilder()
+          .setSenderId(record.getSenderId())
+          .setRecipientId(record.getRecipientId())
+          .setMessage(mc)
+          .setSeq(record.getSeq())
+          .setMessageId(record.getId())
+          .build();
+        pushRouter.push(new PushEnvelope(String.valueOf(record.getRecipientId()),
+          CMD_C2C_NOTIFY_VALUE, notify.toByteArray()));
+        return Future.<Void>succeededFuture();
+      });
   }
 
   private Future<Void> notifyPeer(CallSession session, int reason, long endedBy) {

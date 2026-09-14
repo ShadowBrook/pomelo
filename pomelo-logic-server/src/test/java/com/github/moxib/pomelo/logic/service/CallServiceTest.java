@@ -18,6 +18,7 @@ import com.github.moxib.pomelo.logic.model.UserIdInfo;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.call.CallProto;
+import com.github.moxib.pomelo.proto.chat.ChatProto;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
@@ -152,7 +153,13 @@ class CallServiceTest {
     @Override public Future<List<MessageRecord>> findByIds(long recipientId, List<Long> ids) { return Future.succeededFuture(List.of()); }
     @Override public Future<MessageRecord> findBySenderAndClientMsgId(long senderId, long clientMsgId) { return Future.succeededFuture(null); }
     @Override public Future<List<MessageRecord>> pullConversation(String conversationId, long beforeTime, int limit) { return Future.succeededFuture(List.of()); }
-    @Override public Future<Map<Long, UserIdInfo>> findUserIdsByIds(List<Long> ids) { return Future.succeededFuture(Map.of()); }
+    @Override public Future<Map<Long, UserIdInfo>> findUserIdsByIds(List<Long> ids) {
+      Map<Long, UserIdInfo> info = new HashMap<>();
+      for (long id : ids) {
+        info.put(id, new UserIdInfo(String.valueOf(id), "user" + id, "昵称" + id));
+      }
+      return Future.succeededFuture(info);
+    }
   }
 
   private static class RecordingRoomManager implements CallRoomManager {
@@ -206,6 +213,24 @@ class CallServiceTest {
       if (env.getCmd() == CMD_CALL_EVENT_PUSH_VALUE && env.getTargetUserId().equals(String.valueOf(toUserId))) {
         try {
           return CallProto.CallEventPush.parseFrom(env.getBody());
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      }
+    }
+    return null;
+  }
+
+  /** 收件人最后一条通话记录 C2CNotify（MSG_TYPE_SYSTEM），无则 null */
+  private static ChatProto.C2CNotify lastRecordNotify(CapturingPushRouter router, long toUserId) {
+    for (int i = router.pushes.size() - 1; i >= 0; i--) {
+      PushEnvelope env = router.pushes.get(i);
+      if (env.getCmd() == CMD_C2C_NOTIFY_VALUE && env.getTargetUserId().equals(String.valueOf(toUserId))) {
+        try {
+          ChatProto.C2CNotify notify = ChatProto.C2CNotify.parseFrom(env.getBody());
+          if (notify.getMessage().getMsgTypeValue() == CommonProto.MsgType.MSG_TYPE_SYSTEM_VALUE) {
+            return notify;
+          }
         } catch (Exception e) {
           throw new RuntimeException(e);
         }
@@ -423,6 +448,20 @@ class CallServiceTest {
     // 一条发给主叫（sender=被叫），一条发给被叫（sender=主叫）
     assertTrue(msgRepo.saved.stream().anyMatch(r -> r.getSenderId() == CALLEE && r.getRecipientId() == CALLER));
     assertTrue(msgRepo.saved.stream().anyMatch(r -> r.getSenderId() == CALLER && r.getRecipientId() == CALLEE));
+    // outgoing 相对收件人标记方向：主叫那份为 true、被叫那份为 false（客户端气泡落边依据）
+    assertTrue(msgRepo.saved.stream().anyMatch(r -> r.getRecipientId() == CALLER
+      && r.getContent().contains("\"outgoing\":true")));
+    assertTrue(msgRepo.saved.stream().anyMatch(r -> r.getRecipientId() == CALLEE
+      && r.getContent().contains("\"outgoing\":false")));
+    // 实时通知带发送者 ext（接收方头像/预览不回退成数字 ID）
+    ChatProto.C2CNotify recordToCallee = lastRecordNotify(pushRouter, CALLEE);
+    assertNotNull(recordToCallee);
+    assertEquals(CALLER, recordToCallee.getSenderId());
+    assertEquals("user" + CALLER, recordToCallee.getMessage().getExtOrThrow("senderUserName"));
+    assertEquals("昵称" + CALLER, recordToCallee.getMessage().getExtOrThrow("senderNickname"));
+    ChatProto.C2CNotify recordToCaller = lastRecordNotify(pushRouter, CALLER);
+    assertNotNull(recordToCaller);
+    assertEquals("昵称" + CALLEE, recordToCaller.getMessage().getExtOrThrow("senderNickname"));
   }
 
   @Test

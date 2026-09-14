@@ -8,10 +8,10 @@ rtc:
   # UDP 不通时的 TCP 回退
   tcp_port: 7881
   # WebRTC 媒体 UDP 端口范围（compose 已做同名映射，扩缩需两端同步）。
-  # 刻意选在 macOS/Linux 临时端口范围（49152-65535）之外：Docker Desktop 会逐端口
-  # 绑定映射段，落在临时范围内会与系统自身的 UDP 会话相撞（bind: address already in use）
-  port_range_start: 40000
-  port_range_end: 40100
+  # 刻意选在 macOS（49152-65535）与 Linux（32768-60999）临时端口范围之外：
+  # 端口映射段落在临时范围内会与系统自身的 UDP 会话相撞（bind: address already in use）
+  port_range_start: 30000
+  port_range_end: 30100
   # ICE 候选的节点 IP 不在本文件配置——YAML 的 rtc.node_ip.ipv4 在 Docker 场景下
   # 不会生效（容器内无该网卡，配置被忽略），必须用 compose 的 --node-ip 参数宣告
   # 宿主机局域网 IP（见 docker-compose.yml，IP 变化后同步修改并 up -d livekit）。
