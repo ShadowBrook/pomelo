@@ -53,6 +53,17 @@
       <artifactId>vertx-auth-jwt</artifactId>
     </dependency>
 
+    <!-- 全局指标门面 PomeloMetrics（Prometheus 格式）；vertx 模块版本由 vertx-stack-depchain 管理 -->
+    <dependency>
+      <groupId>io.vertx</groupId>
+      <artifactId>vertx-micrometer-metrics</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
+      <version>${micrometer.version}</version>
+    </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>

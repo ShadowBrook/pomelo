@@ -4,9 +4,11 @@ import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.seqsvr.client.SeqClientService;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.infrastructure.MinioObjectPresigner;
+import com.github.moxib.pomelo.logic.infrastructure.PgCallRepository;
 import com.github.moxib.pomelo.logic.infrastructure.PgGroupRepository;
 import com.github.moxib.pomelo.logic.infrastructure.PgMessageRepository;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
+import com.github.moxib.pomelo.logic.infrastructure.RedisCallStateStore;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
 import com.github.moxib.pomelo.logic.service.*;
 import io.vertx.core.Future;
@@ -37,6 +39,7 @@ public class LogicVerticle extends VerticleBase {
   private GroupPullService groupPullService;
   private GroupAckService groupAckService;
   private UploadService uploadService;
+  private CallService callService;
 
   private final SnowflakeIdGenerator snowflake;
 
@@ -69,6 +72,13 @@ public class LogicVerticle extends VerticleBase {
         groupPullService = new GroupPullService(groupRepo, messageRepo, mediaUrlSigner);
         groupAckService = new GroupAckService(groupRepo, messageRepo);
 
+        // 音视频通话：token 签发 + 房间管理 + Redis 态 + 记录落库
+        var livekitTokens = new LiveKitTokenService();
+        var livekitRooms = new LiveKitRoomClient(vertx, livekitTokens);
+        callService = new CallService(vertx, pushRouter, groupRepo,
+          new PgCallRepository(vertx), new RedisCallStateStore(RedisFactory.get(vertx)),
+          livekitTokens, livekitRooms, snowflake, messageRepo, seqClient);
+
         var bus = vertx.eventBus();
         bus.consumer("logic.c2c",     (Message<Buffer> msg) -> dispatch(msg, c2cService::process));
         bus.consumer("logic.ack",     (Message<Buffer> msg) -> dispatch(msg, ackService::process));
@@ -81,6 +91,7 @@ public class LogicVerticle extends VerticleBase {
         bus.consumer("logic.gpull",   (Message<Buffer> msg) -> dispatch(msg, groupPullService::process));
         bus.consumer("logic.gack",    (Message<Buffer> msg) -> dispatch(msg, groupAckService::process));
         bus.consumer("logic.friend",  (Message<Buffer> msg) -> dispatch(msg, friendService::process));
+        bus.consumer("logic.call",    (Message<Buffer> msg) -> dispatch(msg, callService::process));
 
         LOG.info("LogicVerticle 已启动，所有 EventBus consumer 注册完成");
         return Future.succeededFuture();

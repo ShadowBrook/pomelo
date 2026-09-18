@@ -8,6 +8,7 @@ import com.github.moxib.pomelo.logic.model.C2CReqContext;
 import com.github.moxib.pomelo.logic.model.C2CRespResult;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
 import com.github.moxib.pomelo.logic.model.requests.C2CRequest;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.chat.ChatProto;
 import com.github.moxib.pomelo.proto.common.CommonProto;
@@ -20,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 public class C2CService extends ServiceBase {
 
@@ -94,6 +96,18 @@ public class C2CService extends ServiceBase {
   }
 
   private Future<C2CRespResult> doSend(C2CReqContext ctx) {
+    // 业务指标：完成回调里 record（方法返回 ≠ 处理完成），见 docs/2026-09-17-im-metrics-plan.md
+    long startNanos = System.nanoTime();
+    return doSendInternal(ctx)
+      .onComplete(ar -> {
+        PomeloMetrics.histogramTimer("im.message.process.latency", "type", "c2c")
+          .record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+        PomeloMetrics.counter("im.message.sent.total", "type", "c2c",
+          "result", ar.succeeded() ? "ok" : "fail").increment();
+      });
+  }
+
+  private Future<C2CRespResult> doSendInternal(C2CReqContext ctx) {
     long snowflakeId = snowflake.nextId();
     return seqClient.fetchNextSequence(ctx.getRecipientId())
       .compose(seq -> {

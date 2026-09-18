@@ -3,9 +3,11 @@ package com.github.moxib.pomelo.config;
 import io.github.shadowbrook.RedisClusterManager;
 import io.github.shadowbrook.config.RedisConfig;
 import io.vertx.core.Vertx;
+import io.vertx.core.VertxBuilder;
 import io.vertx.core.VertxOptions;
 import io.vertx.core.eventbus.EventBusOptions;
 import io.vertx.core.json.JsonObject;
+import io.vertx.core.spi.VertxMetricsFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
@@ -66,9 +68,31 @@ public final class ClusterHelper {
    * 创建 Vert.x 实例，自动检测集群模式。
    */
   public static Vertx createVertx() {
+    return createVertx(new VertxOptions(), null);
+  }
+
+  /**
+   * 创建 Vert.x 实例（自动检测集群模式），挂接自定义 metrics 工厂
+   * （如 seqsvr 的 Prometheus registry）；不需要时传 null。
+   */
+  public static Vertx createVertx(VertxMetricsFactory metricsFactory) {
+    return createVertx(new VertxOptions(), metricsFactory);
+  }
+
+  /**
+   * 创建 Vert.x 实例（自动检测集群模式），调用方可注入自定义 VertxOptions 与
+   * metrics 工厂；options 中的其余字段沿用默认值。
+   */
+  public static Vertx createVertx(VertxOptions options, VertxMetricsFactory metricsFactory) {
+    VertxBuilder builder = Vertx.builder()
+        .with(options);
+    if (metricsFactory != null) {
+      builder = builder.withMetrics(metricsFactory);
+    }
+
     if (!isClustered()) {
       LOG.info("Creating standalone (non-clustered) Vert.x instance");
-      return Vertx.vertx();
+      return builder.build();
     }
 
     RedisConfig redisConfig = loadRedisConfig();
@@ -79,12 +103,10 @@ public final class ClusterHelper {
       LOG.info("Redis CM key namespace: {}", redisConfig.getKeyNamespace());
     }
 
-    VertxOptions options = new VertxOptions()
-        .setEventBusOptions(new EventBusOptions());
+    options.setEventBusOptions(new EventBusOptions());
 
     try {
-      Vertx vertx = Vertx.builder()
-          .with(options)
+      Vertx vertx = builder
           .withClusterManager(clusterManager)
           .buildClustered()
           .toCompletionStage()

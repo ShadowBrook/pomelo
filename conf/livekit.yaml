@@ -1,0 +1,40 @@
+# LiveKit SFU 配置（音视频通话媒体面）
+# 调研与拆解：docs/2026-09-11-livekit-calling-*.md
+#
+# 信令端口：浏览器经 room.connect(ws://<host>:7880, token) 直连（publicUrl 见 conf/config.yaml livekit 段）
+port: 7880
+
+rtc:
+  # UDP 不通时的 TCP 回退
+  tcp_port: 7881
+  # WebRTC 媒体 UDP 端口范围（compose 已做同名映射，扩缩需两端同步）。
+  # 刻意选在 macOS（49152-65535）与 Linux（32768-60999）临时端口范围之外：
+  # 端口映射段落在临时范围内会与系统自身的 UDP 会话相撞（bind: address already in use）
+  port_range_start: 30000
+  port_range_end: 30100
+  # ICE 候选的节点 IP 不在本文件配置——YAML 的 rtc.node_ip.ipv4 在 Docker 场景下
+  # 不会生效（容器内无该网卡，配置被忽略），必须用 compose 的 --node-ip 参数宣告
+  # 宿主机局域网 IP（见 docker-compose.yml，IP 变化后同步修改并 up -d livekit）。
+  # 生产跨网部署必须打开：服务器自动探测公网 IP 注入 ICE 候选；
+  # 本机/内网开发保持 false，否则把探测到的外网 IP 发给内网客户端反而打不通
+  use_external_ip: false
+
+turn:
+  # 开发环境仅开 UDP TURN(3478)；生产 TURN/TLS(443) 需要域名+证书，见调研文档 §2.3/Phase 3
+  enabled: true
+  udp_port: 3478
+
+room:
+  # 最后一人离开后房间保留 60s（断线重连回房间的窗口），之后自动关闭并触发 room_finished webhook
+  empty_timeout: 60
+
+# API 密钥经环境变量注入（deploy.sh 生成 conf/livekit.env，内含 LIVEKIT_KEYS="devkey: <随机secret>"），
+# 不写入本文件；logic 侧签发 token 用的同一 secret 走 POMELO_LIVEKIT_SECRET。
+#
+# webhook 兜底（participant_left / room_finished）：
+#   webhook:
+#     api_key: devkey
+#     urls:
+#       - https://pomelo:8888/api/livekit/webhook
+# 开发环境 API 端口是自签证书，LiveKit 服务端 POST 时会因证书不可信而失败，故默认关闭——
+# 通话收尾由 CallService 的振铃超时/通话上限定时器兜底；生产换受信证书后放开本段。

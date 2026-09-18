@@ -188,3 +188,5 @@ nbdist/
 conf/tls/
 # 本地生成的 JWT 签名密钥（deploy.sh 产出）
 conf/jwt.env
+# 本地生成的 LiveKit API 密钥（deploy.sh 产出）
+conf/livekit.env

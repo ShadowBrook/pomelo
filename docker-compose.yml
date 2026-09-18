@@ -25,8 +25,9 @@ services:
     image: pomelo/pomelo
     container_name: pomelo
     ports:
-      - "8888:8888"   # HTTP API（Logic-Server）
+      - "8888:8888"   # HTTP API（开发：放开给局域网真机联调；生产环境改回 127.0.0.1 走反代）
     environment:
+      TZ: "Asia/Shanghai"
       # 集群 EventBus（与 gateway / seqsvr 同 Redis 集群）
       VERTX_CLUSTER: "true"
       POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
@@ -44,8 +45,9 @@ services:
       POMELO_TLS_KEY_PATH: "/certs/server.key"
       # JVM 参数
       JAVA_OPTS: "-Xms256m -Xmx512m"
-    # JWT 签名密钥（HS256 密钥即签发权）：由 deploy.sh 随机生成，不入库
-    env_file: [./conf/jwt.env]
+    # JWT 签名密钥（HS256 密钥即签发权）与 LiveKit token 签名密钥：
+    # 均由 deploy.sh 随机生成，不入库
+    env_file: [./conf/jwt.env, ./conf/livekit.env]
     volumes: [./conf/tls:/certs:ro]
     depends_on:
       postgres:
@@ -60,9 +62,10 @@ services:
     image: pomelo/gateway
     container_name: pomelo-gateway
     ports:
-      - "9000:9000"   # TCP Gateway
-      - "9001:9001"   # WebSocket Gateway
+      - "127.0.0.1:9000:9000"   # TCP Gateway（Web 端不用；原生客户端接入时再放开）
+      - "9001:9001"   # WebSocket Gateway（开发：放开给局域网真机联调；生产环境改回 127.0.0.1 走反代）
     environment:
+      TZ: "Asia/Shanghai"
       VERTX_CLUSTER: "true"
       POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
       # TLS（TCP/WS 网关，客户端需使用 TLS / wss://）
@@ -90,7 +93,7 @@ services:
       POSTGRES_USER: pomelo
       POSTGRES_PASSWORD: pomelo123
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql
       # 初始化建表脚本
@@ -108,7 +111,7 @@ services:
     image: redis:7-alpine
     container_name: pomelo-redis
     ports:
-      - "6379:6379"
+      - "127.0.0.1:6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -127,6 +130,7 @@ services:
     # 临时以 root 运行；上行到 K8s 后改用 fsGroup 即可切回 1000:1000
     user: root
     environment: &seqsvr-env
+      TZ: "Asia/Shanghai"
       VERTX_CLUSTER: "true"
       POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
       JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.dataDir=/data -Dseqsvr.store.replicaId=store-1"
@@ -166,8 +170,9 @@ services:
     image: pomelo/seqsvr-mediate
     container_name: seqsvr-mediate
     ports:
-      - "10106:10106"   # admin HTTP：GET /router /nodes
+      - "127.0.0.1:10106:10106"   # admin HTTP：GET /router /nodes
     environment:
+      TZ: "Asia/Shanghai"
       VERTX_CLUSTER: "true"
       POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
       JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.store.replicas=seqsvr.store.store-1,seqsvr.store.store-2,seqsvr.store.store-3 -Dseqsvr.store.w=2 -Dseqsvr.store.r=2"
@@ -181,6 +186,7 @@ services:
     image: pomelo/seqsvr-alloc
     container_name: seqsvr-alloc-1
     environment:
+      TZ: "Asia/Shanghai"
       VERTX_CLUSTER: "true"
       POMELO_REDIS_CM_ENDPOINT: "redis://redis:6379"
       JAVA_OPTS: "-Xms256m -Xmx512m -Dseqsvr.nodeId=alloc-1 -Dseqsvr.mediate.enabled=true -Dseqsvr.store.replicas=seqsvr.store.store-1,seqsvr.store.store-2,seqsvr.store.store-3 -Dseqsvr.store.w=2 -Dseqsvr.store.r=2"
@@ -209,8 +215,8 @@ services:
     container_name: pomelo-silo
     command: server /data --console-address :9001
     ports:
-      - "9002:9000"   # S3 API
-      - "9003:9001"   # Web Console
+      - "127.0.0.1:9002:9000"   # S3 API（外部设备经反代媒体子域访问，见 deploy/demo）
+      - "127.0.0.1:9003:9001"   # Web Console
     environment:
       MINIO_ROOT_USER: pomelo-admin
       MINIO_ROOT_PASSWORD: pomelo-admin-password
@@ -220,12 +226,83 @@ services:
     networks:
       - pomelo-net
 
+  # ============ LiveKit SFU（音视频通话媒体面） ============
+
+  livekit:
+    image: livekit/livekit-server:v1.13.6
+    container_name: pomelo-livekit
+    # --node-ip：向客户端宣告的 ICE 候选地址。容器内网段（172.18.x）从宿主机浏览器不可路由，
+    # 本机访问宣告 127.0.0.1（媒体 UDP 段 40000-40100 已由 compose 映射到宿主机）。
+    # 局域网设备访问时改成宿主机局域网 IP 并 `docker compose up -d livekit`；
+    # 生产跨网部署改为 use_external_ip: true（livekit.yaml）+ 域名/TURN，去掉本参数
+    command: --config /etc/livekit/livekit.yaml --node-ip 127.0.0.1
+    ports:
+      - "127.0.0.1:7880:7880"            # 信令 WS（对外只经反代 wss，见 deploy/demo/Caddyfile）
+      - "7881:7881/tcp"                  # WebRTC TCP 回退（ICE 直连，必须公网可达）
+      - "3478:3478/udp"                  # TURN/UDP
+      - "30000-30100:30000-30100/udp"    # WebRTC 媒体 UDP（避开 macOS/Linux 临时端口段，见 conf/livekit.yaml）
+    volumes: [./conf/livekit.yaml:/etc/livekit/livekit.yaml:ro]
+    env_file: [./conf/livekit.env]
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  # ============ Prometheus（seqsvr / 业务指标抓取与告警） ============
+
+  prometheus:
+    image: prom/prometheus:v2.53.0
+    container_name: pomelo-prometheus
+    environment:
+      # 注意：prom/prometheus 镜像无 tzdata，Web UI 图表恒为 UTC（Go 标准库不解析
+      # POSIX TZ 串；zoneinfo 挂载经 virtiofs 亦不生效）。数据/告警内部全为 epoch 不受影响。
+      # 要本地时间看曲线 → Grafana（按浏览器时区渲染）。
+      TZ: "Asia/Shanghai"
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    depends_on:
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+  # ============ Grafana（指标可视化，按浏览器时区渲染） ============
+
+  grafana:
+    image: grafana/grafana:11.1.0
+    container_name: pomelo-grafana
+    environment:
+      TZ: "Asia/Shanghai"
+      # 开发环境：匿名只读免登录看板；编辑用 admin 账号
+      GF_SECURITY_ADMIN_USER: "admin"
+      GF_SECURITY_ADMIN_PASSWORD: "pomelo123"
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - ./deploy/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      prometheus: { condition: service_started }
+    restart: unless-stopped
+    networks: [pomelo-net]
+
 volumes:
   pgdata:
   seqsvr-data-1:
   seqsvr-data-2:
   seqsvr-data-3:
   silo-data:
+  prometheus-data:
+  grafana-data:
 
 networks:
   pomelo-net:

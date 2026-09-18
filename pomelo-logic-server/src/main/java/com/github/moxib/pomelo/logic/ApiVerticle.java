@@ -7,6 +7,7 @@ import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
 import com.github.moxib.pomelo.logic.infrastructure.TokenService;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.http.HttpServer;
@@ -89,11 +90,15 @@ public class ApiVerticle extends VerticleBase {
         Router router = Router.router(vertx);
         router.route().handler(BodyHandler.create());
         router.get("/api/health").handler(this::health);
+        // Prometheus 指标（seqsvr 客户端 + Vert.x 内建）；compose 端口绑 127.0.0.1，不外泄
+        router.get("/metrics").handler(this::metrics);
         router.post("/api/user/register").handler(this::register);
         router.post("/api/user/login").handler(this::login);
         router.get("/api/user/:userId/profile").handler(this::profile);
         router.get("/api/friends/:userId").handler(this::friends);
         router.get("/api/friends/:userId/pending").handler(this::pending);
+        // LiveKit webhook 兜底（participant_left/room_finished）：验签在 CallService 侧完成
+        router.post("/api/livekit/webhook").handler(this::livekitWebhook);
 
         // TLS：启用后客户端需使用 https://
         HttpServerOptions serverOptions = new HttpServerOptions();
@@ -115,6 +120,26 @@ public class ApiVerticle extends VerticleBase {
 
   private void health(RoutingContext ctx) {
     ctx.json(new JsonObject().put("status", "ok"));
+  }
+
+  private void metrics(RoutingContext ctx) {
+    ctx.response()
+      .putHeader("content-type", "text/plain; version=0.0.4; charset=utf-8")
+      .end(PomeloMetrics.scrape());
+  }
+
+  /**
+   * POST /api/livekit/webhook — LiveKit 事件兜底。
+   * 原始 body + Authorization 头经 EventBus 转给 CallService 验签处理，
+   * 回复值为 HTTP 状态码。此端点不校验 JWT 登录态（LiveKit 的签名即凭证）。
+   */
+  private void livekitWebhook(RoutingContext ctx) {
+    String body = ctx.body().asString();
+    String auth = ctx.request().getHeader("Authorization");
+    vertx.eventBus().<Integer>request("logic.call.webhook",
+        new JsonObject().put("body", body == null ? "" : body).put("auth", auth))
+      .onSuccess(reply -> ctx.response().setStatusCode(reply.body()).end())
+      .onFailure(e -> ctx.response().setStatusCode(503).end());
   }
 
   /** POST /api/user/register — userName + password，返回 Snowflake userId */

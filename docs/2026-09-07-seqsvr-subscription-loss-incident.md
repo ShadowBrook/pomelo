@@ -88,8 +88,11 @@ alloc 重启后 mesh 干净(0 次 Connecting 失败),但 35 分钟内出现 **9 
    极端崩溃窗口（saveRouteTable 失败后进程崩溃）可能复用版本号一次，由 P8 客户端强制采纳兜底。
 > - P8 ✅ `12b741d` — `SeqClientService`：连续 2 次 ROUTE_OUTDATED 强制采纳嵌入路由；连续 3 次向 Mediate
    `getRouter` 全量拉取；`retryAfterMs` 延迟重试；单次发号尝试上限 4 次；`updateRouteFrom` 返回是否采纳。
-> - P9 ✅ `fa48fc6` — `LEASE_TIMEOUT_MS` 5000→15000（约 3× 同步周期）；新增 `PENDING_ACTIVATE_DELAY_MS=5000`
-   解耦 pending 激活节奏；`ROUTE_OUTDATED` 回复统一携带 `retryAfterMs=2000`。
+> - P9 ✅ `fa48fc6` + `e6eb052` — `LEASE_TIMEOUT_MS` 5000→15000（约 3× 同步周期）；
+>   `ROUTE_OUTDATED` 回复统一携带 `retryAfterMs=2000`。pending 激活延迟在 `fa48fc6` 曾固定 5s 与停服阈值解耦，
+>   `e6eb052` 恢复租约不变量：`pendingActivateDelayMs = leaseTimeoutMs + syncLeaseMs`（默认 19s）——
+>   激活窗口必须大于"旧 owner 停服时间上界"（与 Store 分区的旧 owner 只能等租约超时停服），
+>   否则旧 owner 宿主停顿/分区期间新 owner 已激活，同一 section 双写可致同 id seq 重复。
 > - P1~P4 ✅ 库层（vertx-redis-clustermanager 0.0.2，独立仓库分支 5.x）：
    `reconcileOwnSubs` 周期对账（`subscriptionReconcileIntervalMs`，默认 30s，0 禁用）、put/remove 写失败
    ERROR 日志且不再上抛（对账兜底）、`isRegisteredInRedis`/`reconcileNow`/`isSubscriptionVisible` API、

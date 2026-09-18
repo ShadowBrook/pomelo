@@ -5,6 +5,7 @@ import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
 import com.github.moxib.pomelo.logic.id.WorkerIdResolver;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.Vertx;
@@ -42,7 +43,7 @@ public class LogicMain extends VerticleBase {
   }
 
   public static void main(String[] args) {
-    Vertx vertx = ClusterHelper.createVertx();
+    Vertx vertx = ClusterHelper.createVertx(PomeloMetrics.vertxMetricsFactory());
     vertx.deployVerticle(new LogicMain())
       .onSuccess(id -> LOG.info("Logic-Server started: deploymentId={}, clustered={}", id, vertx.isClustered()))
       .onFailure(e -> {

@@ -1,6 +1,7 @@
 package com.github.moxib.pomelo.seqsvr.alloc;
 
 import com.github.moxib.pomelo.config.ClusterHelper;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import com.github.moxib.pomelo.seqsvr.proto.AllocState;
 import com.github.moxib.pomelo.seqsvr.proto.RangeId;
 import com.github.moxib.pomelo.seqsvr.proto.Router;
@@ -25,6 +26,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
 /**
@@ -61,6 +63,8 @@ public class SeqAllocVerticle extends VerticleBase {
   private RouterNode myNode;
   private int heartbeatFailures = 0;
   private boolean registering = false;
+  /** 订阅可见性缓存值（自检/健康检查时刷新），供指标 gauge 读取 */
+  private final AtomicBoolean subscriptionVisibleGauge = new AtomicBoolean(true);
 
   public SeqAllocVerticle() {
     this.config = SeqAllocConfig.fromConfig();
@@ -84,6 +88,8 @@ public class SeqAllocVerticle extends VerticleBase {
       config.storeReplicas(), config.storeW(), config.storeR());
     allocManager = new AllocManager(store, setId, myNode, config.maxIdSize(), config.leaseMs(),
       config.mediateEnabled(), config.syncLeaseMs());
+
+    registerAllocMetrics(nodeId);
 
     // 注册 EventBus consumer
     registerConsumers(nodeId);
@@ -179,6 +185,22 @@ public class SeqAllocVerticle extends VerticleBase {
       });
   }
 
+  /** 注册时机：allocManager 创建后立即注册（gauge 弱引用对象为 manager，随 verticle 存活） */
+  private void registerAllocMetrics(String nodeId) {
+    PomeloMetrics.gauge("seqsvr.alloc.serving", allocManager,
+      m -> m.getState() == AllocState.INITED ? 1 : 0, "node", nodeId);
+    PomeloMetrics.gauge("seqsvr.alloc.lease.last.success.timestamp", allocManager,
+      AllocManager::getLastLeaseSuccess, "node", nodeId);
+    PomeloMetrics.gauge("seqsvr.alloc.sections.active", allocManager,
+      m -> m.getActiveSections().size(), "node", nodeId);
+    PomeloMetrics.gauge("seqsvr.alloc.sections.pending", allocManager,
+      m -> m.getPendingSections().size(), "node", nodeId);
+    PomeloMetrics.gauge("seqsvr.alloc.saves.pending", allocManager,
+      AllocManager::getPendingSavesCount, "node", nodeId);
+    PomeloMetrics.gauge("seqsvr.alloc.subscription.visible", subscriptionVisibleGauge,
+      b -> b.get() ? 1 : 0, "node", nodeId);
+  }
+
   private void registerConsumers(String nodeId) {
     // 兼容 / 兜底地址（单节点开发、客户端无路由表）
     consumers.add(vertx.eventBus().consumer(SeqSvrAddresses.ALLOC_FETCH_NEXT, this::onFetchNext));
@@ -216,7 +238,9 @@ public class SeqAllocVerticle extends VerticleBase {
 
   /** 应用层自检：集群订阅表丢失本节点订阅时,重新注册并触发 CM 立即对账（P2）。 */
   private void selfCheckSubscriptions() {
-    if (!subscriptionsVisible()) {
+    boolean visible = subscriptionsVisible();
+    subscriptionVisibleGauge.set(visible);
+    if (!visible) {
       LOG.error("AllocSvr EventBus 订阅对集群不可见,重新注册消费者: nodeId={}", config.nodeId());
       consumers.forEach(MessageConsumer::unregister);
       consumers.clear();
@@ -226,12 +250,20 @@ public class SeqAllocVerticle extends VerticleBase {
   }
 
   private void handleAdminRequest(HttpServerRequest req) {
-    if (!"/health".equals(req.path())) {
+    String path = req.path();
+    if ("/metrics".equals(path)) {
+      req.response()
+        .putHeader("content-type", "text/plain; version=0.0.4; charset=utf-8")
+        .end(PomeloMetrics.scrape());
+      return;
+    }
+    if (!"/health".equals(path)) {
       req.response().setStatusCode(404).end();
       return;
     }
     AllocState state = allocManager.getState();
     boolean subscriptionOk = subscriptionsVisible();
+    subscriptionVisibleGauge.set(subscriptionOk);
     boolean serving = state == AllocState.INITED;
     req.response()
       .putHeader("content-type", "application/json")
@@ -309,6 +341,7 @@ public class SeqAllocVerticle extends VerticleBase {
    * 构建"路由过期"响应：该节点不拥有请求 id 的号段，携带最新路由表供客户端收敛。
    */
   private JsonObject buildRouteOutdatedResponse(String message) {
+    PomeloMetrics.counter("seqsvr.alloc.route.outdated.total", "node", config.nodeId()).increment();
     Router router = allocManager.getRouter();
     return new JsonObject()
       .put("code", SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED)

@@ -74,6 +74,26 @@ message:
   # 单次拉取的硬上限：请求里的 limit 在此截断，避免一条指令把全量历史读进内存
   maxPullLimit: 200
 
+call:
+  # 振铃超时：无人接听自动结束并写未接记录
+  ringTimeoutMs: 45000
+  # 单通通话硬上限（到点服务端强制结束）
+  maxDurationMs: 7200000
+
+livekit:
+  # 浏览器可达的 SFU 信令地址（room.connect 的 url）。
+  # 开发：走前端 Vite 的 /lk 同源代理（无混合内容问题）；本机访问用 localhost。
+  # 局域网设备访问时改成 https://<电脑局域网IP>:5173/lk 并重启 logic。生产换 wss://域名/livekit
+  publicUrl: "wss://localhost:5173/lk"
+  # 服务端内部访问的 Twirp API 地址（容器部署用 docker 内部 DNS）
+  host: "http://livekit:7880"
+  apiKey: "devkey"
+  # 与 conf/livekit.env 中 LIVEKIT_KEYS 的 secret 一致（deploy.sh 生成）。
+  # 内置值仅为占位：签发时若发现仍是默认值且未显式放行会拒绝
+  secret: "pomelo-livekit-dev-secret-change-in-production"
+  allowDefaultSecret: false
+  tokenTtlSeconds: 900
+
 media:
   # 服务端内部访问 MinIO 的地址（容器部署用 docker 内部 DNS）
   endpoint: http://silo:9000

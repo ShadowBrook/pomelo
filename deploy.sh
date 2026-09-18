@@ -53,6 +53,23 @@ else
   echo "==> 复用已有 JWT 密钥：$JWT_ENV_FILE"
 fi
 
+# LiveKit API 密钥：livekit 容器用它验 token，logic 用同一 secret 签 token。
+# LIVEKIT_KEYS 是 livekit-server 原生读取的键值对（"apiKey: secret"）；
+# POMELO_LIVEKIT_* 供 logic 容器读取（同值），secret 与 JWT 同法随机生成。
+LIVEKIT_ENV_FILE="conf/livekit.env"
+if [ ! -f "$LIVEKIT_ENV_FILE" ]; then
+  umask 077
+  LIVEKIT_SECRET="$(openssl rand -hex 32)"
+  {
+    printf 'LIVEKIT_KEYS=devkey: %s\n' "$LIVEKIT_SECRET"
+    printf 'POMELO_LIVEKIT_API_KEY=devkey\n'
+    printf 'POMELO_LIVEKIT_SECRET=%s\n' "$LIVEKIT_SECRET"
+  } > "$LIVEKIT_ENV_FILE"
+  echo "==> 已生成 LiveKit API 密钥：$LIVEKIT_ENV_FILE（请勿提交到仓库）"
+else
+  echo "==> 复用已有 LiveKit 密钥：$LIVEKIT_ENV_FILE"
+fi
+
 echo "==> [1/4] install 依赖到本地 .m2（-am 自动包含上游依赖）"
 ./mvnw install -pl "$PL" -am -DskipTests -q
 

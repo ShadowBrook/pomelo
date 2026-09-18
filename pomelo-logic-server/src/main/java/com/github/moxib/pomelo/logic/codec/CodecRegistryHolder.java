@@ -4,6 +4,10 @@ import com.github.moxib.pomelo.codec.CodecRegistry;
 import com.github.moxib.pomelo.logic.model.requests.AckRequest;
 import com.github.moxib.pomelo.logic.model.requests.C2CRequest;
 import com.github.moxib.pomelo.logic.model.requests.C2GRequest;
+import com.github.moxib.pomelo.logic.model.requests.CallAcceptRequest;
+import com.github.moxib.pomelo.logic.model.requests.CallEndRequest;
+import com.github.moxib.pomelo.logic.model.requests.CallInviteRequest;
+import com.github.moxib.pomelo.logic.model.requests.CallTokenRequest;
 import com.github.moxib.pomelo.logic.model.requests.CreateGroupRequest;
 import com.github.moxib.pomelo.logic.model.requests.CtrlRequest;
 import com.github.moxib.pomelo.logic.model.requests.FriendOpRequest;
@@ -21,6 +25,7 @@ import com.github.moxib.pomelo.logic.model.requests.SearchRequest;
 import com.github.moxib.pomelo.logic.model.requests.UploadRequest;
 import com.github.moxib.pomelo.proto.ack.AckProto;
 import com.github.moxib.pomelo.proto.auth.AuthProto;
+import com.github.moxib.pomelo.proto.call.CallProto;
 import com.github.moxib.pomelo.proto.chat.ChatProto;
 import com.github.moxib.pomelo.proto.ctrl.CtrlProto;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
@@ -106,6 +111,16 @@ public final class CodecRegistryHolder {
     // 媒体上传预签名
     r.registerProtobuf(CMD_UPLOAD_REQ_VALUE, UploadProto.UploadReq.parser(),
       UploadRequest::fromProto, UploadRequest.class);
+
+    // 音视频通话
+    r.registerProtobuf(CMD_CALL_INVITE_REQ_VALUE, CallProto.CallInviteReq.parser(),
+      CallInviteRequest::fromProto, CallInviteRequest.class);
+    r.registerProtobuf(CMD_CALL_ACCEPT_REQ_VALUE, CallProto.CallAcceptReq.parser(),
+      CallAcceptRequest::fromProto, CallAcceptRequest.class);
+    r.registerProtobuf(CMD_CALL_END_REQ_VALUE, CallProto.CallEndReq.parser(),
+      CallEndRequest::fromProto, CallEndRequest.class);
+    r.registerProtobuf(CMD_CALL_TOKEN_REQ_VALUE, CallProto.CallTokenReq.parser(),
+      CallTokenRequest::fromProto, CallTokenRequest.class);
 
     return r;
   }

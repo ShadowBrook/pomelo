@@ -1,5 +1,6 @@
 package com.github.moxib.pomelo.seqsvr.client;
 
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import com.github.moxib.pomelo.seqsvr.proto.RangeId;
 import com.github.moxib.pomelo.seqsvr.proto.Router;
 import com.github.moxib.pomelo.seqsvr.proto.RouterNode;
@@ -60,6 +61,9 @@ public class SeqClientService {
     this.vertx = vertx;
     this.maxIdSize = maxIdSize;
     this.routeVersion = 0;
+
+    PomeloMetrics.gauge("seqsvr.client.route.version", this, SeqClientService::getRouteVersion);
+    PomeloMetrics.gauge("seqsvr.client.outdated.consecutive", consecutiveOutdated, AtomicInteger::get);
   }
 
   /**
@@ -93,6 +97,7 @@ public class SeqClientService {
     int code = resp.getInteger("code", SeqSvrConstants.ALLOC_CODE_OK);
     if (code == SeqSvrConstants.ALLOC_CODE_ROUTE_OUTDATED) {
       lastOutdatedMessage = resp.getString("message", "");
+      PomeloMetrics.counter("seqsvr.client.route.outdated.total").increment();
       int consecutive = consecutiveOutdated.incrementAndGet();
       boolean adopted = updateRouteFrom(resp);
       if (!adopted && consecutive >= FORCE_ADOPT_AFTER) {
@@ -141,6 +146,7 @@ public class SeqClientService {
 
   /** 连续过期达到阈值：向 Mediate 全量拉取路由表，强制采纳后重试。 */
   private Future<Long> pullRouterFromMediate(int id, boolean increment, int attempt) {
+    PomeloMetrics.counter("seqsvr.client.mediate.pull.total").increment();
     return vertx.eventBus().<JsonObject>request(SeqSvrAddresses.MEDIATE_GET_ROUTER, new JsonObject())
       .map(msg -> msg.body().getJsonObject("router"))
       .compose(routerJson -> {
@@ -164,6 +170,7 @@ public class SeqClientService {
       return Future.failedFuture(err);
     }
     // 目标节点不可达（故障迁移中下线）：走共享兜底地址重试一次
+    PomeloMetrics.counter("seqsvr.client.fallback.total").increment();
     LOG.debug("node-scoped request failed, falling back to shared address: id={}, cause={}",
       id, err.getMessage());
     String shared = increment ? SeqSvrAddresses.ALLOC_FETCH_NEXT : SeqSvrAddresses.ALLOC_GET_CURRENT;

@@ -6,6 +6,7 @@ import com.github.moxib.pomelo.seqsvr.proto.Router;
 import com.github.moxib.pomelo.seqsvr.proto.RouterNode;
 import com.github.moxib.pomelo.seqsvr.proto.SeqSvrConstants;
 import com.github.moxib.pomelo.seqsvr.proto.Sequence;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import com.github.moxib.pomelo.seqsvr.rpc.StoreAccessor;
 import io.vertx.core.Future;
 import org.slf4j.Logger;
@@ -17,6 +18,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 序列号分配管理器 — seqsvr 核心。
@@ -68,7 +70,6 @@ public class AllocManager {
   private final int maxIdSize;
   private final String nodeId;
   private final long leaseTimeoutMs;
-  private final long syncLeaseMs;
   /**
    * 新增号段 pending → active 的延迟 = 停服阈值 + 一个同步周期。
    * <p>
@@ -135,7 +136,7 @@ public class AllocManager {
   }
 
   /**
-   * @param syncLeaseMs 租约同步周期，pending 激活延迟取其 2 倍
+   * @param syncLeaseMs 租约同步周期，pending 激活延迟 = leaseTimeoutMs + syncLeaseMs
    */
   public AllocManager(StoreAccessor store, RangeId setId, RouterNode myNode, int maxIdSize, long leaseTimeoutMs,
                       boolean waitForRouter, long syncLeaseMs) {
@@ -145,7 +146,6 @@ public class AllocManager {
     this.nodeId = myNode.getNodeId();
     this.maxIdSize = maxIdSize;
     this.leaseTimeoutMs = leaseTimeoutMs;
-    this.syncLeaseMs = syncLeaseMs;
     // 必须大于旧 owner 停止发号的时间上界，详见字段注释
     this.pendingActivateDelayMs = leaseTimeoutMs + syncLeaseMs;
     this.waitForRouter = waitForRouter;
@@ -390,6 +390,16 @@ public class AllocManager {
    * @return Sequence，如果客户端路由过期则携带最新 Router
    */
   public Sequence fetchNextSequence(int id, int clientVersion) {
+    long startNanos = System.nanoTime();
+    try {
+      return doFetchNextSequence(id, clientVersion);
+    } finally {
+      PomeloMetrics.timer("seqsvr.alloc.fetch.duration", "node", nodeId)
+        .record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+    }
+  }
+
+  private Sequence doFetchNextSequence(int id, int clientVersion) {
     checkReady();
 
     if (id < setId.getIdBegin() || id >= (long) setId.getIdBegin() + setId.getSize()) {
@@ -401,6 +411,8 @@ public class AllocManager {
       throw new IllegalArgumentException(
         String.format("id %d not in an active section (section %d) of node %s", id, sectionIdx, nodeId));
     }
+
+    PomeloMetrics.counter("seqsvr.alloc.fetch.total", "node", nodeId).increment();
 
     // 递增用户 cur_seq：已分配则取自身值，未分配则从该 section 启动时的 max_seq 惰性起步
     long curSeq = curSeqs.getOrDefault(id, baseSectionMaxSeqs[sectionIdx]) + 1;
@@ -477,6 +489,7 @@ public class AllocManager {
       long targetSeq = entry.getValue();
       store.saveMaxSeq(id, targetSeq).onComplete(ar -> {
         if (ar.failed()) {
+          PomeloMetrics.counter("seqsvr.alloc.save.fail.total", "node", nodeId).increment();
           LOG.warn("saveMaxSeq failed, will retry on next lease sync: nodeId={}, id={}, targetSeq={}, cause={}",
             nodeId, id, targetSeq, ar.cause().getMessage());
           return;
@@ -581,8 +594,14 @@ public class AllocManager {
   /** pending 中的 section → 标记时刻 */
   public Map<Integer, Long> getPendingSections() { return Collections.unmodifiableMap(pendingSections); }
 
-  /** pending 激活延迟（= 2× 租约同步周期） */
+  /** pending 激活延迟（= 停服阈值 + 一个租约同步周期） */
   public long getPendingActivateDelayMs() { return pendingActivateDelayMs; }
+
+  /** 最近一次成功读取 Store 路由表的时刻（租约心跳，供指标 gauge） */
+  public long getLastLeaseSuccess() { return lastLeaseSuccess; }
+
+  /** 未落盘的已发号积压数（供指标 gauge） */
+  public int getPendingSavesCount() { return pendingSaves.size(); }
 
   /** 测试注入：把租约心跳回拨，模拟长时间无法读取 StoreSvr */
   void backdateLeaseForTest(long nowMs) {

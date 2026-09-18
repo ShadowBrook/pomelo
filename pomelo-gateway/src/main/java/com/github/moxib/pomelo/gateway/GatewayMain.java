@@ -4,9 +4,12 @@ import com.github.moxib.pomelo.config.ClusterHelper;
 import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.gateway.handler.MessageDispatcher;
 import com.github.moxib.pomelo.gateway.handler.SessionRegistry;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServer;
+import io.vertx.core.http.HttpServerRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +26,8 @@ public class GatewayMain extends VerticleBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(GatewayMain.class);
 
+  private HttpServer metricsServer;
+
   @Override
   public Future<?> start() {
     ClusterHelper.warnIfNotClustered(vertx, "Gateway");
@@ -32,17 +37,44 @@ public class GatewayMain extends VerticleBase {
         // 双套组件会导致 push 被轮询投递到没有用户会话的一侧而丢失
         long heartbeatTimeoutMs = ConfigHolder.getLong("gateway.heartbeat.timeoutMs", 90000L);
         SessionRegistry registry = new SessionRegistry(vertx);
+        PomeloMetrics.gauge("im.connections", registry, SessionRegistry::size);
         MessageDispatcher dispatcher = new MessageDispatcher(vertx, registry, heartbeatTimeoutMs);
         return Future.all(
           vertx.deployVerticle(new TcpGatewayVerticle(registry, dispatcher)),
           vertx.deployVerticle(new WsGatewayVerticle(registry, dispatcher))
-        );
+        ).compose(v2 -> startMetricsServer());
       })
       .mapEmpty();
   }
 
+  /** Prometheus 指标端点（gateway.metrics.port，默认 10104；<=0 关闭） */
+  private Future<Void> startMetricsServer() {
+    int port = ConfigHolder.getInt("gateway.metrics.port", 10104);
+    if (port <= 0) {
+      return Future.succeededFuture();
+    }
+    metricsServer = vertx.createHttpServer();
+    metricsServer.requestHandler(req -> {
+      if ("/metrics".equals(req.path())) {
+        req.response()
+          .putHeader("content-type", "text/plain; version=0.0.4; charset=utf-8")
+          .end(PomeloMetrics.scrape());
+      } else {
+        req.response().setStatusCode(404).end();
+      }
+    });
+    return metricsServer.listen(port)
+      .onSuccess(v -> LOG.info("Gateway metrics server started on port {}", port))
+      .mapEmpty();
+  }
+
+  @Override
+  public Future<?> stop() {
+    return metricsServer != null ? metricsServer.close() : Future.succeededFuture();
+  }
+
   public static void main(String[] args) {
-    Vertx vertx = ClusterHelper.createVertx();
+    Vertx vertx = ClusterHelper.createVertx(PomeloMetrics.vertxMetricsFactory());
     vertx.deployVerticle(new GatewayMain())
       .onSuccess(id -> LOG.info("Gateway started: deploymentId={}, clustered={}", id, vertx.isClustered()))
       .onFailure(e -> {
