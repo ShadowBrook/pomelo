@@ -15,8 +15,8 @@ public class PgCallRepository implements CallRepository {
   private static final Logger LOG = LoggerFactory.getLogger(PgCallRepository.class);
 
   private static final String INSERT_SQL = """
-    INSERT INTO im_call (id, room, caller_id, callee_id, media_type, state, created_at)
-    VALUES ($1, $2, $3, $4, $5, 0, $6)
+    INSERT INTO im_call (id, room, caller_id, callee_id, participants, media_type, state, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, 0, $7)
     """;
 
   private static final String ANSWER_SQL = """
@@ -34,9 +34,10 @@ public class PgCallRepository implements CallRepository {
   }
 
   @Override
-  public Future<Void> insert(long callId, String room, long callerId, long calleeId, int mediaType, long createdAt) {
+  public Future<Void> insert(long callId, String room, long callerId, long calleeId, int mediaType,
+                             long createdAt, String participants) {
     return PgPoolFactory.get(vertx).preparedQuery(INSERT_SQL)
-      .execute(Tuple.of(String.valueOf(callId), room, callerId, calleeId, mediaType, createdAt))
+      .execute(Tuple.of(String.valueOf(callId), room, callerId, calleeId, participants, mediaType, createdAt))
       .<Void>mapEmpty()
       .onFailure(e -> LOG.error("通话记录写入失败 callId={}: {}", callId, e.getMessage()));
   }

@@ -1,0 +1,54 @@
+# =====================================================================
+# 演示/公网部署 overlay（在仓库根目录与 docker-compose.yml 叠加使用）：
+#   docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d
+#
+# 域名写在仓库根 .env（compose 自动读取，模板见 .env.demo.example）：
+#   DEMO_DOMAIN=pomelo.host            # 主站（前端 + /api + /ws + /lk）
+#   DEMO_MEDIA_DOMAIN=oss.pomelo.host  # 对象存储（presigned URL 直连 MinIO）
+#
+# 与基线 compose 的差异：
+#   1. 新增 caddy：80/443 反代 + Let's Encrypt 自动签发（两个域名各一张证书）
+#   2. livekit：换用 conf/livekit.demo.yaml（use_external_ip: true + webhook 兜底），
+#      去掉 --node-ip
+#   3. pomelo：经 POMELO_* 环境覆盖注入浏览器可达地址（ConfigHolder 支持，免重打镜像）
+# =====================================================================
+services:
+  pomelo:
+    environment:
+      # POMELO_LIVEKIT_PUBLIC_URL → livekit.publicUrl（浏览器可达的 SFU 信令地址）
+      POMELO_LIVEKIT_PUBLIC_URL: wss://${DEMO_DOMAIN}/lk
+      # POMELO_MEDIA_PUBLIC_ENDPOINT → media.publicEndpoint（presigned URL 的 host）
+      POMELO_MEDIA_PUBLIC_ENDPOINT: https://${DEMO_MEDIA_DOMAIN}
+
+  livekit:
+    # 同容器目标路径的挂载在后加载的文件里优先生效，此处覆盖基线的 livekit.yaml
+    volumes: [./conf/livekit.demo.yaml:/etc/livekit/livekit.yaml:ro]
+    # 公网部署靠 use_external_ip 自动探测公网 IP，不再用 --node-ip 宣告固定地址
+    command: --config /etc/livekit/livekit.yaml
+
+  caddy:
+    image: caddy:2
+    container_name: pomelo-caddy
+    ports:
+      - "80:80"         # HTTP→HTTPS 跳转 + ACME HTTP-01 校验（域名形态必需）
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    volumes:
+      - ./deploy/demo/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./deploy/demo/import.d:/etc/caddy/import.d:ro
+      # 前端构建产物：在 pomelo-web 里 npm ci && npm run build 后同步到 ../pomelo-web/dist
+      - ../pomelo-web/dist:/srv/dist:ro
+      - caddy-data:/data    # ACME 证书库，务必持久化（续期与频控依赖它）
+      - caddy-config:/config
+    environment:
+      SITE_DOMAIN: ${DEMO_DOMAIN}
+      MEDIA_DOMAIN: ${DEMO_MEDIA_DOMAIN}
+    depends_on:
+      - pomelo
+      - livekit
+    restart: unless-stopped
+    networks: [pomelo-net]
+
+volumes:
+  caddy-data:
+  caddy-config:

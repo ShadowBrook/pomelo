@@ -1,0 +1,50 @@
+# Pomelo 反代 —— 纯 IP 形态（无域名 / 备案未完成时的过渡，用法见 runbook §10）
+# 与 Caddyfile（域名形态）的差异：
+#   1. 单站点：媒体经 /pomelo-media 路径反代（域名形态走独立 oss 子域）
+#   2. 证书：ACME 无法给 IP 签发，必须启用 import.d/tls-local.caddy（mkcert 证书，
+#      SAN 需含该 IP），演示设备装一次 pomelo-web/public/rootCA.pem
+#   3. MEDIA_DOMAIN 环境变量在本形态下不使用；.env 里 DEMO_DOMAIN 直接填 IP
+
+{$SITE_DOMAIN} {
+	import /etc/caddy/import.d/*.caddy
+	encode gzip zstd
+
+	# 业务 API（上游 8888 是自签 TLS，跳过校验）
+	handle /api/* {
+		reverse_proxy https://pomelo:8888 {
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+
+	# 网关 WebSocket（同源 /ws，与前端 useIMClient 的地址派生一致）
+	handle /ws {
+		reverse_proxy https://pomelo-gateway:9001 {
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+
+	# LiveKit 信令：剥掉 /lk 前缀（与 Vite 开发代理一致，LiveKit 只识别根路径）
+	handle /lk/* {
+		uri strip_prefix /lk
+		reverse_proxy livekit:7880
+	}
+
+	# MinIO S3（path-style）：无域名时 presigned URL 与主站同域。
+	# POMELO_MEDIA_PUBLIC_ENDPOINT=https://<IP>，minio-java 生成
+	# https://<IP>/pomelo-media/<object>；SigV4 签名含 Host+Path，原样透传即校验通过。
+	# 换 bucket 名（conf/config.yaml media.bucket）需同步改这里的路径前缀。
+	handle /pomelo-media/* {
+		reverse_proxy silo:9000
+	}
+
+	# 前端静态资源（SPA 回退到 index.html）
+	handle {
+		root * /srv/dist
+		try_files {path} {path}/ /index.html
+		file_server
+	}
+}

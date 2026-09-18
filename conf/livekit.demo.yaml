@@ -1,0 +1,39 @@
+# LiveKit SFU 配置 —— 公网演示/部署变体（与 livekit.yaml 的差异仅 use_external_ip）。
+# 配合 docker-compose.demo.yml 使用：挂载本文件并去掉 --node-ip 参数。
+# 信令端口：浏览器经 room.connect(wss://<域名>/lk, token) 直连（publicUrl 经
+# POMELO_LIVEKIT_PUBLIC_URL 环境变量注入，见 docker-compose.demo.yml）
+port: 7880
+
+rtc:
+  # UDP 不通时的 TCP 回退
+  tcp_port: 7881
+  # WebRTC 媒体 UDP 端口范围（compose 已做同名映射，扩缩需两端同步）。
+  # 刻意选在 macOS（49152-65535）与 Linux（32768-60999）临时端口范围之外：
+  # 端口映射段落在临时范围内会与系统自身的 UDP 会话相撞（bind: address already in use）
+  port_range_start: 30000
+  port_range_end: 30100
+  # 公网部署必须打开：服务器自动探测公网 IP 注入 ICE 候选（云主机网卡是内网 IP，
+  # 不开则候选全是内网地址，跨网客户端打不通）。ICE 直连候选还需防火墙放行
+  # 7881/tcp、3478/udp、40000-40100/udp
+  use_external_ip: true
+
+turn:
+  # UDP TURN(3478)；如需 TURN/TLS(443) 再配域名+证书（见调研文档 §2.3/Phase 3）
+  enabled: true
+  udp_port: 3478
+
+room:
+  # 最后一人离开后房间保留 60s（断线重连回房间的窗口），之后自动关闭并触发 room_finished webhook
+  empty_timeout: 60
+
+# API 密钥经环境变量注入（deploy.sh 生成 conf/livekit.env，内含 LIVEKIT_KEYS="devkey: <随机secret>"），
+# 不写入本文件；logic 侧签发 token 用的同一 secret 走 POMELO_LIVEKIT_SECRET。
+#
+# webhook 兜底（participant_left / room_finished）——域名形态已启用：
+# Caddy 反代持有 Let's Encrypt 受信证书，livekit 容器可正常 POST；
+# logic 侧 CallService.verifyWebhook 用同一 secret（conf/livekit.env）验签。
+# 覆盖场景：logic 进程被杀/断网导致客户端无法发 END 时，房间事件触发服务端强制收尾。
+webhook:
+  api_key: devkey
+  urls:
+    - https://pomelo.host/api/livekit/webhook

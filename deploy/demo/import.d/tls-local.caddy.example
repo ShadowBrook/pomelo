@@ -1,0 +1,5 @@
+# 纯 IP 备选形态专用（无域名、无法 ACME 签证书时）：
+# cp tls-local.caddy.example tls-local.caddy 启用 mkcert 证书（conf/tls/dev-server.crt，
+# SAN 需含该 IP），演示设备装一次 public/rootCA.pem。
+# 域名形态（pomelo.host / oss.pomelo.host，Let's Encrypt 自动签发）保持 import.d 目录为空。
+tls /certs/dev-server.crt /certs/dev-server.key
