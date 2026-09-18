@@ -1,0 +1,51 @@
+# Pomelo 演示/生产反代（Caddy 2）—— 双域名形态（主站 + 对象存储）
+# 用法见 docs/2026-09-14-demo-deploy.md；域名经 docker-compose.demo.yml 注入环境变量：
+#   SITE_DOMAIN  = pomelo.host         （前端 + /api + /ws + /lk）
+#   MEDIA_DOMAIN = oss.pomelo.host     （对象存储 presigned URL 直连 MinIO）
+#
+# 证书：域名形态由 Caddy 向 Let's Encrypt 自动签发续期（需 80/443 公网可达，国内服务器
+# 域名需已完成备案）。import.d 目录保持为空。
+# 纯 IP 备选形态：见 import.d/tls-local.caddy.example。
+
+{$SITE_DOMAIN} {
+	import /etc/caddy/import.d/*.caddy
+	encode gzip zstd
+
+	# 业务 API（上游 8888 是自签 TLS，跳过校验）
+	handle /api/* {
+		reverse_proxy https://pomelo:8888 {
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+
+	# 网关 WebSocket（同源 /ws，与前端 useIMClient 的地址派生一致）
+	handle /ws {
+		reverse_proxy https://pomelo-gateway:9001 {
+			transport http {
+				tls_insecure_skip_verify
+			}
+		}
+	}
+
+	# LiveKit 信令：剥掉 /lk 前缀（与 Vite 开发代理一致，LiveKit 只识别根路径）
+	handle /lk/* {
+		uri strip_prefix /lk
+		reverse_proxy livekit:7880
+	}
+
+	# 前端静态资源（SPA 回退到 index.html）
+	handle {
+		root * /srv/dist
+		try_files {path} {path}/ /index.html
+		file_server
+	}
+}
+
+# 对象存储子域：presigned URL 直连 MinIO S3。
+# SigV4 签名包含 Host，Caddy 原样透传，MinIO 校验通过；conf 侧用
+# POMELO_MEDIA_PUBLIC_ENDPOINT=https://{$MEDIA_DOMAIN} 注入（docker-compose.demo.yml）。
+{$MEDIA_DOMAIN} {
+	reverse_proxy silo:9000
+}
