@@ -159,8 +159,8 @@
     },
     {
       "type": "timeseries",
-      "title": "推送投递模式（precise=精确路由，broadcast=降级广播）",
-      "description": "broadcast 持续出现说明路由缺失或目标节点死亡",
+      "title": "推送投递结果（precise=精确路由，dropped=丢弃，local=单进程本地投递）",
+      "description": "无广播兜底：dropped/reason=no_route 为离线用户正常丢弃（上线后 PULL 补偿）；dead_node/lookup_failed 为异常信号",
       "gridPos": { "h": 9, "w": 12, "x": 0, "y": 26 },
       "id": 9,
       "datasource": { "type": "prometheus", "uid": "prometheus" },

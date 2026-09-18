@@ -18,9 +18,9 @@ import java.util.UUID;
  * 节点身份直接复用 cluster manager 的 nodeId：节点存活由 CM 自身的 nodeInfo 目录
  * （TTL + 周期续期）统一维护，本类不再单独写存活标记、不再自建心跳。
  * Logic-Server 推送前查询目标节点 + 校验节点存活，精确路由到具体 Gateway；
- * 节点已死或查不到时由 PushRouter fallback 到 publish 广播。
+ * 节点已死或查不到时推送直接丢弃（离线消息由客户端上线后 PULL 同步），不再广播兜底。
  */
-public final class SessionRouteTable {
+public class SessionRouteTable {
 
   private static final Logger LOG = LoggerFactory.getLogger(SessionRouteTable.class);
 
@@ -59,6 +59,15 @@ public final class SessionRouteTable {
     }
     return vertx.sharedData().<String, String>getClusterWideMap(MAP_NAME)
       .onSuccess(m -> map = m);
+  }
+
+  /**
+   * 集群路由是否可用（集群模式且 cluster manager 就绪）。
+   * 为 false 时路由表整体 no-op（register/resolve/unregister 均不生效），
+   * PushRouter 据此改走本地 EventBus 点对点投递。
+   */
+  public boolean isRoutingAvailable() {
+    return vertx.isClustered() && clusterManager != null;
   }
 
   // ---- 节点存活 ----
