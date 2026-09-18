@@ -338,7 +338,7 @@ public final class CallProto {
 
     /**
      * <pre>
-     * 被叫用户 ID (Snowflake)
+     * 被叫用户 ID (Snowflake)（1:1 兼容字段；群聊通话请改填 peer_ids）
      * </pre>
      *
      * <code>int64 peer_id = 1;</code>
@@ -356,6 +356,45 @@ public final class CallProto {
      * @return The mediaType.
      */
     com.github.moxib.pomelo.proto.call.CallProto.CallMediaType getMediaType();
+
+    /**
+     * <pre>
+     * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+     * </pre>
+     *
+     * <code>repeated int64 peer_ids = 3;</code>
+     * @return A list containing the peerIds.
+     */
+    java.util.List<java.lang.Long> getPeerIdsList();
+    /**
+     * <pre>
+     * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+     * </pre>
+     *
+     * <code>repeated int64 peer_ids = 3;</code>
+     * @return The count of peerIds.
+     */
+    int getPeerIdsCount();
+    /**
+     * <pre>
+     * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+     * </pre>
+     *
+     * <code>repeated int64 peer_ids = 3;</code>
+     * @param index The index of the element to return.
+     * @return The peerIds at the given index.
+     */
+    long getPeerIds(int index);
+
+    /**
+     * <pre>
+     * 群聊通话所属群：&gt;0 时通话记录落群会话（im_group_message），否则按 1:1 双份落收件箱
+     * </pre>
+     *
+     * <code>int64 group_id = 4;</code>
+     * @return The groupId.
+     */
+    long getGroupId();
   }
   /**
    * <pre>
@@ -375,6 +414,7 @@ public final class CallProto {
     }
     private CallInviteReq() {
       mediaType_ = 0;
+      peerIds_ = emptyLongList();
     }
 
     @java.lang.Override
@@ -401,7 +441,7 @@ public final class CallProto {
     private long peerId_ = 0L;
     /**
      * <pre>
-     * 被叫用户 ID (Snowflake)
+     * 被叫用户 ID (Snowflake)（1:1 兼容字段；群聊通话请改填 peer_ids）
      * </pre>
      *
      * <code>int64 peer_id = 1;</code>
@@ -430,6 +470,63 @@ public final class CallProto {
       return result == null ? com.github.moxib.pomelo.proto.call.CallProto.CallMediaType.UNRECOGNIZED : result;
     }
 
+    public static final int PEER_IDS_FIELD_NUMBER = 3;
+    @SuppressWarnings("serial")
+    private com.google.protobuf.Internal.LongList peerIds_ =
+        emptyLongList();
+    /**
+     * <pre>
+     * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+     * </pre>
+     *
+     * <code>repeated int64 peer_ids = 3;</code>
+     * @return A list containing the peerIds.
+     */
+    @java.lang.Override
+    public java.util.List<java.lang.Long>
+        getPeerIdsList() {
+      return peerIds_;
+    }
+    /**
+     * <pre>
+     * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+     * </pre>
+     *
+     * <code>repeated int64 peer_ids = 3;</code>
+     * @return The count of peerIds.
+     */
+    public int getPeerIdsCount() {
+      return peerIds_.size();
+    }
+    /**
+     * <pre>
+     * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+     * </pre>
+     *
+     * <code>repeated int64 peer_ids = 3;</code>
+     * @param index The index of the element to return.
+     * @return The peerIds at the given index.
+     */
+    public long getPeerIds(int index) {
+      return peerIds_.getLong(index);
+    }
+    private int peerIdsMemoizedSerializedSize = -1;
+
+    public static final int GROUP_ID_FIELD_NUMBER = 4;
+    private long groupId_ = 0L;
+    /**
+     * <pre>
+     * 群聊通话所属群：&gt;0 时通话记录落群会话（im_group_message），否则按 1:1 双份落收件箱
+     * </pre>
+     *
+     * <code>int64 group_id = 4;</code>
+     * @return The groupId.
+     */
+    @java.lang.Override
+    public long getGroupId() {
+      return groupId_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -444,11 +541,22 @@ public final class CallProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
+      getSerializedSize();
       if (peerId_ != 0L) {
         output.writeInt64(1, peerId_);
       }
       if (mediaType_ != com.github.moxib.pomelo.proto.call.CallProto.CallMediaType.CALL_MEDIA_AUDIO.getNumber()) {
         output.writeEnum(2, mediaType_);
+      }
+      if (getPeerIdsList().size() > 0) {
+        output.writeUInt32NoTag(26);
+        output.writeUInt32NoTag(peerIdsMemoizedSerializedSize);
+      }
+      for (int i = 0; i < peerIds_.size(); i++) {
+        output.writeInt64NoTag(peerIds_.getLong(i));
+      }
+      if (groupId_ != 0L) {
+        output.writeInt64(4, groupId_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -466,6 +574,24 @@ public final class CallProto {
       if (mediaType_ != com.github.moxib.pomelo.proto.call.CallProto.CallMediaType.CALL_MEDIA_AUDIO.getNumber()) {
         size += com.google.protobuf.CodedOutputStream
           .computeEnumSize(2, mediaType_);
+      }
+      {
+        int dataSize = 0;
+        for (int i = 0; i < peerIds_.size(); i++) {
+          dataSize += com.google.protobuf.CodedOutputStream
+            .computeInt64SizeNoTag(peerIds_.getLong(i));
+        }
+        size += dataSize;
+        if (!getPeerIdsList().isEmpty()) {
+          size += 1;
+          size += com.google.protobuf.CodedOutputStream
+              .computeInt32SizeNoTag(dataSize);
+        }
+        peerIdsMemoizedSerializedSize = dataSize;
+      }
+      if (groupId_ != 0L) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(4, groupId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -485,6 +611,10 @@ public final class CallProto {
       if (getPeerId()
           != other.getPeerId()) return false;
       if (mediaType_ != other.mediaType_) return false;
+      if (!getPeerIdsList()
+          .equals(other.getPeerIdsList())) return false;
+      if (getGroupId()
+          != other.getGroupId()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -501,6 +631,13 @@ public final class CallProto {
           getPeerId());
       hash = (37 * hash) + MEDIA_TYPE_FIELD_NUMBER;
       hash = (53 * hash) + mediaType_;
+      if (getPeerIdsCount() > 0) {
+        hash = (37 * hash) + PEER_IDS_FIELD_NUMBER;
+        hash = (53 * hash) + getPeerIdsList().hashCode();
+      }
+      hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
+      hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+          getGroupId());
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -638,6 +775,8 @@ public final class CallProto {
         bitField0_ = 0;
         peerId_ = 0L;
         mediaType_ = 0;
+        peerIds_ = emptyLongList();
+        groupId_ = 0L;
         return this;
       }
 
@@ -676,6 +815,13 @@ public final class CallProto {
         }
         if (((from_bitField0_ & 0x00000002) != 0)) {
           result.mediaType_ = mediaType_;
+        }
+        if (((from_bitField0_ & 0x00000004) != 0)) {
+          peerIds_.makeImmutable();
+          result.peerIds_ = peerIds_;
+        }
+        if (((from_bitField0_ & 0x00000008) != 0)) {
+          result.groupId_ = groupId_;
         }
       }
 
@@ -729,6 +875,20 @@ public final class CallProto {
         if (other.mediaType_ != 0) {
           setMediaTypeValue(other.getMediaTypeValue());
         }
+        if (!other.peerIds_.isEmpty()) {
+          if (peerIds_.isEmpty()) {
+            peerIds_ = other.peerIds_;
+            peerIds_.makeImmutable();
+            bitField0_ |= 0x00000004;
+          } else {
+            ensurePeerIdsIsMutable();
+            peerIds_.addAll(other.peerIds_);
+          }
+          onChanged();
+        }
+        if (other.getGroupId() != 0L) {
+          setGroupId(other.getGroupId());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
@@ -765,6 +925,27 @@ public final class CallProto {
                 bitField0_ |= 0x00000002;
                 break;
               } // case 16
+              case 24: {
+                long v = input.readInt64();
+                ensurePeerIdsIsMutable();
+                peerIds_.addLong(v);
+                break;
+              } // case 24
+              case 26: {
+                int length = input.readRawVarint32();
+                int limit = input.pushLimit(length);
+                ensurePeerIdsIsMutable();
+                while (input.getBytesUntilLimit() > 0) {
+                  peerIds_.addLong(input.readInt64());
+                }
+                input.popLimit(limit);
+                break;
+              } // case 26
+              case 32: {
+                groupId_ = input.readInt64();
+                bitField0_ |= 0x00000008;
+                break;
+              } // case 32
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -785,7 +966,7 @@ public final class CallProto {
       private long peerId_ ;
       /**
        * <pre>
-       * 被叫用户 ID (Snowflake)
+       * 被叫用户 ID (Snowflake)（1:1 兼容字段；群聊通话请改填 peer_ids）
        * </pre>
        *
        * <code>int64 peer_id = 1;</code>
@@ -797,7 +978,7 @@ public final class CallProto {
       }
       /**
        * <pre>
-       * 被叫用户 ID (Snowflake)
+       * 被叫用户 ID (Snowflake)（1:1 兼容字段；群聊通话请改填 peer_ids）
        * </pre>
        *
        * <code>int64 peer_id = 1;</code>
@@ -813,7 +994,7 @@ public final class CallProto {
       }
       /**
        * <pre>
-       * 被叫用户 ID (Snowflake)
+       * 被叫用户 ID (Snowflake)（1:1 兼容字段；群聊通话请改填 peer_ids）
        * </pre>
        *
        * <code>int64 peer_id = 1;</code>
@@ -875,6 +1056,162 @@ public final class CallProto {
       public Builder clearMediaType() {
         bitField0_ = (bitField0_ & ~0x00000002);
         mediaType_ = 0;
+        onChanged();
+        return this;
+      }
+
+      private com.google.protobuf.Internal.LongList peerIds_ = emptyLongList();
+      private void ensurePeerIdsIsMutable() {
+        if (!peerIds_.isModifiable()) {
+          peerIds_ = makeMutableCopy(peerIds_);
+        }
+        bitField0_ |= 0x00000004;
+      }
+      /**
+       * <pre>
+       * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+       * </pre>
+       *
+       * <code>repeated int64 peer_ids = 3;</code>
+       * @return A list containing the peerIds.
+       */
+      public java.util.List<java.lang.Long>
+          getPeerIdsList() {
+        peerIds_.makeImmutable();
+        return peerIds_;
+      }
+      /**
+       * <pre>
+       * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+       * </pre>
+       *
+       * <code>repeated int64 peer_ids = 3;</code>
+       * @return The count of peerIds.
+       */
+      public int getPeerIdsCount() {
+        return peerIds_.size();
+      }
+      /**
+       * <pre>
+       * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+       * </pre>
+       *
+       * <code>repeated int64 peer_ids = 3;</code>
+       * @param index The index of the element to return.
+       * @return The peerIds at the given index.
+       */
+      public long getPeerIds(int index) {
+        return peerIds_.getLong(index);
+      }
+      /**
+       * <pre>
+       * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+       * </pre>
+       *
+       * <code>repeated int64 peer_ids = 3;</code>
+       * @param index The index to set the value at.
+       * @param value The peerIds to set.
+       * @return This builder for chaining.
+       */
+      public Builder setPeerIds(
+          int index, long value) {
+
+        ensurePeerIdsIsMutable();
+        peerIds_.setLong(index, value);
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+       * </pre>
+       *
+       * <code>repeated int64 peer_ids = 3;</code>
+       * @param value The peerIds to add.
+       * @return This builder for chaining.
+       */
+      public Builder addPeerIds(long value) {
+
+        ensurePeerIdsIsMutable();
+        peerIds_.addLong(value);
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+       * </pre>
+       *
+       * <code>repeated int64 peer_ids = 3;</code>
+       * @param values The peerIds to add.
+       * @return This builder for chaining.
+       */
+      public Builder addAllPeerIds(
+          java.lang.Iterable<? extends java.lang.Long> values) {
+        ensurePeerIdsIsMutable();
+        com.google.protobuf.AbstractMessageLite.Builder.addAll(
+            values, peerIds_);
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 被叫列表（不含主叫）。非空时视为群聊通话：人数上限由服务端 call.maxParticipants 约束
+       * </pre>
+       *
+       * <code>repeated int64 peer_ids = 3;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearPeerIds() {
+        peerIds_ = emptyLongList();
+        bitField0_ = (bitField0_ & ~0x00000004);
+        onChanged();
+        return this;
+      }
+
+      private long groupId_ ;
+      /**
+       * <pre>
+       * 群聊通话所属群：&gt;0 时通话记录落群会话（im_group_message），否则按 1:1 双份落收件箱
+       * </pre>
+       *
+       * <code>int64 group_id = 4;</code>
+       * @return The groupId.
+       */
+      @java.lang.Override
+      public long getGroupId() {
+        return groupId_;
+      }
+      /**
+       * <pre>
+       * 群聊通话所属群：&gt;0 时通话记录落群会话（im_group_message），否则按 1:1 双份落收件箱
+       * </pre>
+       *
+       * <code>int64 group_id = 4;</code>
+       * @param value The groupId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setGroupId(long value) {
+
+        groupId_ = value;
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 群聊通话所属群：&gt;0 时通话记录落群会话（im_group_message），否则按 1:1 双份落收件箱
+       * </pre>
+       *
+       * <code>int64 group_id = 4;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearGroupId() {
+        bitField0_ = (bitField0_ & ~0x00000008);
+        groupId_ = 0L;
         onChanged();
         return this;
       }
@@ -4888,6 +5225,16 @@ public final class CallProto {
      */
     com.google.protobuf.ByteString
         getWsUrlBytes();
+
+    /**
+     * <pre>
+     * 振铃时的参与方总数（含主叫）：&gt;2 即群聊通话，客户端可据此展示
+     * </pre>
+     *
+     * <code>int32 participant_count = 11;</code>
+     * @return The participantCount.
+     */
+    int getParticipantCount();
   }
   /**
    * <pre>
@@ -5252,6 +5599,21 @@ public final class CallProto {
       }
     }
 
+    public static final int PARTICIPANT_COUNT_FIELD_NUMBER = 11;
+    private int participantCount_ = 0;
+    /**
+     * <pre>
+     * 振铃时的参与方总数（含主叫）：&gt;2 即群聊通话，客户端可据此展示
+     * </pre>
+     *
+     * <code>int32 participant_count = 11;</code>
+     * @return The participantCount.
+     */
+    @java.lang.Override
+    public int getParticipantCount() {
+      return participantCount_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -5296,6 +5658,9 @@ public final class CallProto {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(wsUrl_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 10, wsUrl_);
       }
+      if (participantCount_ != 0) {
+        output.writeInt32(11, participantCount_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -5339,6 +5704,10 @@ public final class CallProto {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(wsUrl_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(10, wsUrl_);
       }
+      if (participantCount_ != 0) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt32Size(11, participantCount_);
+      }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
       return size;
@@ -5372,6 +5741,8 @@ public final class CallProto {
           .equals(other.getToken())) return false;
       if (!getWsUrl()
           .equals(other.getWsUrl())) return false;
+      if (getParticipantCount()
+          != other.getParticipantCount()) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -5404,6 +5775,8 @@ public final class CallProto {
       hash = (53 * hash) + getToken().hashCode();
       hash = (37 * hash) + WS_URL_FIELD_NUMBER;
       hash = (53 * hash) + getWsUrl().hashCode();
+      hash = (37 * hash) + PARTICIPANT_COUNT_FIELD_NUMBER;
+      hash = (53 * hash) + getParticipantCount();
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -5549,6 +5922,7 @@ public final class CallProto {
         room_ = "";
         token_ = "";
         wsUrl_ = "";
+        participantCount_ = 0;
         return this;
       }
 
@@ -5611,6 +5985,9 @@ public final class CallProto {
         }
         if (((from_bitField0_ & 0x00000200) != 0)) {
           result.wsUrl_ = wsUrl_;
+        }
+        if (((from_bitField0_ & 0x00000400) != 0)) {
+          result.participantCount_ = participantCount_;
         }
       }
 
@@ -5700,6 +6077,9 @@ public final class CallProto {
           bitField0_ |= 0x00000200;
           onChanged();
         }
+        if (other.getParticipantCount() != 0) {
+          setParticipantCount(other.getParticipantCount());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
@@ -5776,6 +6156,11 @@ public final class CallProto {
                 bitField0_ |= 0x00000200;
                 break;
               } // case 82
+              case 88: {
+                participantCount_ = input.readInt32();
+                bitField0_ |= 0x00000400;
+                break;
+              } // case 88
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -6455,6 +6840,50 @@ public final class CallProto {
         checkByteStringIsUtf8(value);
         wsUrl_ = value;
         bitField0_ |= 0x00000200;
+        onChanged();
+        return this;
+      }
+
+      private int participantCount_ ;
+      /**
+       * <pre>
+       * 振铃时的参与方总数（含主叫）：&gt;2 即群聊通话，客户端可据此展示
+       * </pre>
+       *
+       * <code>int32 participant_count = 11;</code>
+       * @return The participantCount.
+       */
+      @java.lang.Override
+      public int getParticipantCount() {
+        return participantCount_;
+      }
+      /**
+       * <pre>
+       * 振铃时的参与方总数（含主叫）：&gt;2 即群聊通话，客户端可据此展示
+       * </pre>
+       *
+       * <code>int32 participant_count = 11;</code>
+       * @param value The participantCount to set.
+       * @return This builder for chaining.
+       */
+      public Builder setParticipantCount(int value) {
+
+        participantCount_ = value;
+        bitField0_ |= 0x00000400;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 振铃时的参与方总数（含主叫）：&gt;2 即群聊通话，客户端可据此展示
+       * </pre>
+       *
+       * <code>int32 participant_count = 11;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearParticipantCount() {
+        bitField0_ = (bitField0_ & ~0x00000400);
+        participantCount_ = 0;
         onChanged();
         return this;
       }
@@ -8204,34 +8633,35 @@ public final class CallProto {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\017call/call.proto\022\007im.call\"L\n\rCallInvite" +
+      "\n\017call/call.proto\022\007im.call\"p\n\rCallInvite" +
       "Req\022\017\n\007peer_id\030\001 \001(\003\022*\n\nmedia_type\030\002 \001(\016" +
-      "2\026.im.call.CallMediaType\"@\n\016CallInviteRe" +
-      "sp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022\017\n\007cal" +
-      "l_id\030\003 \001(\t\" \n\rCallAcceptReq\022\017\n\007call_id\030\001" +
-      " \001(\t\"\\\n\016CallAcceptResp\022\014\n\004code\030\001 \001(\005\022\017\n\007" +
-      "message\030\002 \001(\t\022\014\n\004room\030\003 \001(\t\022\r\n\005token\030\004 \001" +
-      "(\t\022\016\n\006ws_url\030\005 \001(\t\"E\n\nCallEndReq\022\017\n\007call" +
-      "_id\030\001 \001(\t\022&\n\006reason\030\002 \001(\0162\026.im.call.Call" +
-      "EndReason\",\n\013CallEndResp\022\014\n\004code\030\001 \001(\005\022\017" +
-      "\n\007message\030\002 \001(\t\"\360\001\n\rCallEventPush\022\017\n\007cal" +
-      "l_id\030\001 \001(\t\022\r\n\005event\030\002 \001(\005\022*\n\nmedia_type\030" +
-      "\003 \001(\0162\026.im.call.CallMediaType\022\017\n\007peer_id" +
-      "\030\004 \001(\003\022\026\n\016peer_user_name\030\005 \001(\t\022\025\n\rpeer_n" +
-      "ickname\030\006 \001(\t\022&\n\006reason\030\007 \001(\0162\026.im.call." +
-      "CallEndReason\022\014\n\004room\030\010 \001(\t\022\r\n\005token\030\t \001" +
-      "(\t\022\016\n\006ws_url\030\n \001(\t\"\037\n\014CallTokenReq\022\017\n\007ca" +
-      "ll_id\030\001 \001(\t\"[\n\rCallTokenResp\022\014\n\004code\030\001 \001" +
-      "(\005\022\017\n\007message\030\002 \001(\t\022\014\n\004room\030\003 \001(\t\022\r\n\005tok" +
-      "en\030\004 \001(\t\022\016\n\006ws_url\030\005 \001(\t*;\n\rCallMediaTyp" +
-      "e\022\024\n\020CALL_MEDIA_AUDIO\020\000\022\024\n\020CALL_MEDIA_VI" +
-      "DEO\020\001*\263\001\n\rCallEndReason\022\026\n\022END_REASON_UN" +
-      "KNOWN\020\000\022\025\n\021END_REASON_CANCEL\020\001\022\025\n\021END_RE" +
-      "ASON_REJECT\020\002\022\025\n\021END_REASON_HANGUP\020\003\022\023\n\017" +
-      "END_REASON_BUSY\020\004\022\026\n\022END_REASON_TIMEOUT\020" +
-      "\005\022\030\n\024END_REASON_PEER_DROP\020\006B/\n\"com.githu" +
-      "b.moxib.pomelo.proto.callB\tCallProtob\006pr" +
-      "oto3"
+      "2\026.im.call.CallMediaType\022\020\n\010peer_ids\030\003 \003" +
+      "(\003\022\020\n\010group_id\030\004 \001(\003\"@\n\016CallInviteResp\022\014" +
+      "\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022\017\n\007call_id" +
+      "\030\003 \001(\t\" \n\rCallAcceptReq\022\017\n\007call_id\030\001 \001(\t" +
+      "\"\\\n\016CallAcceptResp\022\014\n\004code\030\001 \001(\005\022\017\n\007mess" +
+      "age\030\002 \001(\t\022\014\n\004room\030\003 \001(\t\022\r\n\005token\030\004 \001(\t\022\016" +
+      "\n\006ws_url\030\005 \001(\t\"E\n\nCallEndReq\022\017\n\007call_id\030" +
+      "\001 \001(\t\022&\n\006reason\030\002 \001(\0162\026.im.call.CallEndR" +
+      "eason\",\n\013CallEndResp\022\014\n\004code\030\001 \001(\005\022\017\n\007me" +
+      "ssage\030\002 \001(\t\"\213\002\n\rCallEventPush\022\017\n\007call_id" +
+      "\030\001 \001(\t\022\r\n\005event\030\002 \001(\005\022*\n\nmedia_type\030\003 \001(" +
+      "\0162\026.im.call.CallMediaType\022\017\n\007peer_id\030\004 \001" +
+      "(\003\022\026\n\016peer_user_name\030\005 \001(\t\022\025\n\rpeer_nickn" +
+      "ame\030\006 \001(\t\022&\n\006reason\030\007 \001(\0162\026.im.call.Call" +
+      "EndReason\022\014\n\004room\030\010 \001(\t\022\r\n\005token\030\t \001(\t\022\016" +
+      "\n\006ws_url\030\n \001(\t\022\031\n\021participant_count\030\013 \001(" +
+      "\005\"\037\n\014CallTokenReq\022\017\n\007call_id\030\001 \001(\t\"[\n\rCa" +
+      "llTokenResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001" +
+      "(\t\022\014\n\004room\030\003 \001(\t\022\r\n\005token\030\004 \001(\t\022\016\n\006ws_ur" +
+      "l\030\005 \001(\t*;\n\rCallMediaType\022\024\n\020CALL_MEDIA_A" +
+      "UDIO\020\000\022\024\n\020CALL_MEDIA_VIDEO\020\001*\263\001\n\rCallEnd" +
+      "Reason\022\026\n\022END_REASON_UNKNOWN\020\000\022\025\n\021END_RE" +
+      "ASON_CANCEL\020\001\022\025\n\021END_REASON_REJECT\020\002\022\025\n\021" +
+      "END_REASON_HANGUP\020\003\022\023\n\017END_REASON_BUSY\020\004" +
+      "\022\026\n\022END_REASON_TIMEOUT\020\005\022\030\n\024END_REASON_P" +
+      "EER_DROP\020\006B/\n\"com.github.moxib.pomelo.pr" +
+      "oto.callB\tCallProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -8242,7 +8672,7 @@ public final class CallProto {
     internal_static_im_call_CallInviteReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_call_CallInviteReq_descriptor,
-        new java.lang.String[] { "PeerId", "MediaType", });
+        new java.lang.String[] { "PeerId", "MediaType", "PeerIds", "GroupId", });
     internal_static_im_call_CallInviteResp_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_im_call_CallInviteResp_fieldAccessorTable = new
@@ -8278,7 +8708,7 @@ public final class CallProto {
     internal_static_im_call_CallEventPush_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_call_CallEventPush_descriptor,
-        new java.lang.String[] { "CallId", "Event", "MediaType", "PeerId", "PeerUserName", "PeerNickname", "Reason", "Room", "Token", "WsUrl", });
+        new java.lang.String[] { "CallId", "Event", "MediaType", "PeerId", "PeerUserName", "PeerNickname", "Reason", "Room", "Token", "WsUrl", "ParticipantCount", });
     internal_static_im_call_CallTokenReq_descriptor =
       getDescriptor().getMessageTypes().get(7);
     internal_static_im_call_CallTokenReq_fieldAccessorTable = new

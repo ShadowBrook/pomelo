@@ -79,11 +79,16 @@ call:
   ringTimeoutMs: 45000
   # 单通通话硬上限（到点服务端强制结束）
   maxDurationMs: 7200000
+  # 单房间通话人数上限（LiveKit max_participants，SFU 层硬限）。
+  # 1:1 通话固定占 2 席；群聊通话最多允许 maxParticipants 人同时入会，
+  # 超出的入会请求由 LiveKit 直接拒绝。代码内下限钳到 2，保护 1:1 通话。
+  maxParticipants: 5
 
 livekit:
   # 浏览器可达的 SFU 信令地址（room.connect 的 url）。
   # 开发：走前端 Vite 的 /lk 同源代理（无混合内容问题）；本机访问用 localhost。
   # 局域网设备访问时改成 https://<电脑局域网IP>:5173/lk 并重启 logic。生产换 wss://域名/livekit
+  # Android 真机：客户端会把本地址改写为 ws://localhost:7880 经 adb reverse 直连（见 pomelo-android）
   publicUrl: "wss://localhost:5173/lk"
   # 服务端内部访问的 Twirp API 地址（容器部署用 docker 内部 DNS）
   host: "http://livekit:7880"

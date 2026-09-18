@@ -7,7 +7,11 @@ import io.vertx.core.Future;
  */
 public interface CallRepository {
 
-  Future<Void> insert(long callId, String room, long callerId, long calleeId, int mediaType, long createdAt);
+  /**
+   * @param participants 全部参与方 ID（逗号拼接，主叫在前；1:1 为两席）
+   */
+  Future<Void> insert(long callId, String room, long callerId, long calleeId, int mediaType,
+                      long createdAt, String participants);
 
   Future<Void> markAnswered(String callId, long answeredAt);
 
