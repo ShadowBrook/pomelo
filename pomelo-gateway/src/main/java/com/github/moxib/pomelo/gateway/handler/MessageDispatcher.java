@@ -5,6 +5,7 @@ import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
 import com.github.moxib.pomelo.config.JwtTokenParser;
 import com.github.moxib.pomelo.config.SessionRouteTable;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import com.github.moxib.pomelo.model.PushCodec;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.auth.AuthProto;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
@@ -94,6 +96,12 @@ public class MessageDispatcher {
     Connection conn = sessionRegistry.getConnectionByUserId(userId);
     if (conn == null) {
       return;
+    }
+    // e2e 投递延迟（服务端落库 → gateway 写入连接）；sentAt=0 为旧格式信封，跳过
+    long sentAt = env.getSentAtEpochMs();
+    if (sentAt > 0) {
+      PomeloMetrics.histogramTimer("im.push.e2e.latency")
+        .record(System.currentTimeMillis() - sentAt, TimeUnit.MILLISECONDS);
     }
     ImMessage imMsg = ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER)

@@ -1,6 +1,7 @@
 package com.github.moxib.pomelo.seqsvr.mediate;
 
 import com.github.moxib.pomelo.config.ConfigHolder;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import com.github.moxib.pomelo.seqsvr.proto.RangeId;
 import com.github.moxib.pomelo.seqsvr.proto.Router;
 import com.github.moxib.pomelo.seqsvr.proto.RouterNode;
@@ -67,7 +68,7 @@ public class MediateVerticle extends VerticleBase {
           id -> manager.checkTimeouts(System.currentTimeMillis())
             .onFailure(e -> LOG.warn("timeout re-balance failed, will retry: {}", e.getMessage())));
 
-        // Admin HTTP（无 vertx-web，手动路由两个只读端点）
+        // Admin HTTP（无 vertx-web，手动路由只读端点）
         adminServer = vertx.createHttpServer();
         adminServer.requestHandler(req -> {
           String path = req.path();
@@ -78,6 +79,10 @@ public class MediateVerticle extends VerticleBase {
             req.response().putHeader("content-type", "application/json")
               .end(new JsonObject().put("nodes", manager.getNodeCount())
                 .put("lastSeen", manager.getLastSeen()).encode());
+          } else if ("/metrics".equals(path)) {
+            req.response()
+              .putHeader("content-type", "text/plain; version=0.0.4; charset=utf-8")
+              .end(PomeloMetrics.scrape());
           } else {
             req.response().setStatusCode(404).end();
           }

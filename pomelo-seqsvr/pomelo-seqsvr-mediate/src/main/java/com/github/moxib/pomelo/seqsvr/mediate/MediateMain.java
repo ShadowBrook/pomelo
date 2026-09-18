@@ -1,6 +1,7 @@
 package com.github.moxib.pomelo.seqsvr.mediate;
 
 import com.github.moxib.pomelo.config.ClusterHelper;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import io.vertx.core.Vertx;
 
 /**
@@ -14,7 +15,7 @@ import io.vertx.core.Vertx;
  */
 public class MediateMain {
   public static void main(String[] args) {
-    Vertx vertx = ClusterHelper.createVertx();
+    Vertx vertx = ClusterHelper.createVertx(PomeloMetrics.vertxMetricsFactory());
     vertx.deployVerticle(new MediateVerticle())
       .onSuccess(id -> System.out.println("Mediate-Server started: deploymentId=" + id + ", clustered=" + vertx.isClustered()))
       .onFailure(e -> {

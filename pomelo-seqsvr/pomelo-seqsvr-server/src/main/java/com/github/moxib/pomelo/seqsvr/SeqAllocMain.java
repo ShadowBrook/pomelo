@@ -2,6 +2,7 @@ package com.github.moxib.pomelo.seqsvr;
 
 import com.github.moxib.pomelo.config.ClusterHelper;
 import com.github.moxib.pomelo.seqsvr.alloc.SeqAllocVerticle;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import io.vertx.core.Vertx;
 
 /**
@@ -15,7 +16,7 @@ import io.vertx.core.Vertx;
  */
 public class SeqAllocMain {
   public static void main(String[] args) {
-    Vertx vertx = ClusterHelper.createVertx();
+    Vertx vertx = ClusterHelper.createVertx(PomeloMetrics.vertxMetricsFactory());
     vertx.deployVerticle(new SeqAllocVerticle())
       .onSuccess(id -> System.out.println("Alloc-Server started: deploymentId=" + id + ", clustered=" + vertx.isClustered()))
       .onFailure(e -> {

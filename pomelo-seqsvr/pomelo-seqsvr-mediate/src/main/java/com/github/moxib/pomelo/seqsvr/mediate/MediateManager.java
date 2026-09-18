@@ -1,5 +1,6 @@
 package com.github.moxib.pomelo.seqsvr.mediate;
 
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import com.github.moxib.pomelo.seqsvr.proto.RangeId;
 import com.github.moxib.pomelo.seqsvr.proto.Router;
 import com.github.moxib.pomelo.seqsvr.proto.RouterNode;
@@ -73,6 +74,9 @@ public class MediateManager {
     this.sectionCount = setId.calcSetSectionSize();
     this.heartbeatTimeoutMs = heartbeatTimeoutMs;
     this.router = new Router(0, Collections.emptyList());
+
+    PomeloMetrics.gauge("seqsvr.mediate.nodes", this, MediateManager::getNodeCount);
+    PomeloMetrics.gauge("seqsvr.mediate.router.version", this, m -> m.getRouter().getVersion());
   }
 
   /**
@@ -156,6 +160,7 @@ public class MediateManager {
       LOG.warn("AllocSvr heartbeat timeout, removing: nodeId={}", id);
       nodes.remove(id);
     }
+    PomeloMetrics.counter("seqsvr.mediate.heartbeat.timeout.total").increment(stale.size());
     return regenerateAndPersist().map(r -> true);
   }
 
@@ -178,12 +183,16 @@ public class MediateManager {
       .compose(v -> store.saveRouteTable(newRouter))
       .map(v -> {
         this.router = newRouter;
+        PomeloMetrics.counter("seqsvr.mediate.router.regen.total").increment();
         LOG.info("Router regenerated: version={}, nodes={}",
           newRouter.getVersion(), newRouter.getNodeList().size());
         return newRouter;
       })
-      .onFailure(err -> LOG.error("saveRouteTable failed, keeping previous router (old version={}): {}",
-        router.getVersion(), err.getMessage()));
+      .onFailure(err -> {
+        PomeloMetrics.counter("seqsvr.mediate.persist.fail.total").increment();
+        LOG.error("saveRouteTable failed, keeping previous router (old version={}): {}",
+          router.getVersion(), err.getMessage());
+      });
     // 无论成败都释放串行链，失败由调用方（注册 RPC）重试
     persisted.onComplete(ar -> release.complete());
     return persisted;

@@ -1,6 +1,7 @@
 package com.github.moxib.pomelo.seqsvr.store;
 
 import com.github.moxib.pomelo.config.ClusterHelper;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import io.vertx.core.Vertx;
 
 /**
@@ -13,7 +14,7 @@ import io.vertx.core.Vertx;
  */
 public class StoreMain {
   public static void main(String[] args) {
-    Vertx vertx = ClusterHelper.createVertx();
+    Vertx vertx = ClusterHelper.createVertx(PomeloMetrics.vertxMetricsFactory());
     vertx.deployVerticle(new StoreVerticle())
       .onSuccess(id -> System.out.println("Store-Server started: deploymentId=" + id + ", clustered=" + vertx.isClustered()))
       .onFailure(e -> {

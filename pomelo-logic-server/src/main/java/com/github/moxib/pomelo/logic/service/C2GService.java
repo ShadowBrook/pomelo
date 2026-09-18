@@ -9,6 +9,7 @@ import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
 import com.github.moxib.pomelo.logic.model.GroupMsgContext;
 import com.github.moxib.pomelo.logic.model.requests.C2GRequest;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.proto.group.GroupProto;
@@ -20,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
@@ -135,6 +137,18 @@ public class C2GService extends ServiceBase {
   }
 
   private Future<C2GRespResult> doSend(GroupMsgContext ctx, long senderNumericId, long internalGroupId) {
+    // 业务指标：完成回调里 record（方法返回 ≠ 处理完成），见 docs/2026-09-17-im-metrics-plan.md
+    long startNanos = System.nanoTime();
+    return doSendInternal(ctx, senderNumericId, internalGroupId)
+      .onComplete(ar -> {
+        PomeloMetrics.histogramTimer("im.message.process.latency", "type", "c2g")
+          .record(System.nanoTime() - startNanos, TimeUnit.NANOSECONDS);
+        PomeloMetrics.counter("im.message.sent.total", "type", "c2g",
+          "result", ar.succeeded() ? "ok" : "fail").increment();
+      });
+  }
+
+  private Future<C2GRespResult> doSendInternal(GroupMsgContext ctx, long senderNumericId, long internalGroupId) {
     long snowflakeId = snowflake.nextId();
     return seqClient.fetchNextSequence(internalGroupId)
       .compose(seq -> {

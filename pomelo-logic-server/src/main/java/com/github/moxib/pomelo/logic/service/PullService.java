@@ -7,6 +7,7 @@ import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.MessageRecord;
 import com.github.moxib.pomelo.logic.model.UserIdInfo;
 import com.github.moxib.pomelo.logic.model.requests.PullRequest;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import com.github.moxib.pomelo.proto.common.CommonProto;
 import com.github.moxib.pomelo.proto.pull.PullProto;
 import com.google.protobuf.ByteString;
@@ -40,6 +41,7 @@ public class PullService extends ServiceBase {
   }
 
   public Future<ImMessage> process(ImMessage message) {
+    PomeloMetrics.counter("im.pull.request.total").increment();
     try {
       PullRequest req = decode(message, PullRequest.class);
       // 身份只信 gateway 规范化后的 varHeader；body 中的 userId 一律忽略（防伪造拉取他人信箱）

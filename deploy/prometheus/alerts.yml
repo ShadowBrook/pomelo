@@ -1,0 +1,57 @@
+# seqsvr 基础告警规则（初始集，见 docs/2026-09-17-seqsvr-optimization-plan.md 第二节）
+groups:
+  - name: seqsvr
+    rules:
+      # alloc 停服：租约超时 / 初始化失败 / saveMaxSeq 持续失败升级
+      - alert: SeqsvrAllocNotServing
+        expr: seqsvr_alloc_serving == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "AllocSvr {{ $labels.node }} 停止发号"
+
+      # 事故 L1 类"僵尸可见性"：本地 consumer 在、集群订阅表丢失（自检会自动重注册，仍告警说明反复丢失）
+      - alert: SeqsvrAllocSubscriptionInvisible
+        expr: seqsvr_alloc_subscription_visible == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "AllocSvr {{ $labels.node }} EventBus 订阅对集群不可见"
+
+      # 仲裁断流：故障迁移冻结（alloc 死亡后号段无人接管）
+      - alert: SeqsvrMediateDown
+        expr: up{job="seqsvr-mediate"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "MediateSvr 指标断流超过 5 分钟，故障迁移冻结"
+
+      # saveMaxSeq 失败：防 seq 回退的 pendingSaves 重试在工作，持续出现说明 Store 异常
+      - alert: SeqsvrSaveFailing
+        expr: increase(seqsvr_alloc_save_fail_total[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "AllocSvr {{ $labels.node }} saveMaxSeq 失败（未落盘已发号）"
+
+      # 客户端路由收敛异常：连续过期达到 force-adopt / mediate-pull 阈值（事故 P8 场景）
+      - alert: SeqsvrClientRouteUnstable
+        expr: seqsvr_client_outdated_consecutive >= 3
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "logic-server 路由连续过期 >= 3 次，检查路由版本倒退或节点分区"
+
+  - name: im
+    rules:
+      # 推送降级广播：路由缺失或目标节点死亡（SessionRouteTable 与节点存活的健康度信号）
+      - alert: ImPushDegradedBroadcast
+        expr: increase(im_push_delivery_total{mode="broadcast"}[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "推送降级为广播（目标用户路由缺失或所在 gateway 节点已死）"

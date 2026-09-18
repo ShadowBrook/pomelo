@@ -28,6 +28,12 @@
       <artifactId>jackson-databind</artifactId>
     </dependency>
 
+    <!-- 客户端埋点经全局指标门面（PomeloMetrics，micrometer 传递可达） -->
+    <dependency>
+      <groupId>com.github.moxib</groupId>
+      <artifactId>pomelo-common</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>

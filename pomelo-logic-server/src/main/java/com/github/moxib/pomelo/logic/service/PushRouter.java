@@ -1,6 +1,7 @@
 package com.github.moxib.pomelo.logic.service;
 
 import com.github.moxib.pomelo.config.SessionRouteTable;
+import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import com.github.moxib.pomelo.model.PushCodec;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import io.vertx.core.Future;
@@ -29,8 +30,10 @@ public class PushRouter {
 
   /**
    * 推送消息。优先精确路由到存活节点，节点已死/查不到时广播兜底。
+   * mode 标签区分精确/广播：广播占比是路由表健康度的直接信号（im-metrics-plan 第二节）。
    */
   public void push(PushEnvelope env) {
+    env.setSentAtEpochMs(System.currentTimeMillis());
     String targetUserId = env.getTargetUserId();
     routeTable.resolve(targetUserId)
       .compose(nodeId -> {
@@ -45,6 +48,7 @@ public class PushRouter {
         boolean alive = route.getValue();
         if (!nodeId.isEmpty() && alive) {
           // 精确路由到存活的 Gateway 节点
+          PomeloMetrics.counter("im.push.delivery.total", "mode", "precise").increment();
           String addr = "gateway.push." + nodeId;
           vertx.eventBus().send(addr, PushCodec.encode(env));
           LOG.debug("Push sent directly: target={} node={} cmd={}", targetUserId, nodeId, env.getCmd());
@@ -54,12 +58,14 @@ public class PushRouter {
             routeTable.unregister(targetUserId, nodeId);
           }
           // 死节点/无路由：广播兜底
+          PomeloMetrics.counter("im.push.delivery.total", "mode", "broadcast").increment();
           vertx.eventBus().publish("gateway.push", PushCodec.encode(env));
           LOG.debug("Push broadcast: target={} cmd={}", targetUserId, env.getCmd());
         }
       })
       .onFailure(e -> {
         LOG.warn("Route lookup failed for {}, falling back to broadcast", targetUserId, e);
+        PomeloMetrics.counter("im.push.delivery.total", "mode", "broadcast").increment();
         vertx.eventBus().publish("gateway.push", PushCodec.encode(env));
       });
   }

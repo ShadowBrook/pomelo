@@ -14,6 +14,8 @@ public class PushEnvelope {
   private int cmd;
   private byte[] body;
   private String correlationMsgId;
+  // logic 侧推送发起时刻（e2e 投递延迟观测用，见 docs/2026-09-17-im-metrics-plan.md）
+  private long sentAtEpochMs;
 
   public PushEnvelope() {}
 
@@ -34,4 +36,7 @@ public class PushEnvelope {
 
   public String getCorrelationMsgId() { return correlationMsgId; }
   public void setCorrelationMsgId(String correlationMsgId) { this.correlationMsgId = correlationMsgId; }
+
+  public long getSentAtEpochMs() { return sentAtEpochMs; }
+  public void setSentAtEpochMs(long sentAtEpochMs) { this.sentAtEpochMs = sentAtEpochMs; }
 }

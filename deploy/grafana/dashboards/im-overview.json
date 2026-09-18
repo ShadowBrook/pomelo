@@ -1,0 +1,237 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "links": [],
+  "panels": [
+    {
+      "type": "row",
+      "title": "总览",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 },
+      "id": 100
+    },
+    {
+      "type": "stat",
+      "title": "在线连接数",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 1 },
+      "id": 1,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "im_connections", "legendFormat": "连接数" }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "auto"
+      },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "type": "stat",
+      "title": "Mediate 存活 Alloc 节点",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 1 },
+      "id": 2,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "seqsvr_mediate_nodes", "legendFormat": "节点数" }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": { "defaults": { "unit": "short", "thresholds": { "mode": "absolute", "steps": [ { "color": "red", "value": null }, { "color": "green", "value": 2 } ] } }, "overrides": [] }
+    },
+    {
+      "type": "stat",
+      "title": "AllocSvr 发号状态",
+      "description": "1=发号中(INITED)，0=停服",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 1 },
+      "id": 3,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "seqsvr_alloc_serving", "legendFormat": "{{node}}" }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "value_and_name"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "停服", "color": "red" }, "1": { "text": "发号中", "color": "green" } } }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "type": "stat",
+      "title": "当前路由表版本",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 1 },
+      "id": 4,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "seqsvr_mediate_router_version", "legendFormat": "v{{value}}" }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] }
+    },
+    {
+      "type": "row",
+      "title": "消息量与延迟",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 6 },
+      "id": 101
+    },
+    {
+      "type": "timeseries",
+      "title": "消息发送速率（条/秒，按类型与结果）",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 7 },
+      "id": 5,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (type, result) (rate(im_message_sent_total[5m]))",
+          "legendFormat": "{{type}}/{{result}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 1, "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] } }
+    },
+    {
+      "type": "timeseries",
+      "title": "在线连接数",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 7 },
+      "id": 6,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "im_connections", "legendFormat": "连接数" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 1, "fillOpacity": 20, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull"] } }
+    },
+    {
+      "type": "timeseries",
+      "title": "消息处理延迟 P50 / P95 / P99（C2C+C2G）",
+      "description": "logic 收包 → 持久化+推送完成",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 16 },
+      "id": 7,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(im_message_process_latency_bucket[5m])))", "legendFormat": "P50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(im_message_process_latency_bucket[5m])))", "legendFormat": "P95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(im_message_process_latency_bucket[5m])))", "legendFormat": "P99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 1, "fillOpacity": 0, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] } }
+    },
+    {
+      "type": "timeseries",
+      "title": "推送端到端延迟 P50 / P95 / P99（落库 → gateway 写入连接）",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 16 },
+      "id": 8,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "histogram_quantile(0.50, sum by (le) (rate(im_push_e2e_latency_bucket[5m])))", "legendFormat": "P50" },
+        { "refId": "B", "expr": "histogram_quantile(0.95, sum by (le) (rate(im_push_e2e_latency_bucket[5m])))", "legendFormat": "P95" },
+        { "refId": "C", "expr": "histogram_quantile(0.99, sum by (le) (rate(im_push_e2e_latency_bucket[5m])))", "legendFormat": "P99" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s", "custom": { "lineWidth": 1, "fillOpacity": 0, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["mean", "max"] } }
+    },
+    {
+      "type": "row",
+      "title": "推送与离线同步",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 25 },
+      "id": 102
+    },
+    {
+      "type": "timeseries",
+      "title": "推送投递模式（precise=精确路由，broadcast=降级广播）",
+      "description": "broadcast 持续出现说明路由缺失或目标节点死亡",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 26 },
+      "id": 9,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (mode) (rate(im_push_delivery_total[5m]))",
+          "legendFormat": "{{mode}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 1, "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean"] } }
+    },
+    {
+      "type": "timeseries",
+      "title": "离线/历史拉取速率",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 26 },
+      "id": 10,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "rate(im_pull_request_total[5m])", "legendFormat": "pull/s" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 1, "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] } }
+    },
+    {
+      "type": "row",
+      "title": "seqsvr 发号服务",
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 35 },
+      "id": 103
+    },
+    {
+      "type": "timeseries",
+      "title": "AllocSvr 发号速率（按节点）",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 36 },
+      "id": 11,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum by (node) (rate(seqsvr_alloc_fetch_total[5m]))",
+          "legendFormat": "{{node}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps", "custom": { "lineWidth": 1, "fillOpacity": 10, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["mean", "max"] } }
+    },
+    {
+      "type": "timeseries",
+      "title": "seqsvr 风险信号（未落盘积压 / 客户端连续路由过期）",
+      "description": "saves_pending 持续 >0 说明 Store 写异常；outdated_consecutive >= 3 触发客户端逃生通道",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 36 },
+      "id": 12,
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "targets": [
+        { "refId": "A", "expr": "seqsvr_alloc_saves_pending", "legendFormat": "{{node}} 未落盘积压" },
+        { "refId": "B", "expr": "seqsvr_client_outdated_consecutive", "legendFormat": "客户端连续路由过期" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short", "custom": { "lineWidth": 1, "fillOpacity": 0, "showPoints": "never" } }, "overrides": [] },
+      "options": { "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["max"] } }
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["pomelo", "im"],
+  "templating": { "list": [] },
+  "time": { "from": "now-3h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Pomelo IM 总览",
+  "uid": "pomelo-im-overview",
+  "version": 1,
+  "weekStart": ""
+}
