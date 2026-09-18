@@ -110,4 +110,5 @@ media:
   putUrlTtlSeconds: 300
   getUrlTtlSeconds: 604800
   maxSizeBytes: 104857600
-  allowedExtensions: "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip,webm,ogg"
+  # 允许上传的扩展名（小写逗号分隔，校验不区分大小写）：图片/音视频 + 常见文档与压缩包
+  allowedExtensions: "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip,webm,ogg,txt,md,csv,json,doc,docx,xls,xlsx,ppt,pptx,rar,7z,tar,gz"

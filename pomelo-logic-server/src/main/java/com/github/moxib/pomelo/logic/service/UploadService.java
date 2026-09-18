@@ -20,7 +20,9 @@ public class UploadService extends ServiceBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(UploadService.class);
 
-  private static final String DEFAULT_EXTENSIONS = "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip,webm,ogg";
+  private static final String DEFAULT_EXTENSIONS =
+    "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip,webm,ogg,"
+      + "txt,md,csv,json,doc,docx,xls,xlsx,ppt,pptx,rar,7z,tar,gz";
 
   private final ObjectPresigner presigner;
   private final long maxSizeBytes;
@@ -58,7 +60,8 @@ public class UploadService extends ServiceBase {
       }
       String ext = extractExt(req.fileName());
       if (ext == null || !allowedExtensions.contains(ext)) {
-        return Future.succeededFuture(buildErrorResp(message, CMD_UPLOAD_RESP_VALUE, ErrorCode.BAD_REQUEST, "文件扩展名不允许"));
+        return Future.succeededFuture(buildErrorResp(message, CMD_UPLOAD_RESP_VALUE,
+          ErrorCode.BAD_REQUEST, "不支持的文件类型：" + (ext != null ? "." + ext : "文件缺少扩展名")));
       }
 
       String objectKey = buildObjectKey(req.mediaType(), userId, ext);
