@@ -256,12 +256,13 @@ public final class ClusterHelper {
   }
 
   /**
-   * 非集群模式下告警：session 路由 / 跨实例 push 依赖集群 EventBus，
-   * 非集群时 SessionRouteTable 会静默 no-op，多实例部署必须加 -Dvertx.cluster=true。
+   * 非集群模式下告警：session 路由依赖集群 EventBus，
+   * 非集群时 SessionRouteTable 会静默 no-op（推送退化为本进程点对点投递，跨进程不可达），
+   * 多实例部署必须加 -Dvertx.cluster=true。
    */
   public static void warnIfNotClustered(Vertx vertx, String role) {
     if (vertx != null && !vertx.isClustered()) {
-      LOG.warn("{} 以非集群模式启动：session 路由与跨实例 push 将退化（单进程广播 / 跨进程不可达），" +
+      LOG.warn("{} 以非集群模式启动：session 路由与跨进程 push 将退化（单进程本地投递 / 跨进程不可达），" +
         "多实例部署请加 -Dvertx.cluster=true", role);
     }
   }

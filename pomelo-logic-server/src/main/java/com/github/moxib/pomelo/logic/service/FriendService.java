@@ -190,7 +190,7 @@ public class FriendService extends ServiceBase {
       byte[] body = buildFriendNotifyBody(cmd, fromUserId, profile);
       PushEnvelope env = new PushEnvelope(String.valueOf(targetUserId), cmd, body);
       pushRouter.push(env);
-      LOG.debug("FriendNotify 已广播: target={} cmd={}", targetUserId, cmd);
+      LOG.debug("FriendNotify 已提交推送: target={} cmd={}", targetUserId, cmd);
     }).onFailure(e -> LOG.warn("FriendNotify 查询用户信息失败 from={}: {}", fromUserId, e.getMessage()));
   }
 

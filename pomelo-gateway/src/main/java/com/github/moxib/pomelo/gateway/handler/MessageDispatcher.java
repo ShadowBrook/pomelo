@@ -47,11 +47,15 @@ public class MessageDispatcher {
     // AUTH_REQ token 验签解析（与 logic TokenService 复用同一 JwtTokenParser）
     this.jwtParser = new JwtTokenParser(vertx);
     String nodeId = routeTable.getNodeId();
-    // 精确路由订阅（logic-server 通过 send 直接投递）
-    vertx.eventBus().consumer("gateway.push." + nodeId, msg -> deliverPush(msg.body()));
-    // 兜底广播订阅（logic-server 查不到路由时 fallback）
-    vertx.eventBus().consumer("gateway.push", msg -> deliverPush(msg.body()));
-    LOG.info("Push consumers registered: gateway.push.{} + gateway.push (fallback)", nodeId);
+    if (routeTable.isRoutingAvailable()) {
+      // 集群：logic 按路由精确投递到本节点专属地址（广播兜底已移除，不再订阅 gateway.push）
+      vertx.eventBus().consumer("gateway.push." + nodeId, msg -> deliverPush(msg.body()));
+      LOG.info("Push consumer registered: gateway.push.{}", nodeId);
+    } else {
+      // 单进程：logic 经本地 EventBus 点对点投递到本地址
+      vertx.eventBus().consumer("gateway.push", msg -> deliverPush(msg.body()));
+      LOG.info("Push consumer registered: gateway.push (standalone)");
+    }
   }
 
   /**
