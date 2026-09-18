@@ -48,10 +48,20 @@ groups:
 
   - name: im
     rules:
-      # 推送降级广播：路由缺失或目标节点死亡（SessionRouteTable 与节点存活的健康度信号）
-      - alert: ImPushDegradedBroadcast
-        expr: increase(im_push_delivery_total{mode="broadcast"}[5m]) > 0
+      # 推送已无广播兜底（见 docs/2026-09-18-remove-push-broadcast-design.md）：
+      # mode=no_route 的丢弃是离线用户的正常现象，不告警；只对异常原因告警。
+      # 死节点：推送命中指向已崩溃 gateway 的残留路由（连接随节点消亡，用户必然离线）
+      - alert: ImPushDroppedDeadNode
+        expr: increase(im_push_delivery_total{mode="dropped",reason="dead_node"}[5m]) > 0
         labels:
           severity: warning
         annotations:
-          summary: "推送降级为广播（目标用户路由缺失或所在 gateway 节点已死）"
+          summary: "推送命中死节点残留路由被丢弃（gateway 节点疑似崩溃，路由已惰性清理）"
+
+      # 路由查询失败：SessionRouteTable / Redis 不可用，离线 PULL 可补偿但需排查基础设施
+      - alert: ImPushRouteLookupFailed
+        expr: increase(im_push_delivery_total{mode="dropped",reason="lookup_failed"}[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "推送路由查询失败被丢弃（SessionRouteTable/Redis 不可用）"

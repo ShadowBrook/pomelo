@@ -69,11 +69,12 @@ Client → Gateway Verticle (TCP/Ws, RecordParser framing)
 
 ### Session Routing
 
-Gateways register per-user routes in a clustered `SessionRouteTable` (Vert.x cluster-wide map, no TTL; node liveness is a separate TTL'd heartbeat). Pushes go precise-route first, broadcast fallback on dead/unknown node; route deletion is conditional (`removeIfPresent`) so stale disconnects never clobber a newer node's route.
+Gateways register per-user routes in a clustered `SessionRouteTable` (Vert.x cluster-wide map, no TTL; node liveness is a separate TTL'd heartbeat). Pushes are precise-route only — there is **no broadcast fallback**: pushes to offline users (no route) or dead nodes are dropped and recovered by the client's seq + ACK + PULL offline sync (see `docs/2026-09-18-remove-push-broadcast-design.md`); route deletion is conditional (`removeIfPresent`) so stale disconnects never clobber a newer node's route. Non-clustered single-process mode delivers pushes via a local point-to-point EventBus `send` (`gateway.push`); clustered gateways only subscribe to `gateway.push.<nodeId>` — both sides branch on `SessionRouteTable.isRoutingAvailable()`.
 
 ## Design Docs
 
 - `docs/2026-09-08-reply-and-forward-message-design.md` — 引用（快照式 ReplySnippet + reply_json 列 + 服务端反查覆盖）与转发（单条零协议改动 / 合并 FORWARD=8 + 签名器嵌套注入）设计（未实施）
+- `docs/2026-09-18-remove-push-broadcast-design.md` — 取消推送广播兜底：离线/死节点丢弃由 seq + PULL 补偿，单进程改本地点对点投递
 - `docs/2026-09-08-message-model-and-conversation-key-design.md` — 消息扩散模型（单聊写扩散信箱 / 群聊读融合时间线）与会话键（c2c conversation_id / group group_id）设计决策
 - `docs/2026-09-07-seqsvr-subscription-loss-incident.md` — 2026-09-07 seqsvr 订阅丢失事故分析与加固（P1–P9）
 

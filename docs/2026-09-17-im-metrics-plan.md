@@ -19,14 +19,16 @@
 | `im.message.sent.total{type=c2c\|c2g, result=ok\|fail}` | Counter | `C2CService.doSend` / `C2GService` 发送 Future 完成回调 | 消息量主指标 |
 | `im.message.process.latency` | Timer | 同上，完成回调中 record | 服务端处理延迟（收包→持久化+推送完成） |
 | `im.push.e2e.latency` | Timer（record 计算差值） | gateway 推送投递成功处：`now - created_at` | 服务端→接收端投递延迟 |
-| `im.push.delivery.total{mode=precise\|broadcast}` | Counter | `PushRouter` | 投递模式计数；`mode=broadcast` 即降级路径（路由缺失/节点已死），广播占比是路由表健康度的直接信号 |
+| `im.push.delivery.total{mode=precise\|dropped\|local, reason=none\|no_route\|dead_node\|lookup_failed}` | Counter | `PushRouter` | 投递结果计数；`dropped/no_route` 为离线用户正常丢弃（上线后 PULL 补偿），`dead_node`/`lookup_failed` 为异常信号。同名指标 tag key 必须一致，故不适用 reason 时固定 `none`（2026-09-18 起无广播兜底，见 `2026-09-18-remove-push-broadcast-design.md`） |
 | `im.pull.request.total` | Counter | `PullService` | 离线同步压力 |
 | `im.connections` | Gauge | gateway `SessionRegistry` | 在线连接数 |
 | `seqsvr.alloc.fetch.duration` | Timer（已有） | `AllocManager` | 取号延迟 |
 
 ### 告警规则（新增）
 
-- `increase(im_push_delivery_total{mode="broadcast"}[5m]) > 0` → 推送降级广播（路由缺失或目标节点死亡），路由表健康度信号
+- `increase(im_push_delivery_total{mode="dropped",reason="dead_node"}[5m]) > 0` → 推送命中死节点残留路由（gateway 疑似崩溃）
+- `increase(im_push_delivery_total{mode="dropped",reason="lookup_failed"}[5m]) > 0` → 路由查询失败（SessionRouteTable/Redis 不可用）
+- `mode="dropped",reason="no_route"` 为离线用户正常丢弃，不告警
 
 ## 三、设计约束
 
