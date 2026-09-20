@@ -567,7 +567,7 @@ public class CallService extends ServiceBase {
           .createdAt(System.currentTimeMillis())
           .clientMsgId(id)
           .build();
-        return groupRepo.saveMessage(id, session.groupId, sender, record.getMsgType(), content, seq,
+        return groupRepo.saveMessage(id, session.groupId, sender, record.getMsgType(), content, null, seq,
             record.getCreatedAt(), id)
           .compose(inserted -> inserted ? pushGroupCallRecordNotify(session, record) : Future.<Void>succeededFuture());
       });

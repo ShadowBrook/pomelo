@@ -21,23 +21,61 @@ public final class ProfileProto {
 
     /**
      * <pre>
-     * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；空串表示清除头像）
+     * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
      * </pre>
      *
-     * <code>string avatar = 1;</code>
+     * <code>optional string avatar = 1;</code>
+     * @return Whether the avatar field is set.
+     */
+    boolean hasAvatar();
+    /**
+     * <pre>
+     * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
+     * </pre>
+     *
+     * <code>optional string avatar = 1;</code>
      * @return The avatar.
      */
     java.lang.String getAvatar();
     /**
      * <pre>
-     * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；空串表示清除头像）
+     * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
      * </pre>
      *
-     * <code>string avatar = 1;</code>
+     * <code>optional string avatar = 1;</code>
      * @return The bytes for avatar.
      */
     com.google.protobuf.ByteString
         getAvatarBytes();
+
+    /**
+     * <pre>
+     * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+     * </pre>
+     *
+     * <code>optional string signature = 2;</code>
+     * @return Whether the signature field is set.
+     */
+    boolean hasSignature();
+    /**
+     * <pre>
+     * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+     * </pre>
+     *
+     * <code>optional string signature = 2;</code>
+     * @return The signature.
+     */
+    java.lang.String getSignature();
+    /**
+     * <pre>
+     * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+     * </pre>
+     *
+     * <code>optional string signature = 2;</code>
+     * @return The bytes for signature.
+     */
+    com.google.protobuf.ByteString
+        getSignatureBytes();
   }
   /**
    * <pre>
@@ -59,6 +97,7 @@ public final class ProfileProto {
     }
     private ProfileUpdateReq() {
       avatar_ = "";
+      signature_ = "";
     }
 
     @java.lang.Override
@@ -81,15 +120,28 @@ public final class ProfileProto {
               com.github.moxib.pomelo.proto.profile.ProfileProto.ProfileUpdateReq.class, com.github.moxib.pomelo.proto.profile.ProfileProto.ProfileUpdateReq.Builder.class);
     }
 
+    private int bitField0_;
     public static final int AVATAR_FIELD_NUMBER = 1;
     @SuppressWarnings("serial")
     private volatile java.lang.Object avatar_ = "";
     /**
      * <pre>
-     * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；空串表示清除头像）
+     * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
      * </pre>
      *
-     * <code>string avatar = 1;</code>
+     * <code>optional string avatar = 1;</code>
+     * @return Whether the avatar field is set.
+     */
+    @java.lang.Override
+    public boolean hasAvatar() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <pre>
+     * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
+     * </pre>
+     *
+     * <code>optional string avatar = 1;</code>
      * @return The avatar.
      */
     @java.lang.Override
@@ -107,10 +159,10 @@ public final class ProfileProto {
     }
     /**
      * <pre>
-     * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；空串表示清除头像）
+     * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
      * </pre>
      *
-     * <code>string avatar = 1;</code>
+     * <code>optional string avatar = 1;</code>
      * @return The bytes for avatar.
      */
     @java.lang.Override
@@ -122,6 +174,65 @@ public final class ProfileProto {
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         avatar_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int SIGNATURE_FIELD_NUMBER = 2;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object signature_ = "";
+    /**
+     * <pre>
+     * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+     * </pre>
+     *
+     * <code>optional string signature = 2;</code>
+     * @return Whether the signature field is set.
+     */
+    @java.lang.Override
+    public boolean hasSignature() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <pre>
+     * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+     * </pre>
+     *
+     * <code>optional string signature = 2;</code>
+     * @return The signature.
+     */
+    @java.lang.Override
+    public java.lang.String getSignature() {
+      java.lang.Object ref = signature_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        signature_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+     * </pre>
+     *
+     * <code>optional string signature = 2;</code>
+     * @return The bytes for signature.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getSignatureBytes() {
+      java.lang.Object ref = signature_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        signature_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
@@ -142,8 +253,11 @@ public final class ProfileProto {
     @java.lang.Override
     public void writeTo(com.google.protobuf.CodedOutputStream output)
                         throws java.io.IOException {
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(avatar_)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 1, avatar_);
+      }
+      if (((bitField0_ & 0x00000002) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 2, signature_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -154,8 +268,11 @@ public final class ProfileProto {
       if (size != -1) return size;
 
       size = 0;
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(avatar_)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(1, avatar_);
+      }
+      if (((bitField0_ & 0x00000002) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, signature_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -172,8 +289,16 @@ public final class ProfileProto {
       }
       com.github.moxib.pomelo.proto.profile.ProfileProto.ProfileUpdateReq other = (com.github.moxib.pomelo.proto.profile.ProfileProto.ProfileUpdateReq) obj;
 
-      if (!getAvatar()
-          .equals(other.getAvatar())) return false;
+      if (hasAvatar() != other.hasAvatar()) return false;
+      if (hasAvatar()) {
+        if (!getAvatar()
+            .equals(other.getAvatar())) return false;
+      }
+      if (hasSignature() != other.hasSignature()) return false;
+      if (hasSignature()) {
+        if (!getSignature()
+            .equals(other.getSignature())) return false;
+      }
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -185,8 +310,14 @@ public final class ProfileProto {
       }
       int hash = 41;
       hash = (19 * hash) + getDescriptor().hashCode();
-      hash = (37 * hash) + AVATAR_FIELD_NUMBER;
-      hash = (53 * hash) + getAvatar().hashCode();
+      if (hasAvatar()) {
+        hash = (37 * hash) + AVATAR_FIELD_NUMBER;
+        hash = (53 * hash) + getAvatar().hashCode();
+      }
+      if (hasSignature()) {
+        hash = (37 * hash) + SIGNATURE_FIELD_NUMBER;
+        hash = (53 * hash) + getSignature().hashCode();
+      }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -325,6 +456,7 @@ public final class ProfileProto {
         super.clear();
         bitField0_ = 0;
         avatar_ = "";
+        signature_ = "";
         return this;
       }
 
@@ -358,9 +490,16 @@ public final class ProfileProto {
 
       private void buildPartial0(com.github.moxib.pomelo.proto.profile.ProfileProto.ProfileUpdateReq result) {
         int from_bitField0_ = bitField0_;
+        int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000001) != 0)) {
           result.avatar_ = avatar_;
+          to_bitField0_ |= 0x00000001;
         }
+        if (((from_bitField0_ & 0x00000002) != 0)) {
+          result.signature_ = signature_;
+          to_bitField0_ |= 0x00000002;
+        }
+        result.bitField0_ |= to_bitField0_;
       }
 
       @java.lang.Override
@@ -407,9 +546,14 @@ public final class ProfileProto {
 
       public Builder mergeFrom(com.github.moxib.pomelo.proto.profile.ProfileProto.ProfileUpdateReq other) {
         if (other == com.github.moxib.pomelo.proto.profile.ProfileProto.ProfileUpdateReq.getDefaultInstance()) return this;
-        if (!other.getAvatar().isEmpty()) {
+        if (other.hasAvatar()) {
           avatar_ = other.avatar_;
           bitField0_ |= 0x00000001;
+          onChanged();
+        }
+        if (other.hasSignature()) {
+          signature_ = other.signature_;
+          bitField0_ |= 0x00000002;
           onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
@@ -443,6 +587,11 @@ public final class ProfileProto {
                 bitField0_ |= 0x00000001;
                 break;
               } // case 10
+              case 18: {
+                signature_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000002;
+                break;
+              } // case 18
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -463,10 +612,21 @@ public final class ProfileProto {
       private java.lang.Object avatar_ = "";
       /**
        * <pre>
-       * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；空串表示清除头像）
+       * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
        * </pre>
        *
-       * <code>string avatar = 1;</code>
+       * <code>optional string avatar = 1;</code>
+       * @return Whether the avatar field is set.
+       */
+      public boolean hasAvatar() {
+        return ((bitField0_ & 0x00000001) != 0);
+      }
+      /**
+       * <pre>
+       * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
+       * </pre>
+       *
+       * <code>optional string avatar = 1;</code>
        * @return The avatar.
        */
       public java.lang.String getAvatar() {
@@ -483,10 +643,10 @@ public final class ProfileProto {
       }
       /**
        * <pre>
-       * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；空串表示清除头像）
+       * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
        * </pre>
        *
-       * <code>string avatar = 1;</code>
+       * <code>optional string avatar = 1;</code>
        * @return The bytes for avatar.
        */
       public com.google.protobuf.ByteString
@@ -504,10 +664,10 @@ public final class ProfileProto {
       }
       /**
        * <pre>
-       * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；空串表示清除头像）
+       * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
        * </pre>
        *
-       * <code>string avatar = 1;</code>
+       * <code>optional string avatar = 1;</code>
        * @param value The avatar to set.
        * @return This builder for chaining.
        */
@@ -521,10 +681,10 @@ public final class ProfileProto {
       }
       /**
        * <pre>
-       * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；空串表示清除头像）
+       * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
        * </pre>
        *
-       * <code>string avatar = 1;</code>
+       * <code>optional string avatar = 1;</code>
        * @return This builder for chaining.
        */
       public Builder clearAvatar() {
@@ -535,10 +695,10 @@ public final class ProfileProto {
       }
       /**
        * <pre>
-       * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；空串表示清除头像）
+       * 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
        * </pre>
        *
-       * <code>string avatar = 1;</code>
+       * <code>optional string avatar = 1;</code>
        * @param value The bytes for avatar to set.
        * @return This builder for chaining.
        */
@@ -548,6 +708,109 @@ public final class ProfileProto {
         checkByteStringIsUtf8(value);
         avatar_ = value;
         bitField0_ |= 0x00000001;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object signature_ = "";
+      /**
+       * <pre>
+       * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+       * </pre>
+       *
+       * <code>optional string signature = 2;</code>
+       * @return Whether the signature field is set.
+       */
+      public boolean hasSignature() {
+        return ((bitField0_ & 0x00000002) != 0);
+      }
+      /**
+       * <pre>
+       * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+       * </pre>
+       *
+       * <code>optional string signature = 2;</code>
+       * @return The signature.
+       */
+      public java.lang.String getSignature() {
+        java.lang.Object ref = signature_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          signature_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+       * </pre>
+       *
+       * <code>optional string signature = 2;</code>
+       * @return The bytes for signature.
+       */
+      public com.google.protobuf.ByteString
+          getSignatureBytes() {
+        java.lang.Object ref = signature_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          signature_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+       * </pre>
+       *
+       * <code>optional string signature = 2;</code>
+       * @param value The signature to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSignature(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        signature_ = value;
+        bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+       * </pre>
+       *
+       * <code>optional string signature = 2;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearSignature() {
+        signature_ = getDefaultInstance().getSignature();
+        bitField0_ = (bitField0_ & ~0x00000002);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+       * </pre>
+       *
+       * <code>optional string signature = 2;</code>
+       * @param value The bytes for signature to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSignatureBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        signature_ = value;
+        bitField0_ |= 0x00000002;
         onChanged();
         return this;
       }
@@ -668,6 +931,26 @@ public final class ProfileProto {
      */
     com.google.protobuf.ByteString
         getAvatarBytes();
+
+    /**
+     * <pre>
+     * 个性签名（请求包含 signature 时回显新值）
+     * </pre>
+     *
+     * <code>string signature = 4;</code>
+     * @return The signature.
+     */
+    java.lang.String getSignature();
+    /**
+     * <pre>
+     * 个性签名（请求包含 signature 时回显新值）
+     * </pre>
+     *
+     * <code>string signature = 4;</code>
+     * @return The bytes for signature.
+     */
+    com.google.protobuf.ByteString
+        getSignatureBytes();
   }
   /**
    * Protobuf type {@code im.profile.ProfileUpdateResp}
@@ -684,6 +967,7 @@ public final class ProfileProto {
     private ProfileUpdateResp() {
       message_ = "";
       avatar_ = "";
+      signature_ = "";
     }
 
     @java.lang.Override
@@ -815,6 +1099,53 @@ public final class ProfileProto {
       }
     }
 
+    public static final int SIGNATURE_FIELD_NUMBER = 4;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object signature_ = "";
+    /**
+     * <pre>
+     * 个性签名（请求包含 signature 时回显新值）
+     * </pre>
+     *
+     * <code>string signature = 4;</code>
+     * @return The signature.
+     */
+    @java.lang.Override
+    public java.lang.String getSignature() {
+      java.lang.Object ref = signature_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        signature_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * 个性签名（请求包含 signature 时回显新值）
+     * </pre>
+     *
+     * <code>string signature = 4;</code>
+     * @return The bytes for signature.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getSignatureBytes() {
+      java.lang.Object ref = signature_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        signature_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -838,6 +1169,9 @@ public final class ProfileProto {
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(avatar_)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 3, avatar_);
       }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(signature_)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 4, signature_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -856,6 +1190,9 @@ public final class ProfileProto {
       }
       if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(avatar_)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, avatar_);
+      }
+      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(signature_)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(4, signature_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -878,6 +1215,8 @@ public final class ProfileProto {
           .equals(other.getMessage())) return false;
       if (!getAvatar()
           .equals(other.getAvatar())) return false;
+      if (!getSignature()
+          .equals(other.getSignature())) return false;
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -895,6 +1234,8 @@ public final class ProfileProto {
       hash = (53 * hash) + getMessage().hashCode();
       hash = (37 * hash) + AVATAR_FIELD_NUMBER;
       hash = (53 * hash) + getAvatar().hashCode();
+      hash = (37 * hash) + SIGNATURE_FIELD_NUMBER;
+      hash = (53 * hash) + getSignature().hashCode();
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -1029,6 +1370,7 @@ public final class ProfileProto {
         code_ = 0;
         message_ = "";
         avatar_ = "";
+        signature_ = "";
         return this;
       }
 
@@ -1070,6 +1412,9 @@ public final class ProfileProto {
         }
         if (((from_bitField0_ & 0x00000004) != 0)) {
           result.avatar_ = avatar_;
+        }
+        if (((from_bitField0_ & 0x00000008) != 0)) {
+          result.signature_ = signature_;
         }
       }
 
@@ -1130,6 +1475,11 @@ public final class ProfileProto {
           bitField0_ |= 0x00000004;
           onChanged();
         }
+        if (!other.getSignature().isEmpty()) {
+          signature_ = other.signature_;
+          bitField0_ |= 0x00000008;
+          onChanged();
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
@@ -1171,6 +1521,11 @@ public final class ProfileProto {
                 bitField0_ |= 0x00000004;
                 break;
               } // case 26
+              case 34: {
+                signature_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000008;
+                break;
+              } // case 34
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -1415,6 +1770,98 @@ public final class ProfileProto {
         onChanged();
         return this;
       }
+
+      private java.lang.Object signature_ = "";
+      /**
+       * <pre>
+       * 个性签名（请求包含 signature 时回显新值）
+       * </pre>
+       *
+       * <code>string signature = 4;</code>
+       * @return The signature.
+       */
+      public java.lang.String getSignature() {
+        java.lang.Object ref = signature_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          signature_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 个性签名（请求包含 signature 时回显新值）
+       * </pre>
+       *
+       * <code>string signature = 4;</code>
+       * @return The bytes for signature.
+       */
+      public com.google.protobuf.ByteString
+          getSignatureBytes() {
+        java.lang.Object ref = signature_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          signature_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 个性签名（请求包含 signature 时回显新值）
+       * </pre>
+       *
+       * <code>string signature = 4;</code>
+       * @param value The signature to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSignature(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        signature_ = value;
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 个性签名（请求包含 signature 时回显新值）
+       * </pre>
+       *
+       * <code>string signature = 4;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearSignature() {
+        signature_ = getDefaultInstance().getSignature();
+        bitField0_ = (bitField0_ & ~0x00000008);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 个性签名（请求包含 signature 时回显新值）
+       * </pre>
+       *
+       * <code>string signature = 4;</code>
+       * @param value The bytes for signature to set.
+       * @return This builder for chaining.
+       */
+      public Builder setSignatureBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        signature_ = value;
+        bitField0_ |= 0x00000008;
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -1498,12 +1945,13 @@ public final class ProfileProto {
       descriptor;
   static {
     java.lang.String[] descriptorData = {
-      "\n\025profile/profile.proto\022\nim.profile\"\"\n\020P" +
-      "rofileUpdateReq\022\016\n\006avatar\030\001 \001(\t\"B\n\021Profi" +
-      "leUpdateResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 " +
-      "\001(\t\022\016\n\006avatar\030\003 \001(\tB5\n%com.github.moxib." +
-      "pomelo.proto.profileB\014ProfileProtob\006prot" +
-      "o3"
+      "\n\025profile/profile.proto\022\nim.profile\"X\n\020P" +
+      "rofileUpdateReq\022\023\n\006avatar\030\001 \001(\tH\000\210\001\001\022\026\n\t" +
+      "signature\030\002 \001(\tH\001\210\001\001B\t\n\007_avatarB\014\n\n_sign" +
+      "ature\"U\n\021ProfileUpdateResp\022\014\n\004code\030\001 \001(\005" +
+      "\022\017\n\007message\030\002 \001(\t\022\016\n\006avatar\030\003 \001(\t\022\021\n\tsig" +
+      "nature\030\004 \001(\tB5\n%com.github.moxib.pomelo." +
+      "proto.profileB\014ProfileProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -1514,13 +1962,13 @@ public final class ProfileProto {
     internal_static_im_profile_ProfileUpdateReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_profile_ProfileUpdateReq_descriptor,
-        new java.lang.String[] { "Avatar", });
+        new java.lang.String[] { "Avatar", "Signature", });
     internal_static_im_profile_ProfileUpdateResp_descriptor =
       getDescriptor().getMessageTypes().get(1);
     internal_static_im_profile_ProfileUpdateResp_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_profile_ProfileUpdateResp_descriptor,
-        new java.lang.String[] { "Code", "Message", "Avatar", });
+        new java.lang.String[] { "Code", "Message", "Avatar", "Signature", });
   }
 
   // @@protoc_insertion_point(outer_class_scope)

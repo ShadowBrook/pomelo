@@ -67,6 +67,7 @@ public class C2GService extends ServiceBase {
       }
       String content = msg.content();
       int msgType = msg.msgType();
+      final String fExt = msg.ext();
       long clientMsgId = parseClientMsgId(req.messageId(), message.getMessageId());
       if (clientMsgId == 0) {
         // 兜底用 Snowflake 而非墙钟毫秒：毫秒级兜底会在同毫秒内碰撞，
@@ -123,6 +124,7 @@ public class C2GService extends ServiceBase {
           .senderNickname(fSenderNickname)
           .msgType(fMsgType)
           .content(fContent)
+          .ext(fExt)
           .timestamp(System.currentTimeMillis())
           .build();
 
@@ -155,7 +157,7 @@ public class C2GService extends ServiceBase {
         long now = System.currentTimeMillis();
 
         return groupRepo.saveMessage(snowflakeId, internalGroupId, senderNumericId,
-            ctx.getMsgType(), ctx.getContent(), seq, now, ctx.getMessageId())
+            ctx.getMsgType(), ctx.getContent(), ctx.getExt(), seq, now, ctx.getMessageId())
           .compose(inserted -> {
             if (inserted) {
               pushToGroupMembers(ctx, internalGroupId, seq, snowflakeId, senderNumericId);
@@ -207,6 +209,8 @@ public class C2GService extends ServiceBase {
     if (ctx.getSenderNickname() != null && !ctx.getSenderNickname().isEmpty()) {
       msgContentBuilder.putExt("senderNickname", ctx.getSenderNickname());
     }
+    // 客户端扩展元数据（如 @ 提及）随通知原样下发
+    MessageExtCodec.inject(msgContentBuilder, ctx.getExt());
     return GroupProto.C2GNotify.newBuilder()
       .setSenderId(ctx.getSenderUserId())
       .setGroupId(ctx.getGroupId())

@@ -9,8 +9,10 @@ option java_outer_classname = "ProfileProto";
 // 用户资料
 // ============================================================================
 message ProfileUpdateReq {
-    // 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；空串表示清除头像）
-    string avatar = 1;
+    // 头像对象 key（先经 CMD_UPLOAD_REQ 预签名直传对象存储；字段出现时才更新，空串=清除头像）
+    optional string avatar = 1;
+    // 个性签名（字段出现时才更新，空串=清除；≤128 字符）
+    optional string signature = 2;
 }
 
 message ProfileUpdateResp {
@@ -20,4 +22,6 @@ message ProfileUpdateResp {
     string message = 2;
     // 头像访问 URL（读侧预签名，可直接用于 img/ImageView）
     string avatar  = 3;
+    // 个性签名（请求包含 signature 时回显新值）
+    string signature = 4;
 }

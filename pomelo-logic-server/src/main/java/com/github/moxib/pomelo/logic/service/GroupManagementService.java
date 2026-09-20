@@ -9,12 +9,14 @@ import com.github.moxib.pomelo.logic.infrastructure.MessageRepository;
 import com.github.moxib.pomelo.logic.model.GroupInfo;
 import com.github.moxib.pomelo.logic.model.GroupMemberRecord;
 import com.github.moxib.pomelo.logic.model.requests.CreateGroupRequest;
+import com.github.moxib.pomelo.logic.model.requests.DissolveGroupRequest;
 import com.github.moxib.pomelo.logic.model.requests.GetGroupInfoRequest;
 import com.github.moxib.pomelo.logic.model.requests.GetGroupMembersRequest;
 import com.github.moxib.pomelo.logic.model.requests.GroupMsgReadRequest;
 import com.github.moxib.pomelo.logic.model.requests.GroupReadStateRequest;
 import com.github.moxib.pomelo.logic.model.requests.InviteToGroupRequest;
 import com.github.moxib.pomelo.logic.model.requests.KickMemberRequest;
+import com.github.moxib.pomelo.logic.model.requests.TransferGroupRequest;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
 import io.vertx.core.Future;
@@ -54,6 +56,8 @@ public class GroupManagementService extends ServiceBase {
       CMD_GROUP_CREATE_REQ_VALUE, this::handleCreateGroup,
       CMD_GROUP_INVITE_REQ_VALUE, this::handleInviteToGroup,
       CMD_GROUP_KICK_REQ_VALUE, this::handleKickMember,
+      CMD_GROUP_TRANSFER_REQ_VALUE, this::handleTransferGroup,
+      CMD_GROUP_DISSOLVE_REQ_VALUE, this::handleDissolveGroup,
       CMD_GROUP_GET_INFO_REQ_VALUE, this::handleGetGroupInfo,
       CMD_GROUP_GET_MEMBERS_REQ_VALUE, this::handleGetMembers,
       CMD_GROUP_GET_MY_GROUPS_REQ_VALUE, this::handleGetMyGroups,
@@ -184,6 +188,102 @@ public class GroupManagementService extends ServiceBase {
     groupRepo.findMembers(groupId)
       .onSuccess(members -> pushMemberChangeNotify(groupId, userId, operatorId, type, members))
       .onFailure(e -> LOG.warn("获取群成员失败 groupId={}: {}", groupId, e.getMessage()));
+  }
+
+  /**
+   * 群主转让：仅群主可操作，目标必须是群成员且不能是自己。
+   * 成功后向全体成员推送 OWNER_TRANSFERRED（user_id=新群主，operator_id=原群主）。
+   */
+  private Future<ImMessage> handleTransferGroup(ImMessage message) {
+    String operatorId = getUserIdFromHeaders(message);
+    if (operatorId == null || operatorId.isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_TRANSFER_RESP_VALUE,
+        ErrorCode.UNAUTHORIZED, "未认证用户"));
+    }
+    TransferGroupRequest req = decode(message, TransferGroupRequest.class);
+    if (req == null || req.groupId() == null || req.groupId().isEmpty()
+      || req.targetUserId() == null || req.targetUserId().isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_TRANSFER_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "groupId 和 targetUserId 不能为空"));
+    }
+    long operatorNumericId = Long.parseLong(operatorId);
+    long groupId = Long.parseLong(req.groupId());
+    long targetNumericId = Long.parseLong(req.targetUserId());
+    if (targetNumericId == operatorNumericId) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_TRANSFER_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "不能转让给自己"));
+    }
+    return groupRepo.findById(groupId).compose(group -> {
+      if (group == null) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_TRANSFER_RESP_VALUE,
+          ErrorCode.NOT_FOUND, "群不存在"));
+      }
+      if (group.getOwnerId() != operatorNumericId) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_TRANSFER_RESP_VALUE,
+          ErrorCode.UNAUTHORIZED, "仅群主可以转让群主"));
+      }
+      return groupRepo.isMember(groupId, targetNumericId).compose(isMember -> {
+        if (!isMember) {
+          return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_TRANSFER_RESP_VALUE,
+            ErrorCode.BAD_REQUEST, "目标用户不是该群成员"));
+        }
+        return groupRepo.transferOwnership(groupId, operatorNumericId, targetNumericId)
+          .compose(rows -> rows > 0
+            ? Future.succeededFuture(Boolean.TRUE)
+            : Future.<Boolean>failedFuture("转让未生效"))
+          .map(ok -> {
+            pushMemberChangeNotify(groupId, targetNumericId, operatorNumericId,
+              GroupMgmtProto.GroupMemberChangeNotify.ChangeType.OWNER_TRANSFERRED);
+            LOG.info("群主已转让: groupId={} from={} to={}", groupId, operatorId, req.targetUserId());
+            return buildResponse(message, CMD_GROUP_TRANSFER_RESP_VALUE,
+              GroupMgmtProto.TransferGroupResp.newBuilder().setCode(0).setMessage("success").build());
+          });
+      });
+    }).recover(e -> Future.succeededFuture(buildErrorResp(message, CMD_GROUP_TRANSFER_RESP_VALUE,
+      ErrorCode.CONFLICT, "转让失败：" + e.getMessage())));
+  }
+
+  /**
+   * 解散群聊：仅群主可操作。先取「解散前」的成员列表，删除成功后向全部成员推送
+   * DISSOLVED（user_id/operator_id=群主），客户端据此清本地群、成员与会话。
+   * 历史消息保留。
+   */
+  private Future<ImMessage> handleDissolveGroup(ImMessage message) {
+    String operatorId = getUserIdFromHeaders(message);
+    if (operatorId == null || operatorId.isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_DISSOLVE_RESP_VALUE,
+        ErrorCode.UNAUTHORIZED, "未认证用户"));
+    }
+    DissolveGroupRequest req = decode(message, DissolveGroupRequest.class);
+    if (req == null || req.groupId() == null || req.groupId().isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_DISSOLVE_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "groupId 不能为空"));
+    }
+    long operatorNumericId = Long.parseLong(operatorId);
+    long groupId = Long.parseLong(req.groupId());
+    return groupRepo.findById(groupId).compose(group -> {
+      if (group == null) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_DISSOLVE_RESP_VALUE,
+          ErrorCode.NOT_FOUND, "群不存在"));
+      }
+      if (group.getOwnerId() != operatorNumericId) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_DISSOLVE_RESP_VALUE,
+          ErrorCode.UNAUTHORIZED, "仅群主可以解散群聊"));
+      }
+      // 先取解散前的成员列表，删除成功后再推送（删除后 findMembers 恒为空）
+      return groupRepo.findMembers(groupId).compose(members ->
+        groupRepo.dissolveGroup(groupId, operatorNumericId).compose(rows -> {
+          if (rows <= 0) {
+            return Future.<ImMessage>failedFuture("解散未生效");
+          }
+          pushMemberChangeNotify(groupId, operatorNumericId, operatorNumericId,
+            GroupMgmtProto.GroupMemberChangeNotify.ChangeType.DISSOLVED, members);
+          LOG.info("群聊已解散: groupId={} owner={} members={}", groupId, operatorId, members.size());
+          return Future.succeededFuture(buildResponse(message, CMD_GROUP_DISSOLVE_RESP_VALUE,
+            GroupMgmtProto.DissolveGroupResp.newBuilder().setCode(0).setMessage("success").build()));
+        }));
+    }).recover(e -> Future.succeededFuture(buildErrorResp(message, CMD_GROUP_DISSOLVE_RESP_VALUE,
+      ErrorCode.CONFLICT, "解散失败：" + e.getMessage())));
   }
 
   /**

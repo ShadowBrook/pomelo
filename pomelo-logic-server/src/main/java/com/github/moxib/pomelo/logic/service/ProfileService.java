@@ -32,9 +32,15 @@ public class ProfileService extends ServiceBase {
   private static final String UPDATE_AVATAR_SQL = """
     UPDATE im_user SET avatar = $1, updated_at = $2 WHERE id = $3
     """;
+  private static final String UPDATE_SIGNATURE_SQL = """
+    UPDATE im_user SET signature = $1, updated_at = $2 WHERE id = $3
+    """;
 
   /** avatar 列长度上限（schema 为 VARCHAR(512)） */
   private static final int MAX_AVATAR_LENGTH = 512;
+
+  /** 个性签名长度上限（schema 为 VARCHAR(128)） */
+  private static final int MAX_SIGNATURE_LENGTH = 128;
 
   private final Pool pgPool;
   private final MediaUrlSigner mediaUrlSigner;
@@ -57,30 +63,61 @@ public class ProfileService extends ServiceBase {
           ErrorCode.UNAUTHORIZED, "未认证用户"));
       }
       ProfileProto.ProfileUpdateReq req = decode(message, ProfileProto.ProfileUpdateReq.class);
-      String avatar = req.getAvatar() == null ? "" : req.getAvatar().trim();
+      // proto3 optional：字段未出现的项不更新（与「设置空串=清除」区分开）
+      boolean hasAvatar = req.hasAvatar();
+      boolean hasSignature = req.hasSignature();
+      if (!hasAvatar && !hasSignature) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_PROFILE_UPDATE_RESP_VALUE,
+          ErrorCode.BAD_REQUEST, "avatar 和 signature 至少提供一个"));
+      }
+      String avatar = hasAvatar ? req.getAvatar().trim() : null;
+      String signature = hasSignature ? req.getSignature().trim() : null;
 
-      if (!avatar.isEmpty()) {
+      if (hasAvatar && !avatar.isEmpty()) {
         String invalid = validateAvatar(userId, avatar);
         if (invalid != null) {
           return Future.succeededFuture(buildErrorResp(message, CMD_PROFILE_UPDATE_RESP_VALUE,
             ErrorCode.BAD_REQUEST, invalid));
         }
       }
+      if (signature != null && signature.length() > MAX_SIGNATURE_LENGTH) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_PROFILE_UPDATE_RESP_VALUE,
+          ErrorCode.BAD_REQUEST, "个性签名不能超过 " + MAX_SIGNATURE_LENGTH + " 个字符"));
+      }
 
       long now = System.currentTimeMillis();
-      return pgPool.preparedQuery(UPDATE_AVATAR_SQL)
-        .execute(Tuple.of(avatar, now, Long.parseLong(userId)))
+      long id = Long.parseLong(userId);
+      String sql;
+      Tuple params;
+      if (hasAvatar && hasSignature) {
+        sql = "UPDATE im_user SET avatar = $1, signature = $2, updated_at = $3 WHERE id = $4";
+        params = Tuple.of(avatar, signature, now, id);
+      } else if (hasAvatar) {
+        sql = UPDATE_AVATAR_SQL;
+        params = Tuple.of(avatar, now, id);
+      } else {
+        sql = UPDATE_SIGNATURE_SQL;
+        params = Tuple.of(signature, now, id);
+      }
+      return pgPool.preparedQuery(sql)
+        .execute(params)
         .map(rows -> {
           if (rows.rowCount() == 0) {
             return buildErrorResp(message, CMD_PROFILE_UPDATE_RESP_VALUE, ErrorCode.NOT_FOUND, "用户不存在");
           }
-          LOG.info("头像已更新: userId={}", userId);
-          ProfileProto.ProfileUpdateResp respBody = ProfileProto.ProfileUpdateResp.newBuilder()
-            .setCode(0).setMessage("success").setAvatar(mediaUrlSigner.signAvatar(avatar)).build();
-          return buildResponse(message, CMD_PROFILE_UPDATE_RESP_VALUE, respBody);
+          LOG.info("资料已更新: userId={} avatar={} signature={}", userId, hasAvatar, hasSignature);
+          ProfileProto.ProfileUpdateResp.Builder respBody = ProfileProto.ProfileUpdateResp.newBuilder()
+            .setCode(0).setMessage("success");
+          if (hasAvatar) {
+            respBody.setAvatar(mediaUrlSigner.signAvatar(avatar));
+          }
+          if (hasSignature) {
+            respBody.setSignature(signature);
+          }
+          return buildResponse(message, CMD_PROFILE_UPDATE_RESP_VALUE, respBody.build());
         })
         .recover(e -> {
-          LOG.error("头像更新失败 userId={}", userId, e);
+          LOG.error("资料更新失败 userId={}", userId, e);
           return Future.succeededFuture(buildErrorResp(message, CMD_PROFILE_UPDATE_RESP_VALUE,
             ErrorCode.INTERNAL_ERROR, "更新失败"));
         });

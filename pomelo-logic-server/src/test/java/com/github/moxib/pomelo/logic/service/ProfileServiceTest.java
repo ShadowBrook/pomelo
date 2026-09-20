@@ -91,6 +91,20 @@ class ProfileServiceTest {
       .build();
   }
 
+  private static ImMessage signatureReq(String signature) {
+    Map<String, String> headers = new HashMap<>();
+    headers.put("userId", String.valueOf(USER));
+    return ImMessage.builder()
+      .magic(ImMessage.MAGIC_NUMBER)
+      .version(ImMessage.WIRE_PROTOCOL_VERSION)
+      .codecId((byte) 0)
+      .cmd(CommonProto.Cmd.CMD_PROFILE_UPDATE_REQ_VALUE)
+      .messageId("m-1")
+      .body(ProfileProto.ProfileUpdateReq.newBuilder().setSignature(signature).build().toByteArray())
+      .varHeaders(headers)
+      .build();
+  }
+
   private static ImMessage awaitResult(ProfileService service, ImMessage req) throws Exception {
     CountDownLatch done = new CountDownLatch(1);
     AtomicReference<ImMessage> resp = new AtomicReference<>();
@@ -180,6 +194,51 @@ class ProfileServiceTest {
 
     assertEquals(ErrorCode.UNAUTHORIZED.getCode(), asError(resp).getCode());
     assertTrue(pool.sqls.isEmpty(), "未认证请求不应触达数据库");
+  }
+
+  @Test
+  @DisplayName("仅更新签名：写 signature 列且不触碰 avatar")
+  void signatureOnlyUpdate() throws Exception {
+    ImMessage resp = awaitResult(service(), signatureReq("自由职业者"));
+
+    assertFalse(pool.sqls.isEmpty());
+    assertTrue(pool.sqls.get(0).contains("signature"), "应为签名更新语句: " + pool.sqls.get(0));
+    assertFalse(pool.sqls.get(0).contains("avatar"), "签名更新不应触碰 avatar 列");
+    assertEquals("自由职业者", pool.params.get(0).getString(0));
+
+    ProfileProto.ProfileUpdateResp body = ProfileProto.ProfileUpdateResp.parseFrom(resp.getBody());
+    assertEquals(0, body.getCode());
+    assertEquals("自由职业者", body.getSignature(), "响应应回显新签名");
+  }
+
+  @Test
+  @DisplayName("签名超过 128 字符被拒绝且不触库")
+  void overlyLongSignatureIsRejected() throws Exception {
+    ImMessage resp = awaitResult(service(), signatureReq("长".repeat(129)));
+
+    assertEquals(ErrorCode.BAD_REQUEST.getCode(), asError(resp).getCode());
+    assertTrue(pool.sqls.isEmpty(), "校验失败不应触达数据库");
+  }
+
+  @Test
+  @DisplayName("avatar 与 signature 均未提供时拒绝")
+  void emptyRequestIsRejected() throws Exception {
+    Map<String, String> headers = new HashMap<>();
+    headers.put("userId", String.valueOf(USER));
+    ImMessage req = ImMessage.builder()
+      .magic(ImMessage.MAGIC_NUMBER)
+      .version(ImMessage.WIRE_PROTOCOL_VERSION)
+      .codecId((byte) 0)
+      .cmd(CommonProto.Cmd.CMD_PROFILE_UPDATE_REQ_VALUE)
+      .messageId("m-1")
+      .body(ProfileProto.ProfileUpdateReq.newBuilder().build().toByteArray())
+      .varHeaders(headers)
+      .build();
+
+    ImMessage resp = awaitResult(service(), req);
+
+    assertEquals(ErrorCode.BAD_REQUEST.getCode(), asError(resp).getCode());
+    assertTrue(pool.sqls.isEmpty(), "无可更新字段不应触达数据库");
   }
 
   @Test

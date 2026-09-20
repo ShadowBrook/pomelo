@@ -128,7 +128,41 @@ message GroupMemberChangeNotify {
         KICKED = 3;
         ADMIN_SET = 4;
         OWNER_TRANSFERRED = 5;
+        // 群被解散：user_id/operator_id 为解散操作者（群主），客户端清本地群与会话
+        DISSOLVED = 6;
     }
+}
+
+// ============================================================================
+// 群主转让
+// ============================================================================
+message TransferGroupReq {
+    // 群 ID
+    int64 group_id        = 1;
+    // 新群主（须为群成员）
+    int64 target_user_id  = 2;
+}
+
+message TransferGroupResp {
+    // 响应码 0=成功
+    int32 code     = 1;
+    // 响应消息
+    string message = 2;
+}
+
+// ============================================================================
+// 解散群聊（仅群主）
+// ============================================================================
+message DissolveGroupReq {
+    // 群 ID
+    int64 group_id = 1;
+}
+
+message DissolveGroupResp {
+    // 响应码 0=成功
+    int32 code     = 1;
+    // 响应消息
+    string message = 2;
 }
 
 // ============================================================================

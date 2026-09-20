@@ -10,6 +10,7 @@ import com.github.moxib.pomelo.logic.model.requests.CallInviteRequest;
 import com.github.moxib.pomelo.logic.model.requests.CallTokenRequest;
 import com.github.moxib.pomelo.logic.model.requests.CreateGroupRequest;
 import com.github.moxib.pomelo.logic.model.requests.CtrlRequest;
+import com.github.moxib.pomelo.logic.model.requests.DissolveGroupRequest;
 import com.github.moxib.pomelo.logic.model.requests.FriendOpRequest;
 import com.github.moxib.pomelo.logic.model.requests.GetGroupInfoRequest;
 import com.github.moxib.pomelo.logic.model.requests.GetGroupMembersRequest;
@@ -22,6 +23,7 @@ import com.github.moxib.pomelo.logic.model.requests.KickMemberRequest;
 import com.github.moxib.pomelo.logic.model.requests.LoginRequest;
 import com.github.moxib.pomelo.logic.model.requests.PullRequest;
 import com.github.moxib.pomelo.logic.model.requests.SearchRequest;
+import com.github.moxib.pomelo.logic.model.requests.TransferGroupRequest;
 import com.github.moxib.pomelo.logic.model.requests.UploadRequest;
 import com.github.moxib.pomelo.proto.ack.AckProto;
 import com.github.moxib.pomelo.proto.auth.AuthProto;
@@ -97,6 +99,10 @@ public final class CodecRegistryHolder {
       GroupMgmtProto.InviteToGroupReq.parser(), InviteToGroupRequest::fromProto, InviteToGroupRequest.class);
     r.registerProtobuf(CMD_GROUP_KICK_REQ_VALUE,
       GroupMgmtProto.KickMemberReq.parser(), KickMemberRequest::fromProto, KickMemberRequest.class);
+    r.registerProtobuf(CMD_GROUP_TRANSFER_REQ_VALUE,
+      GroupMgmtProto.TransferGroupReq.parser(), TransferGroupRequest::fromProto, TransferGroupRequest.class);
+    r.registerProtobuf(CMD_GROUP_DISSOLVE_REQ_VALUE,
+      GroupMgmtProto.DissolveGroupReq.parser(), DissolveGroupRequest::fromProto, DissolveGroupRequest.class);
     r.registerProtobuf(CMD_GROUP_GET_INFO_REQ_VALUE,
       GroupMgmtProto.GetGroupInfoReq.parser(), GetGroupInfoRequest::fromProto, GetGroupInfoRequest.class);
     r.registerProtobuf(CMD_GROUP_GET_MEMBERS_REQ_VALUE,

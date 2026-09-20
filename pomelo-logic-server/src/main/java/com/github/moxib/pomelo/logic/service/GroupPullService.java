@@ -127,6 +127,8 @@ public class GroupPullService extends ServiceBase {
         mc.putExt("senderNickname", senderInfo.nickname());
       }
       mc.putExt("seq", String.valueOf(m.getSeq()));
+      // 客户端扩展元数据（如 @ 提及）原样回传
+      MessageExtCodec.inject(mc, m.getExt());
       resp.addMessages(mc);
     }
     return buildResponse(request, CMD_GROUP_PULL_MSG_RESP_VALUE, resp.build());
