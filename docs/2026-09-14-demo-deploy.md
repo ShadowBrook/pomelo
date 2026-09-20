@@ -3,6 +3,9 @@
 > 目标：把 Pomelo（IM + 1:1 音视频通话）部署到公网服务器，供 5-6 人异地演示。
 > 双域名 + Caddy 自动 HTTPS（Let's Encrypt），演示设备**零信任配置**（不用装根证书）。
 > 首次配置约 30-60 分钟，后续重演示只需 `up -d`。
+>
+> **2026-09-20 更新**：新增个性签名、群主转让/解散、@提及（元数据 + [有人@我]）、
+> 头像裁剪上传、修改密码。已有部署升级见 §6.5（两条 DB 迁移 + 两个镜像增量更新）。
 
 ## 1. 拓扑
 
@@ -44,7 +47,10 @@ systemctl enable --now docker
 
 ## 4. 镜像分发（本地构建 → 服务器加载）
 
-仓库 `.mvn/jvm.config` 指向本地代理，**服务器上不要执行 Maven 构建**，在开发机打包后传输：
+**服务器上不要执行 Maven 构建**，在开发机打包后传输（镜像按需增量更新见下）。
+> `.mvn/jvm.config` 只含构建必需的 `--add-opens`（JDK 17+ 反射限制），
+> **不含代理参数**——曾内置的 Mac 本地代理（127.0.0.1）已移除，同步到服务器后不会干扰构建。
+> 若某台机器的 Maven 下载确需走代理，配置在该机的 `~/.m2/settings.xml`（按机器环境，不入仓库）。
 
 ```bash
 # 开发机：构建 5 个业务镜像（deploy.sh 会生成 conf/jwt.env、conf/livekit.env 随机密钥）
@@ -58,6 +64,18 @@ docker load < pomelo-images.tgz
 ```
 
 基础镜像（postgres/redis/caddy/livekit/pgsty-silo）在服务器上 `up -d` 时自动拉（配了镜像加速）。
+
+**增量更新（服务器已有旧版本时）**：多数迭代只改 `pomelo/pomelo`（logic）与 `pomelo/gateway`，
+seqsvr 三镜像极少变动，无需全量传输：
+
+```bash
+# 开发机
+docker save pomelo/pomelo pomelo/gateway | gzip > pomelo-update.tgz
+scp pomelo-update.tgz ubuntu@1.15.179.198:
+# 服务器
+docker load < pomelo-update.tgz
+cd ~/pomelo && docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d pomelo pomelo-gateway
+```
 
 ## 5. 代码与前端产物
 
@@ -95,6 +113,25 @@ docker logs pomelo-livekit 2>&1 | grep -iE "nodeip|webhook"      # nodeIP=公网
 - webhook 兜底已在 `conf/livekit.demo.yaml` 启用（`https://pomelo.host/api/livekit/webhook`）：
   logic 进程被杀/断网导致客户端发不出 END 时，由房间事件触发服务端强制收尾。
 
+## 6.5 版本升级（已有部署更新，2026-09-20 起）
+
+每次升级按序执行；SQL 迁移只需执行一次（语句幂等，重复执行无害）：
+
+```bash
+# 1) 镜像增量更新（见 §4）
+# 2) DB 迁移（服务器上执行；新增 im_user.signature 个性签名、im_message_group.ext @提及元数据）
+docker exec pomelo-postgres psql -U pomelo -d pomelo_db \
+  -c "ALTER TABLE im_user ADD COLUMN IF NOT EXISTS signature VARCHAR(128) NOT NULL DEFAULT '';" \
+  -c "ALTER TABLE im_message_group ADD COLUMN IF NOT EXISTS ext TEXT;"
+# 3) 重建容器
+cd ~/pomelo && docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d pomelo pomelo-gateway
+# 4) 验证
+curl -s https://pomelo.host/api/health        # {"status":"ok"}
+# 5) 前端产物更新（新功能涉及 UI）：重新 npm run build 后按 §5 rsync dist/
+```
+
+安卓端需重新构建 APK 安装（Room 自动迁移 v3→v4；web 端刷新页面即可）。
+
 ## 7. 3M 带宽策略（重要）
 
 前端已内置视频发布压制（`useCallStore` CAM_CAPTURE/CAM_PUBLISH）：摄像头采集与编码锁 **480p / 500kbps**，单路通话服务端约 1.2Mbps，两路并发视频可跑。
@@ -113,6 +150,10 @@ curl -s https://pomelo.host/api/user/register -H 'Content-Type: application/json
 
 好友关系在 Web UI 里操作：登录 → 通讯录 → 搜索用户名 → 申请 → 对方同意。历史消息/通话记录全量持久化，重演示前可用测试账号留一轮现场数据。
 
+**可演示功能（2026-09-20 起）**：头像裁剪上传（个人信息弹窗点头像）、个性签名（左上角点击编辑）、
+修改密码（设置菜单）、群主转让/解散（群详情面板，仅群主）、@ 提及（群聊输入 @ 弹成员下拉，
+被 @ 的人未读会话显示红色「[有人@我]」）、图片/视频/文件收发与引用/转发。
+
 ## 9. 安全注意（公网暴露面）
 
 - 开放注册接口是公开的——演示结束后关停或改密；正式使用需加邀请码/管理端。
@@ -129,6 +170,9 @@ curl -s https://pomelo.host/api/user/register -H 'Content-Type: application/json
 3. `.env` 改 `DEMO_DOMAIN=1.15.179.198`（DEMO_MEDIA_DOMAIN 保留不动，该形态不使用）
 4. 确认 `conf/tls/dev-server.crt` SAN 含该 IP（Mac 上 `mkcert -cert-file conf/tls/dev-server.crt -key-file conf/tls/dev-server.key localhost pomelo pomelo-gateway 127.0.0.1 ::1 1.15.179.198`），并同步 conf/tls 到服务器
 5. `docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d caddy` 重建 Caddy；演示设备装一次 `pomelo-web/public/rootCA.pem`（iOS 描述文件 + 完全信任；Android 安装 CA 证书）
+
+> **IP 形态功能降级**：对象存储走 `oss` 子域的 https presigned URL，纯 IP 形态下该子域不可用，
+> 图片/视频/文件/头像等媒体功能无法使用（仅文字与音视频通话可用）。此形态仅为备案前过渡。
 
 备案下来后反向切回：还原域名版 Caddyfile、清空 import.d、`.env` 恢复两个域名、重建 caddy。局域网演示同法（SAN 换成局域网 IP）。
 
