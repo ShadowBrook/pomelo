@@ -96,7 +96,22 @@ pick_java_home() {
 # 切到脚本所在目录（repo 根）
 cd "$(dirname "$0")"
 
-JIB_GOAL="com.google.cloud.tools:jib-maven-plugin:3.4.0:dockerBuild"
+JIB_GOAL="com.google.cloud.tools:jib-maven-plugin:3.4.4:dockerBuild"
+
+# 目标 CPU 平台：默认本机架构（Apple Silicon Mac = arm64，本地 compose 用）。
+# 服务器（x86_64）镜像必须显式交叉构建，否则 arm64 镜像在服务器上无法运行：
+#   JIB_PLATFORMS=linux/amd64 ./deploy.sh ...
+# 服务器架构用 `uname -m` 确认（x86_64→amd64，aarch64→arm64）。
+JIB_PLATFORMS="${JIB_PLATFORMS:-}"
+JIB_ARCH_ARGS=""
+[ -n "$JIB_PLATFORMS" ] && JIB_ARCH_ARGS="-Djib.architecture=${JIB_PLATFORMS##*/}"
+# 本机访问 Docker Hub / Maven 中央仓库需要代理时注入（仅构建进程用，不入仓库）：
+#   JIB_PROXY=127.0.0.1:5780 ./deploy.sh ...
+JIB_PROXY="${JIB_PROXY:-}"
+JVM_PROXY_ARGS=""
+if [ -n "$JIB_PROXY" ]; then
+  JVM_PROXY_ARGS="-Dhttp.proxyHost=${JIB_PROXY%%:*} -Dhttp.proxyPort=${JIB_PROXY##*:} -Dhttps.proxyHost=${JIB_PROXY%%:*} -Dhttps.proxyPort=${JIB_PROXY##*:}"
+fi
 
 ALL_SERVICES=(
   "pomelo-logic-server"
@@ -162,12 +177,21 @@ else
   PL=$(IFS=,; echo "${SERVICES[*]}")
 
   echo "==> [1/4] install 依赖到本地 .m2（-am 自动包含上游依赖）"
-  ./mvnw install -pl "$PL" -am -DskipTests -q
+  ./mvnw install -pl "$PL" -am -DskipTests -q $JVM_PROXY_ARGS
 
-  echo "==> [2/4] Jib 构建镜像"
+  PLATFORM_TAG=""
+  PROXY_TAG=""
+  [ -n "$JIB_PLATFORMS" ] && PLATFORM_TAG="（平台 ${JIB_PLATFORMS}）"
+  [ -n "$JIB_PROXY" ] && PROXY_TAG="（代理 ${JIB_PROXY}）"
+  echo "==> [2/4] Jib 构建镜像$PLATFORM_TAG$PROXY_TAG"
   for mod in "${SERVICES[@]}"; do
     echo "---- 构建 $mod"
-    ./mvnw -pl "$mod" -DskipTests "$JIB_GOAL"
+    local_attempt=0
+    until ./mvnw -pl "$mod" -DskipTests "$JIB_GOAL" $JIB_ARCH_ARGS $JVM_PROXY_ARGS; do
+      local_attempt=$((local_attempt + 1))
+      [ "$local_attempt" -ge 3 ] && { echo "==== 构建 $mod 连续失败，终止"; exit 1; }
+      echo "---- 构建中断（代理抖动），第 $local_attempt 次重试（jib 层缓存使重试有进度）"
+    done
   done
 fi
 

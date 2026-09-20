@@ -52,6 +52,22 @@ systemctl enable --now docker
 > **不含代理参数**——曾内置的 Mac 本地代理（127.0.0.1）已移除，同步到服务器后不会干扰构建。
 > 若某台机器的 Maven 下载确需走代理，配置在该机的 `~/.m2/settings.xml`（按机器环境，不入仓库）。
 
+**CPU 平台（重要）**：开发机为 Apple Silicon（arm64），腾讯云 x86_64 服务器需要 **amd64** 镜像。
+为服务器构建必须显式交叉构建，否则 arm64 镜像在服务器上 `exec format error` 无法运行：
+
+```bash
+# 服务器架构确认：uname -m（x86_64→amd64；aarch64→arm64）
+# 为服务器构建（amd64 + 构建期代理 + 失败自动重试）：
+JIB_PROXY=127.0.0.1:5780 JIB_PLATFORMS=linux/amd64 ./deploy.sh pomelo-logic-server pomelo-gateway
+# 本地开发/演示栈（Mac 上跑）保持默认即可（不设 JIB_PLATFORMS = 本机 arm64）
+#
+# 注意：为服务器构建后，本地 :latest 标签被 amd64 镜像占用，
+# 回到本地开发先重跑一次默认构建恢复 arm64。
+```
+
+> 不要绕过 deploy.sh 裸跑 `mvnw jib:dockerBuild`：不固定版本会解析到新版 jib
+> （平台判定行为不同，曾报 "configured platform (arm64) doesn't match base image (amd64)"）。
+
 ```bash
 # 开发机：构建 5 个业务镜像（deploy.sh 会生成 conf/jwt.env、conf/livekit.env 随机密钥）
 ./deploy.sh                 # 全量构建
@@ -69,7 +85,8 @@ docker load < pomelo-images.tgz
 seqsvr 三镜像极少变动，无需全量传输：
 
 ```bash
-# 开发机
+# 开发机（服务器为 x86_64，必须 amd64 交叉构建）
+JIB_PLATFORMS=linux/amd64 ./deploy.sh pomelo-logic-server pomelo-gateway
 docker save pomelo/pomelo pomelo/gateway | gzip > pomelo-update.tgz
 scp pomelo-update.tgz ubuntu@1.15.179.198:
 # 服务器
