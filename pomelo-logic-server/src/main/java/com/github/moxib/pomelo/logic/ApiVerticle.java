@@ -3,10 +3,13 @@ package com.github.moxib.pomelo.logic;
 import com.github.moxib.pomelo.config.ConfigHolder;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.config.TlsConfig;
+import com.github.moxib.pomelo.logic.infrastructure.MinioObjectPresigner;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
 import com.github.moxib.pomelo.logic.infrastructure.TokenService;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
+import com.github.moxib.pomelo.logic.service.MediaUrlSigner;
+import com.github.moxib.pomelo.logic.service.MinioMediaUrlSigner;
 import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
@@ -74,6 +77,8 @@ public class ApiVerticle extends VerticleBase {
   private HttpServer server;
   private Pool pgPool;
   private SessionRouteTable routeTable;
+  // 头像列存对象 key，出囗统一换 presigned GET URL（与消息媒体同一套签名器）
+  private MediaUrlSigner mediaUrlSigner;
 
   public ApiVerticle(SnowflakeIdGenerator snowflake) {
     this.snowflake = snowflake;
@@ -84,6 +89,7 @@ public class ApiVerticle extends VerticleBase {
     this.port = ConfigHolder.getInt("api.http.port", 8888);
     pgPool = PgPoolFactory.get(vertx);
     routeTable = new SessionRouteTable(vertx);
+    mediaUrlSigner = new MinioMediaUrlSigner(new MinioObjectPresigner());
 
     return RedisFactory.get(vertx).connect()
       .compose(v -> {
@@ -196,7 +202,7 @@ public class ApiVerticle extends VerticleBase {
           .put("userId", userId)
           .put("userName", r.getString("user_name"))
           .put("nickname", r.getString("nickname"))
-          .put("avatar", r.getString("avatar"))
+          .put("avatar", mediaUrlSigner.signAvatar(r.getString("avatar")))
           .put("token", token));
       })
       .onFailure(e -> fail(ctx, 500, "登录失败"));
@@ -220,7 +226,7 @@ public class ApiVerticle extends VerticleBase {
           .put("userId", String.valueOf(r.getLong("id")))
           .put("userName", r.getString("user_name"))
           .put("nickname", r.getString("nickname"))
-          .put("avatar", r.getString("avatar"))
+          .put("avatar", mediaUrlSigner.signAvatar(r.getString("avatar")))
           .put("status", r.getInteger("status"))
           .put("createdAt", r.getLong("created_at")));
       })
@@ -286,7 +292,7 @@ public class ApiVerticle extends VerticleBase {
             .put("userId", String.valueOf(r.getLong("id")))
             .put("userName", r.getString("user_name"))
             .put("nickname", r.getString("nickname"))
-            .put("avatar", r.getString("avatar"))
+            .put("avatar", mediaUrlSigner.signAvatar(r.getString("avatar")))
             .put("online", online)
             .put(timeField, r.getLong(timeField)));
         }

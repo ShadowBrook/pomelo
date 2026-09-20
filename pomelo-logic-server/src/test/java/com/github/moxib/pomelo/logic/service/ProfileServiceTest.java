@@ -2,9 +2,8 @@ package com.github.moxib.pomelo.logic.service;
 
 import com.github.moxib.pomelo.common.ErrorCode;
 import com.github.moxib.pomelo.common.ImMessage;
-import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.common.CommonProto;
-import com.github.moxib.pomelo.proto.relation.RelationProto;
+import com.github.moxib.pomelo.proto.profile.ProfileProto;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.sqlclient.Pool;
@@ -31,23 +30,18 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * 好友操作的身份来源测试。
- * <p>
- * 身份只信 gateway 规范化后的 varHeader：body 里的 userId 由客户端自由填写，
- * 若被信任，任意认证用户就能冒充他人发起申请、接受申请或删除他人好友关系。
+ * 头像更新服务的校验边界与写入参数测试。
+ * im_user.avatar 只接受本人上传、服务端签发形态的对象 key；读取出口经签名器换 presigned GET。
+ * 不做变更扇出推送：新鲜度由客户端展示点拉取保证。
  */
-@DisplayName("FriendService 身份可信边界测试")
-class FriendServiceIdentityTest {
+@DisplayName("ProfileService 头像更新测试")
+class ProfileServiceTest {
 
   private Vertx vertx;
   private RecordingPool pool;
 
-  /** 攻击者（已认证连接的真实身份） */
-  private static final long ATTACKER = 111L;
-  /** 受害者（被写进 body 冒充的身份） */
-  private static final long VICTIM = 999L;
-  /** 第三方好友关系中的另一方 */
-  private static final long OTHER = 888L;
+  private static final long USER = 100L;
+  private static final long OTHER = 200L;
 
   @BeforeEach
   void setUp() {
@@ -69,50 +63,35 @@ class FriendServiceIdentityTest {
     }
   }
 
-  private FriendService service() {
-    PushRouter noopPush = new PushRouter(vertx) {
+  private ProfileService service() {
+    return new ProfileService(pool.proxy(), new MediaUrlSigner() {
       @Override
-      public void push(PushEnvelope env) {
-        // no-op
+      public String signContent(int msgType, String content) {
+        return content;
       }
-    };
-    return new FriendService(pool.proxy(), noopPush, 20, (msgType, content) -> content);
+
+      @Override
+      public String signAvatar(String avatar) {
+        return avatar == null || avatar.isEmpty() ? "" : "signed:" + avatar;
+      }
+    });
   }
 
-  /** 构造 Protobuf 好友请求：body 带 userId，varHeader 是网关注入的认证身份 */
-  private static ImMessage friendReq(int cmd, Long bodyUserId, long friendId, Long headerUserId) {
-    RelationProto.FriendDeleteReq.Builder deleteBuilder = RelationProto.FriendDeleteReq.newBuilder()
-      .setFriendId(friendId);
+  private static ImMessage updateReq(String avatar) {
     Map<String, String> headers = new HashMap<>();
-    byte[] body;
-    if (cmd == CommonProto.Cmd.CMD_FRIEND_DELETE_REQ_VALUE) {
-      if (bodyUserId != null) {
-        deleteBuilder.setUserId(bodyUserId);
-      }
-      body = deleteBuilder.build().toByteArray();
-    } else {
-      RelationProto.FriendAcceptReq.Builder acceptBuilder = RelationProto.FriendAcceptReq.newBuilder()
-        .setFriendId(friendId);
-      if (bodyUserId != null) {
-        acceptBuilder.setUserId(bodyUserId);
-      }
-      body = acceptBuilder.build().toByteArray();
-    }
-    if (headerUserId != null) {
-      headers.put("userId", String.valueOf(headerUserId));
-    }
+    headers.put("userId", String.valueOf(USER));
     return ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER)
       .version(ImMessage.WIRE_PROTOCOL_VERSION)
       .codecId((byte) 0)
-      .cmd(cmd)
+      .cmd(CommonProto.Cmd.CMD_PROFILE_UPDATE_REQ_VALUE)
       .messageId("m-1")
-      .body(body)
+      .body(ProfileProto.ProfileUpdateReq.newBuilder().setAvatar(avatar).build().toByteArray())
       .varHeaders(headers)
       .build();
   }
 
-  private static ImMessage awaitResult(FriendService service, ImMessage req) throws Exception {
+  private static ImMessage awaitResult(ProfileService service, ImMessage req) throws Exception {
     CountDownLatch done = new CountDownLatch(1);
     AtomicReference<ImMessage> resp = new AtomicReference<>();
     AtomicReference<Throwable> err = new AtomicReference<>();
@@ -129,50 +108,93 @@ class FriendServiceIdentityTest {
     return resp.get();
   }
 
-  @Test
-  @DisplayName("body 中的 userId 无法冒充他人删除好友关系")
-  void forgedBodyUserIdCannotDeleteOthersFriendship() throws Exception {
-    // 攻击者 111 声称自己是 999，企图删除 999 与 888 的好友关系
-    ImMessage req = friendReq(CommonProto.Cmd.CMD_FRIEND_DELETE_REQ_VALUE, VICTIM, OTHER, ATTACKER);
-
-    awaitResult(service(), req);
-
-    assertFalse(pool.params.isEmpty(), "应执行删除语句");
-    assertTrue(pool.sqls.get(0).contains("DELETE FROM im_friend"),
-      "首条语句应为删除好友关系: " + pool.sqls.get(0));
-    Tuple params = pool.params.get(0);
-    assertEquals(ATTACKER, params.getLong(0), "user_id 参数必须是认证身份，而非 body 冒充的 userId");
-    assertEquals(OTHER, params.getLong(1), "friend_id 参数来自 body");
+  private static CommonProto.ErrorBody asError(ImMessage resp)
+    throws com.google.protobuf.InvalidProtocolBufferException {
+    return CommonProto.ErrorBody.parseFrom(resp.getBody());
   }
 
   @Test
-  @DisplayName("缺少认证身份头的好友操作被拒绝且不触库")
+  @DisplayName("合法对象 key 写库且响应返回签名 URL")
+  void validKeyIsSavedAndSignedBack() throws Exception {
+    String key = "image/" + USER + "/20260919/" + "a".repeat(32) + ".png";
+
+    ImMessage resp = awaitResult(service(), updateReq(key));
+
+    assertEquals(1, pool.sqls.size(), "应执行一条更新语句");
+    assertTrue(pool.sqls.get(0).contains("UPDATE im_user"), "应为头像更新语句: " + pool.sqls.get(0));
+    Tuple params = pool.params.get(0);
+    assertEquals(key, params.getString(0), "avatar 参数应为对象 key");
+    assertEquals(USER, params.getLong(2), "更新对象必须是认证身份");
+
+    ProfileProto.ProfileUpdateResp body = ProfileProto.ProfileUpdateResp.parseFrom(resp.getBody());
+    assertEquals(0, body.getCode());
+    assertEquals("signed:" + key, body.getAvatar(), "响应应携带签名后的头像 URL");
+  }
+
+  @Test
+  @DisplayName("空 avatar 表示清除头像，写空串")
+  void emptyAvatarClearsColumn() throws Exception {
+    ImMessage resp = awaitResult(service(), updateReq(""));
+
+    assertEquals(1, pool.sqls.size());
+    assertEquals("", pool.params.get(0).getString(0), "清除应写空串");
+    ProfileProto.ProfileUpdateResp body = ProfileProto.ProfileUpdateResp.parseFrom(resp.getBody());
+    assertEquals(0, body.getCode());
+  }
+
+  @Test
+  @DisplayName("他人上传的对象 key 被拒绝且不触库")
+  void foreignKeyIsRejected() throws Exception {
+    String key = "image/" + OTHER + "/20260919/" + "a".repeat(32) + ".jpg";
+
+    ImMessage resp = awaitResult(service(), updateReq(key));
+
+    assertEquals(ErrorCode.BAD_REQUEST.getCode(), asError(resp).getCode());
+    assertTrue(pool.sqls.isEmpty(), "校验失败不应触达数据库");
+  }
+
+  @Test
+  @DisplayName("非对象 key 形态（外部 URL）被拒绝")
+  void externalUrlIsRejected() throws Exception {
+    ImMessage resp = awaitResult(service(), updateReq("https://evil.example.com/avatar.png"));
+
+    assertEquals(ErrorCode.BAD_REQUEST.getCode(), asError(resp).getCode());
+    assertTrue(pool.sqls.isEmpty(), "校验失败不应触达数据库");
+  }
+
+  @Test
+  @DisplayName("缺少认证身份头被拒绝且不触库")
   void missingAuthHeaderIsRejected() throws Exception {
-    ImMessage req = friendReq(CommonProto.Cmd.CMD_FRIEND_DELETE_REQ_VALUE, VICTIM, OTHER, null);
+    Map<String, String> headers = new HashMap<>();
+    ImMessage req = ImMessage.builder()
+      .magic(ImMessage.MAGIC_NUMBER)
+      .version(ImMessage.WIRE_PROTOCOL_VERSION)
+      .codecId((byte) 0)
+      .cmd(CommonProto.Cmd.CMD_PROFILE_UPDATE_REQ_VALUE)
+      .messageId("m-1")
+      .body(ProfileProto.ProfileUpdateReq.newBuilder().setAvatar("").build().toByteArray())
+      .varHeaders(headers)
+      .build();
 
     ImMessage resp = awaitResult(service(), req);
 
-    CommonProto.ErrorBody error = CommonProto.ErrorBody.parseFrom(resp.getBody());
-    assertEquals(ErrorCode.UNAUTHORIZED.getCode(), error.getCode(), "应返回未认证错误");
+    assertEquals(ErrorCode.UNAUTHORIZED.getCode(), asError(resp).getCode());
     assertTrue(pool.sqls.isEmpty(), "未认证请求不应触达数据库");
   }
 
   @Test
-  @DisplayName("冒充他人身份接受申请会被识别为自操作并拒绝")
-  void forgedAcceptBecomesSelfOperationAndIsRejected() throws Exception {
-    // 攻击者 111 声称自己是 999（body），试图接受「999 → 111」的申请：
-    // 身份改取 header 后等价于「111 接受 111 的申请」，应被参数校验拦下
-    ImMessage req = friendReq(CommonProto.Cmd.CMD_FRIEND_ACCEPT_REQ_VALUE, VICTIM, ATTACKER, ATTACKER);
+  @DisplayName("用户不存在（更新 0 行）返回 NOT_FOUND")
+  void unknownUserReturnsNotFound() throws Exception {
+    pool.rowCount.set(0);
+    String key = "image/" + USER + "/20260919/" + "a".repeat(32) + ".jpg";
 
-    ImMessage resp = awaitResult(service(), req);
+    ImMessage resp = awaitResult(service(), updateReq(key));
 
-    CommonProto.ErrorBody error = CommonProto.ErrorBody.parseFrom(resp.getBody());
-    assertEquals(ErrorCode.BAD_REQUEST.getCode(), error.getCode(), "应作为非法参数被拒绝");
-    assertTrue(pool.sqls.isEmpty(), "非法请求不应触达数据库");
+    assertEquals(ErrorCode.NOT_FOUND.getCode(), asError(resp).getCode());
   }
 
   /**
-   * Pool 测试替身：记录 preparedQuery 的 SQL 与 execute 参数，统一返回预设 rowCount 与空结果集。
+   * Pool 测试替身：记录 SQL 与参数，返回预设 rowCount 与空结果集。
    * 未预期的方法直接抛 UnsupportedOperationException，避免测试掩盖实现新增的调用。
    */
   private static final class RecordingPool {

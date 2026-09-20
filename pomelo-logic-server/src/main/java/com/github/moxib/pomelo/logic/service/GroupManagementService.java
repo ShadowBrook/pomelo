@@ -39,14 +39,17 @@ public class GroupManagementService extends ServiceBase {
   private final GroupRepository groupRepo;
   private final SnowflakeIdGenerator snowflake;
   private final PushRouter pushRouter;
+  private final MediaUrlSigner mediaUrlSigner;
   private final Map<Integer, Function<ImMessage, Future<ImMessage>>> dispatchMap;
 
   public GroupManagementService(PushRouter pushRouter,
                                 GroupRepository groupRepo,
-                                SnowflakeIdGenerator snowflake, MessageRepository messageRepo) {
+                                SnowflakeIdGenerator snowflake, MessageRepository messageRepo,
+                                MediaUrlSigner mediaUrlSigner) {
     this.groupRepo = groupRepo;
     this.snowflake = snowflake;
     this.pushRouter = pushRouter;
+    this.mediaUrlSigner = mediaUrlSigner;
     this.dispatchMap = Map.of(
       CMD_GROUP_CREATE_REQ_VALUE, this::handleCreateGroup,
       CMD_GROUP_INVITE_REQ_VALUE, this::handleInviteToGroup,
@@ -323,7 +326,7 @@ public class GroupManagementService extends ServiceBase {
                   .setUserId(m.getUserId())
                   .setUserName(nn(m.getUserName()))
                   .setNickname(nn(m.getNickname()))
-                  .setAvatar(nn(m.getAvatar()))
+                  .setAvatar(mediaUrlSigner.signAvatar(m.getAvatar()))
                   .setRole(m.getRole()).setJoinedAt(m.getJoinedAt()).build());
               }
               return Future.succeededFuture(
@@ -379,7 +382,7 @@ public class GroupManagementService extends ServiceBase {
                 GroupMgmtProto.GetGroupMsgReadStatusResp.newBuilder().setCode(0).setMessage("success");
               for (GroupMsgReader r : readers) {
                 resp.addReaders(GroupMgmtProto.GroupMsgReader.newBuilder()
-                  .setUserId(r.userId()).setNickname(nn(r.nickname())).setAvatar(nn(r.avatar())).build());
+                  .setUserId(r.userId()).setNickname(nn(r.nickname())).setAvatar(mediaUrlSigner.signAvatar(r.avatar())).build());
               }
               return buildResponse(message, CMD_GROUP_MSG_READ_RESP_VALUE, resp.build());
             });
@@ -445,7 +448,7 @@ public class GroupManagementService extends ServiceBase {
     return GroupMgmtProto.GroupInfo.newBuilder()
       .setGroupId(g.getId())
       .setName(g.getName())
-      .setAvatar(nn(g.getAvatar())).setDescription(nn(g.getDescription()))
+      .setAvatar(mediaUrlSigner.signAvatar(g.getAvatar())).setDescription(nn(g.getDescription()))
       .setOwnerId(g.getOwnerId()).setMemberCount(g.getMemberCount())
       .setMaxMembers(g.getMaxMembers()).setCreatedAt(g.getCreatedAt())
       .build();

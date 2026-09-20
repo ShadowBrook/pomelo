@@ -542,6 +542,23 @@ public final class CommonProto {
     CMD_CALL_TOKEN_RESP(184),
     /**
      * <pre>
+     * 用户资料（0xC0 段避开 CALL 0xB0）
+     * C→S 更新资料（当前仅头像）
+     * </pre>
+     *
+     * <code>CMD_PROFILE_UPDATE_REQ = 192;</code>
+     */
+    CMD_PROFILE_UPDATE_REQ(192),
+    /**
+     * <pre>
+     * S→C 更新资料响应
+     * </pre>
+     *
+     * <code>CMD_PROFILE_UPDATE_RESP = 193;</code>
+     */
+    CMD_PROFILE_UPDATE_RESP(193),
+    /**
+     * <pre>
      * S→C 通用错误响应
      * </pre>
      *
@@ -1067,6 +1084,23 @@ public final class CommonProto {
     public static final int CMD_CALL_TOKEN_RESP_VALUE = 184;
     /**
      * <pre>
+     * 用户资料（0xC0 段避开 CALL 0xB0）
+     * C→S 更新资料（当前仅头像）
+     * </pre>
+     *
+     * <code>CMD_PROFILE_UPDATE_REQ = 192;</code>
+     */
+    public static final int CMD_PROFILE_UPDATE_REQ_VALUE = 192;
+    /**
+     * <pre>
+     * S→C 更新资料响应
+     * </pre>
+     *
+     * <code>CMD_PROFILE_UPDATE_RESP = 193;</code>
+     */
+    public static final int CMD_PROFILE_UPDATE_RESP_VALUE = 193;
+    /**
+     * <pre>
      * S→C 通用错误响应
      * </pre>
      *
@@ -1163,6 +1197,8 @@ public final class CommonProto {
         case 182: return CMD_CALL_EVENT_PUSH;
         case 183: return CMD_CALL_TOKEN_REQ;
         case 184: return CMD_CALL_TOKEN_RESP;
+        case 192: return CMD_PROFILE_UPDATE_REQ;
+        case 193: return CMD_PROFILE_UPDATE_RESP;
         case 65535: return CMD_ERROR;
         default: return null;
       }
@@ -3444,7 +3480,7 @@ java.lang.String defaultValue) {
       "\003 \001(\003\022/\n\003ext\030\004 \003(\0132\".im.common.MessageCo" +
       "ntent.ExtEntry\032*\n\010ExtEntry\022\013\n\003key\030\001 \001(\t\022" +
       "\r\n\005value\030\002 \001(\t:\0028\001\"*\n\tErrorBody\022\014\n\004code\030" +
-      "\001 \001(\005\022\017\n\007message\030\002 \001(\t*\272\014\n\003Cmd\022\017\n\013CMD_UN" +
+      "\001 \001(\005\022\017\n\007message\030\002 \001(\t*\365\014\n\003Cmd\022\017\n\013CMD_UN" +
       "KNOWN\020\000\022\020\n\014CMD_AUTH_REQ\020\001\022\021\n\rCMD_AUTH_RE" +
       "SP\020\002\022\022\n\016CMD_LOGOUT_REQ\020\003\022\023\n\017CMD_LOGOUT_R" +
       "ESP\020\004\022\017\n\013CMD_C2C_REQ\020\020\022\020\n\014CMD_C2C_RESP\020\021" +
@@ -3484,15 +3520,16 @@ java.lang.String defaultValue) {
       "\n\020CMD_CALL_END_REQ\020\264\001\022\026\n\021CMD_CALL_END_RE" +
       "SP\020\265\001\022\030\n\023CMD_CALL_EVENT_PUSH\020\266\001\022\027\n\022CMD_C" +
       "ALL_TOKEN_REQ\020\267\001\022\030\n\023CMD_CALL_TOKEN_RESP\020" +
-      "\270\001\022\017\n\tCMD_ERROR\020\377\377\003*\324\001\n\007MsgType\022\024\n\020MSG_T" +
-      "YPE_UNKNOWN\020\000\022\021\n\rMSG_TYPE_TEXT\020\001\022\022\n\016MSG_" +
-      "TYPE_IMAGE\020\002\022\022\n\016MSG_TYPE_VOICE\020\003\022\022\n\016MSG_" +
-      "TYPE_VIDEO\020\004\022\021\n\rMSG_TYPE_FILE\020\005\022\022\n\016MSG_T" +
-      "YPE_EMOJI\020\006\022\024\n\020MSG_TYPE_FORWARD\020\010\022\022\n\016MSG" +
-      "_TYPE_REPLY\020\t\022\023\n\017MSG_TYPE_SYSTEM\020c*!\n\007Ac" +
-      "kType\022\014\n\010RECEIVED\020\000\022\010\n\004SEEN\020\001B3\n$com.git" +
-      "hub.moxib.pomelo.proto.commonB\013CommonPro" +
-      "tob\006proto3"
+      "\270\001\022\033\n\026CMD_PROFILE_UPDATE_REQ\020\300\001\022\034\n\027CMD_P" +
+      "ROFILE_UPDATE_RESP\020\301\001\022\017\n\tCMD_ERROR\020\377\377\003*\324" +
+      "\001\n\007MsgType\022\024\n\020MSG_TYPE_UNKNOWN\020\000\022\021\n\rMSG_" +
+      "TYPE_TEXT\020\001\022\022\n\016MSG_TYPE_IMAGE\020\002\022\022\n\016MSG_T" +
+      "YPE_VOICE\020\003\022\022\n\016MSG_TYPE_VIDEO\020\004\022\021\n\rMSG_T" +
+      "YPE_FILE\020\005\022\022\n\016MSG_TYPE_EMOJI\020\006\022\024\n\020MSG_TY" +
+      "PE_FORWARD\020\010\022\022\n\016MSG_TYPE_REPLY\020\t\022\023\n\017MSG_" +
+      "TYPE_SYSTEM\020c*!\n\007AckType\022\014\n\010RECEIVED\020\000\022\010" +
+      "\n\004SEEN\020\001B3\n$com.github.moxib.pomelo.prot" +
+      "o.commonB\013CommonProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

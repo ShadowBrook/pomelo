@@ -274,6 +274,7 @@ public class MessageDispatcher {
     if (cmd == CMD_CTRL_REQ_VALUE)         return "logic.ctrl";
     if (cmd == CMD_ACK_REQ_VALUE)          return "logic.ack";
     if (cmd == CMD_UPLOAD_REQ_VALUE)       return "logic.upload";
+    if (cmd == CMD_PROFILE_UPDATE_REQ_VALUE) return "logic.profile";
     if (cmd == CMD_PULL_REQ_VALUE)         return "logic.pull";
     // 音视频通话（0xB0~0xB8 段；群命令 0x0070~0x009B 的硬编码区间勿复用）
     if (cmd >= CMD_CALL_INVITE_REQ_VALUE && cmd <= CMD_CALL_TOKEN_REQ_VALUE) return "logic.call";

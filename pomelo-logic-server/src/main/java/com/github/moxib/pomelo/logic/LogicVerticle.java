@@ -39,6 +39,7 @@ public class LogicVerticle extends VerticleBase {
   private GroupPullService groupPullService;
   private GroupAckService groupAckService;
   private UploadService uploadService;
+  private ProfileService profileService;
   private CallService callService;
 
   private final SnowflakeIdGenerator snowflake;
@@ -67,10 +68,11 @@ public class LogicVerticle extends VerticleBase {
         ctrlService = new CtrlService();
         var groupRepo = new PgGroupRepository(vertx);
         c2gService = new C2GService(vertx, pushRouter, groupRepo, seqClient, snowflake, mediaUrlSigner);
-        friendService = new FriendService(vertx, pushRouter);
-        groupService = new GroupManagementService(pushRouter, groupRepo, snowflake, messageRepo);
+        friendService = new FriendService(vertx, pushRouter, mediaUrlSigner);
+        groupService = new GroupManagementService(pushRouter, groupRepo, snowflake, messageRepo, mediaUrlSigner);
         groupPullService = new GroupPullService(groupRepo, messageRepo, mediaUrlSigner);
         groupAckService = new GroupAckService(groupRepo, messageRepo);
+        profileService = new ProfileService(vertx, mediaUrlSigner);
 
         // 音视频通话：token 签发 + 房间管理 + Redis 态 + 记录落库
         var livekitTokens = new LiveKitTokenService();
@@ -84,6 +86,7 @@ public class LogicVerticle extends VerticleBase {
         bus.consumer("logic.ack",     (Message<Buffer> msg) -> dispatch(msg, ackService::process));
         bus.consumer("logic.auth",    (Message<Buffer> msg) -> dispatch(msg, authService::process));
         bus.consumer("logic.upload",  (Message<Buffer> msg) -> dispatch(msg, uploadService::process));
+        bus.consumer("logic.profile", (Message<Buffer> msg) -> dispatch(msg, profileService::process));
         bus.consumer("logic.pull",    (Message<Buffer> msg) -> dispatch(msg, pullService::process));
         bus.consumer("logic.ctrl",    (Message<Buffer> msg) -> dispatch(msg, ctrlService::process));
         bus.consumer("logic.c2g",     (Message<Buffer> msg) -> dispatch(msg, c2gService::process));

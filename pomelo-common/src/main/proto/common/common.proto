@@ -158,6 +158,12 @@ enum Cmd {
     // S→C 入会材料响应
     CMD_CALL_TOKEN_RESP  = 0x00B8;
 
+    // 用户资料（0xC0 段避开 CALL 0xB0）
+    // C→S 更新资料（当前仅头像）
+    CMD_PROFILE_UPDATE_REQ  = 0x00C0;
+    // S→C 更新资料响应
+    CMD_PROFILE_UPDATE_RESP = 0x00C1;
+
     // S→C 通用错误响应
     CMD_ERROR = 0xFFFF;
 }

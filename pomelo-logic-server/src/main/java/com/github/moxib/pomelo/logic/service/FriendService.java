@@ -46,16 +46,18 @@ public class FriendService extends ServiceBase {
 
   private final PushRouter pushRouter;
   private final Pool pgPool;
+  private final MediaUrlSigner mediaUrlSigner;
   private final int searchLimit;
 
-  public FriendService(Vertx vertx, PushRouter pushRouter) {
-    this(PgPoolFactory.get(vertx), pushRouter, ConfigHolder.getInt("friend.searchLimit", 20));
+  public FriendService(Vertx vertx, PushRouter pushRouter, MediaUrlSigner mediaUrlSigner) {
+    this(PgPoolFactory.get(vertx), pushRouter, ConfigHolder.getInt("friend.searchLimit", 20), mediaUrlSigner);
   }
 
   /** 供测试注入连接池 */
-  FriendService(Pool pgPool, PushRouter pushRouter, int searchLimit) {
+  FriendService(Pool pgPool, PushRouter pushRouter, int searchLimit, MediaUrlSigner mediaUrlSigner) {
     this.pushRouter = pushRouter;
     this.pgPool = pgPool;
+    this.mediaUrlSigner = mediaUrlSigner;
     this.searchLimit = searchLimit;
   }
 
@@ -97,7 +99,8 @@ public class FriendService extends ServiceBase {
     for (Row row : rows) {
       b.addUsers(RelationProto.SearchUserResp.UserInfo.newBuilder()
         .setUserId(row.getLong("id")).setUserName(row.getString("user_name"))
-        .setNickname(row.getString("nickname")).setAvatar(row.getString("avatar")));
+        .setNickname(row.getString("nickname"))
+        .setAvatar(mediaUrlSigner.signAvatar(row.getString("avatar"))));
     }
     return b.build();
   }
@@ -202,7 +205,8 @@ public class FriendService extends ServiceBase {
           return new UserProfile("", "", "");
         }
         Row row = rows.iterator().next();
-        return new UserProfile(nn(row.getString("user_name")), nn(row.getString("nickname")), nn(row.getString("avatar")));
+        return new UserProfile(nn(row.getString("user_name")), nn(row.getString("nickname")),
+          mediaUrlSigner.signAvatar(row.getString("avatar")));
       });
   }
 
