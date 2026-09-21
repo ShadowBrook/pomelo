@@ -19,7 +19,7 @@
       未放行时通话「能接通但两端黑屏/无声」（信令走 443 所以看起来一切正常）。
       自检：`python3 scripts/probe-media-ports.py pomelo.host`（当前线上五项全不通）
 - [ ] 备案通过后 IP → 域名切换（用户侧）
-- [ ] 备案号上站（用户侧）：服务器 `~/pomelo-web/.env.local` 写 `VITE_ICP_BEIAN=皖ICP备2026032119号`
+- [ ] 备案号上站（用户侧）：服务器 `~/pomelo-web/.env.local` 写 `VITE_ICP_BEIAN=<备案号>`
       后重新 `npm run build`（构建期注入，不入库；未配置则登录页不显示该行）
 
 ## 二、通话（livekit-calling-plan Phase 4，另行评估）

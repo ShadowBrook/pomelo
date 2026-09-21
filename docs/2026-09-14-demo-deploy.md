@@ -80,7 +80,7 @@ cp .env.demo.example .env     # 含 COMPOSE_FILE（自动合并 demo overlay）
 # 3) 前端构建（dist 即 Caddy 挂载路径，即时生效）
 cd ~/pomelo-web && npm ci
 cp .env.example .env.local      # 站点文案/备案号等站点级配置写这里（*.local 不入库）
-                                # 例：VITE_ICP_BEIAN=皖ICP备2026032119号（登录页底部展示并跳转工信部）
+                                # 例：VITE_ICP_BEIAN=皖ICP备XXXXXXXXXX号（登录页底部展示并跳转工信部）
 npm run build
 
 # 4) DB 迁移：无需手工执行——compose 的一次性服务 db-migrate 已在 up -d 时跑完
