@@ -69,7 +69,8 @@ git clone -b feat/webrtc-calling git@github.com:ShadowBrook/pomelo-web.git pomel
 
 # 2) 后端 + 全量启动（首次约 15-30 分钟：Maven 发行版 + 全量依赖 + 基础镜像拉取）
 cd ~/pomelo
-cp .env.demo.example .env     # DEMO_DOMAIN=pomelo.host / DEMO_MEDIA_DOMAIN=oss.pomelo.host
+cp .env.demo.example .env     # 含 COMPOSE_FILE（自动合并 demo overlay）
+                              # DEMO_DOMAIN=pomelo.host / DEMO_MEDIA_DOMAIN=oss.pomelo.host
 ./deploy.sh                   # 构建 5 个业务镜像 + 生成 conf/jwt.env、conf/livekit.env（随机密钥）
                               # 末尾自动 docker compose up -d
 # 3) 前端构建（dist 即 Caddy 挂载路径，即时生效）
@@ -84,7 +85,7 @@ docker exec pomelo-postgres psql -U pomelo -d pomelo_db \
 ## 4. 版本升级（日常主路径）
 
 ```bash
-cd ~/pomelo && git pull
+cd ~/pomelo && git pull          # 注意拉到最新（含 ConfigHolder 修复）
 cd ~/pomelo-web && git pull
 
 # 后端两个镜像重建 + 容器滚动更新（deploy.sh 末尾自动 up -d）
