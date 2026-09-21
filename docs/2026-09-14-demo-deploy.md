@@ -12,6 +12,9 @@
 >
 > **当前状态**：域名形态已上线运行（Caddy 双证书已签发、API 健康）。
 > 最近一轮功能：个性签名、群主转让/解散、@提及（元数据 + [有人@我]）、头像裁剪、修改密码。
+> 2026-09-21 修复两处线上缺陷：① 老数据卷缺 `im_call.participants` 导致通话报「通话服务暂不可用」
+> ——改为 `db-migrate` 一次性服务自动收敛 schema（§4.1）；② LiveKit webhook 因 EventBus
+> 消费端类型不匹配抛 `ClassCastException` 而静默失效——已修复并补真实链路回归测试。
 
 ## 1. 拓扑（线上现状）
 
@@ -76,10 +79,8 @@ cp .env.demo.example .env     # 含 COMPOSE_FILE（自动合并 demo overlay）
 # 3) 前端构建（dist 即 Caddy 挂载路径，即时生效）
 cd ~/pomelo-web && npm ci && npm run build
 
-# 4) DB 迁移（幂等，重复执行无害；截至 2026-09-21 共两条）
-docker exec pomelo-postgres psql -U pomelo -d pomelo_db \
-  -c "ALTER TABLE im_user ADD COLUMN IF NOT EXISTS signature VARCHAR(128) NOT NULL DEFAULT '';" \
-  -c "ALTER TABLE im_message_group ADD COLUMN IF NOT EXISTS ext TEXT;"
+# 4) DB 迁移：无需手工执行——compose 的一次性服务 db-migrate 已在 up -d 时跑完
+docker compose ps --all | grep db-migrate      # Exited (0) 即成功
 ```
 
 > 对象存储 bucket：compose 已内置一次性 `minio-init` 服务自动创建 `pomelo-media`
@@ -99,27 +100,65 @@ cd ~/pomelo && ./deploy.sh pomelo-logic-server pomelo-gateway
 # 前端（原地构建，Caddy 立即提供新产物）
 cd ~/pomelo-web && npm run build
 
-# DB 迁移：有新增语句时执行一次（登记见 §4.1；全部幂等）
+# DB 迁移：随 up -d 自动执行（db-migrate），无需手工步骤；见 §4.1
 ```
 
-### 4.1 DB 迁移登记（新增一条登记一条）
+### 4.1 DB schema 收敛（自动，无需手工迁移）
+
+`db/schema.sql` 是唯一事实源，**全部语句都是幂等形态**（`CREATE TABLE/INDEX IF NOT EXISTS`、
+`ALTER TABLE ... ADD COLUMN IF NOT EXISTS`），因此可以直接对既有库反复执行：
+
+- 空数据卷：postgres 容器首启时经 `docker-entrypoint-initdb.d` 建表；
+- 既有数据卷（老卷不会重跑 initdb）：compose 的一次性服务 **`db-migrate`** 在每次
+  `docker compose up -d` 时执行 `psql -v ON_ERROR_STOP=1 -f db/schema.sql`，
+  `pomelo` 侧 `depends_on: service_completed_successfully` ——迁移失败时业务不会带着旧表结构启动。
+
+**因此新增列/建表的唯一动作是往 `db/schema.sql` 追加语句**（IF NOT EXISTS 形态），
+不要在任何地方单独登记/手工执行迁移（历史上漏执行的正是 `im_call.participants`，
+症状见 §4.3）。
+
+手动兜底（deploy 后忘跑、或临时补列，幂等可重复）：
+
+```bash
+cd ~/pomelo && docker compose up -d db-migrate && docker inspect --format '{{.State.ExitCode}}' pomelo-db-migrate
+```
+
+历史迁移语句（已含在 schema.sql 内，仅作记录）：
 
 | 日期 | 语句 |
 |---|---|
 | 2026-09-20 | `ALTER TABLE im_user ADD COLUMN IF NOT EXISTS signature VARCHAR(128) NOT NULL DEFAULT '';` |
 | 2026-09-20 | `ALTER TABLE im_message_group ADD COLUMN IF NOT EXISTS ext TEXT;` |
+| 2026-09-20 | `ALTER TABLE im_call ADD COLUMN IF NOT EXISTS participants TEXT NOT NULL DEFAULT '';` |
 
 ### 4.2 升级后验证
 
 ```bash
 curl -s https://pomelo.host/api/health                          # {"status":"ok"}
+docker inspect --format '{{.State.ExitCode}}' pomelo-db-migrate # 0
 docker exec pomelo printenv | grep MEDIA_PUBLIC                 # https://oss.pomelo.host
 curl -s https://pomelo.host/api/user/login -H 'Content-Type: application/json' \
   -d '{"userName":"...","password":"..."}' | grep -o '"avatar":"[^"]*"' | head -c 120
 # avatar 必须以 https://oss.pomelo.host 开头（详见 §5）
+# 通话链路的服务端错误都会落在这一行（建房/落库/缺列/密钥）：
+docker compose logs pomelo | grep -E "建房|通话记录写入失败|webhook" | tail -20
 ```
 
 安卓端 APK 仍在开发机构建后安装（服务器不配置 Android SDK）。
+
+### 4.3 排障：通话「通话服务暂不可用」
+
+该文案由 `CallService.invite` 的兜底分支返回，覆盖 **建房（LiveKit）/ 写 Redis 态 / 写 `im_call`**
+三段中的任一失败，日志里必有 `建房/落库失败，回滚忙键 callId=...`，紧跟真实异常：
+
+| 日志中的异常 | 原因 | 处理 |
+|---|---|---|
+| `column "participants" of relation "im_call" does not exist (42703)` | 老数据卷缺列（迁移没跑） | `docker compose up -d db-migrate` 后重拨（§4.1） |
+| `CreateRoom ... 失败: HTTP 401` / `livekit.secret 缺失...拒绝签发` | `conf/livekit.env` 未注入或有损 | `docker compose up -d --force-recreate pomelo`（env_file 改动需重建容器） |
+| `CreateRoom ... 失败: HTTP 404/502` | livekit 容器未起/不在同网 | `docker compose ps livekit`、`docker compose logs livekit \| tail -50` |
+
+**注意**：LiveKit 房间在 `callRepo.insert` 之前就已创建，落库失败时房间会被删房逻辑收尾，
+但**不会**自动重试——修完表结构重拨即可。
 
 ## 5. 对象存储与 presigned URL 契约（上传/图片能否用的关键）
 
@@ -144,7 +183,8 @@ docker exec pomelo printenv | grep MEDIA_PUBLIC   # 期望 https://oss.pomelo.ho
 前端已内置视频发布压制（`useCallStore` CAM_CAPTURE/CAM_PUBLISH）：摄像头采集与编码锁 **480p / 500kbps**，单路通话服务端约 1.2Mbps，两路并发视频可跑。
 
 - 演示动线建议：文字/语音消息、图片（几 MB 走 3M 需几秒）→ 语音通话（~0.15Mbps/路，随便并发）→ 视频通话压轴单路演示。
-- 客户端崩溃/断网：前端监听 LiveKit `Disconnected` 自动发 END；webhook 兜底覆盖 logic 侧异常。不会出现“忙线卡 2 小时”。
+- 客户端崩溃/断网：前端监听 LiveKit `Disconnected` 自动发 END；webhook 兜底覆盖 logic 侧异常（09-21 前该兜底因
+  EventBus 类型不匹配静默失效，现已修复——可用 `docker compose logs pomelo | grep webhook` 观察 `webhook 兜底结束通话`）。不会出现“忙线卡 2 小时”。
 - 如视频需更高画质：升配带宽或改香港节点，放宽 `CAM_PUBLISH.maxBitrate` 即可。
 
 ## 7. 演示账号与可演示功能

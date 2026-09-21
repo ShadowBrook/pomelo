@@ -172,10 +172,14 @@ public Future<Boolean> isMember(long groupId, long userId) {
   private static class RecordingCallRepository implements CallRepository {
     int inserts, answered, ended;
     final List<String> insertedParticipants = new ArrayList<>();
+    boolean failInsert;
     @Override public Future<Void> insert(long callId, String room, long callerId, long calleeId, int mediaType,
                                          long createdAt, String participants) {
       inserts++;
       insertedParticipants.add(participants);
+      if (failInsert) {
+        return Future.failedFuture("ERROR: column \"participants\" of relation \"im_call\" does not exist (42703)");
+      }
       return Future.succeededFuture();
     }
     @Override public Future<Void> markAnswered(String callId, long answeredAt) {
@@ -437,6 +441,23 @@ public Future<Boolean> isMember(long groupId, long userId) {
   }
 
   @Test
+  @DisplayName("INVITE：落库失败（表缺列 42703）→ 回滚忙键并删掉刚建的房间")
+  void inviteRollsBackRoomWhenPersistFails() throws Exception {
+    callRepo.failInsert = true;
+    ImMessage resp = service.process(req(CMD_CALL_INVITE_REQ_VALUE,
+      CallProto.CallInviteReq.newBuilder().setPeerId(CALLEE)
+        .setMediaType(CallProto.CallMediaType.CALL_MEDIA_AUDIO).build(), CALLER))
+      .toCompletionStage().toCompletableFuture().get(5, TimeUnit.SECONDS);
+
+    assertNotEquals(0, respCode(resp));
+    assertEquals(1, rooms.created.size(), "建房已发生");
+    assertEquals(rooms.created, rooms.deleted, "落库失败必须回收房间，否则空房间挂到 empty_timeout");
+    assertFalse(store.busy.containsKey(CALLER), "主叫忙键应回滚");
+    assertFalse(store.busy.containsKey(CALLEE), "被叫忙键应回滚");
+    assertTrue(pushRouter.pushes.isEmpty(), "失败不得推送振铃");
+  }
+
+  @Test
   @DisplayName("ACCEPT：非被叫接听被拒（含主叫自己与陌生人）")
   void acceptRejectsNonCallee() throws Exception {
     String callId = invite();
@@ -625,6 +646,29 @@ public Future<Boolean> isMember(long groupId, long userId) {
     String body = "{\"event\":\"room_finished\",\"room\":{\"name\":\"someone-elses-room\"}}";
     int status = await(service.onLiveKitWebhook(body, "Bearer " + webhookToken("someone-elses-room", body)));
     assertEquals(404, status);
+  }
+
+  @Test
+  @DisplayName("webhook：ApiVerticle 的 EventBus 信封能被消费端解码并收尾（真实链路）")
+  void webhookThroughEventBusEnvelope() throws Exception {
+    String callId = invite();
+    accept(callId, CALLEE);
+    String room = store.rooms.keySet().iterator().next();
+    String body = "{\"event\":\"participant_left\",\"room\":{\"name\":\"" + room + "\"}}";
+
+    // 独立 Vertx：共享实例上每个用例都注册过同名消费者，request 会轮询落到旧实例
+    Vertx busVertx = Vertx.vertx();
+    try {
+      new CallService(busVertx, pushRouter, groupRepoOf(CALLEE), callRepo, store, tokens,
+        rooms, new SnowflakeIdGenerator(1), msgRepo, seqClient(), RING_TIMEOUT, 3_600_000L, 5);
+      int status = await(busVertx.eventBus().<Integer>request("logic.call.webhook",
+          new JsonObject().put("body", body).put("auth", "Bearer " + webhookToken(room, body)))
+        .map(reply -> reply.body()));
+      assertEquals(200, status);
+      assertEquals(1, callRepo.ended);
+    } finally {
+      busVertx.close();
+    }
   }
 
   // ------------------------------------------------------------------
