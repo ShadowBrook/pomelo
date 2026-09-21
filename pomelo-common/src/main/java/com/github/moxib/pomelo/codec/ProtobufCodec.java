@@ -240,7 +240,9 @@ public class ProtobufCodec<T> implements MessageCodec<T> {
       }
       return (T) proto;
     } catch (Exception e) {
-      throw new RuntimeException("Failed to decode protobuf message", e);
+      // 注意：不在此处全局拒绝空 body——GetMyGroups 等无字段命令的合法编码就是空字节，
+      // 空请求的业务校验由各 Service 自行处理（如 ProfileService 的字段缺失检查）
+      throw new RuntimeException("Failed to decode protobuf message (len=" + (data == null ? -1 : data.length) + ")", e);
     }
   }
 
