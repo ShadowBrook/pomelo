@@ -180,6 +180,10 @@ docker compose ps livekit                           # 端口映射是否在
   界面上就是「摄像头没打开、画面全黑」，而且**不报错**——很容易误判成客户端 bug。
 - 排掉后用同一脚本复测，五项全「通」再拨号。
 - 跨网/移动网络下 UDP 易被丢，TURN(3478/udp) 兜底；TURN/TLS(443) 尚未配置（见 §6 与 livekit 调研文档 §2.3）。
+- 端口放行后仍黑屏，则查 ICE 宣告地址：`docker compose logs livekit | head -5` 里的 `nodeIP`
+  应为公网 IP（云主机网卡是内网 IP，靠 `use_external_ip` 探测）。若是 172.x，
+  在 `docker-compose.demo.yml` 的 livekit `command` 上显式加 `--node-ip <公网IP>`
+  （YAML 里的 `rtc.node_ip` 在容器内不生效，必须走命令行参数）。
 
 ## 5. 对象存储与 presigned URL 契约（上传/图片能否用的关键）
 
