@@ -2,6 +2,8 @@
 set -euo pipefail
 
 # 部署脚本：install 依赖 → Jib 构建镜像 → 清理 dangling → docker compose 启动
+# 注意：末尾 up -d 读取项目 .env 的 COMPOSE_FILE（服务器部署形态在 .env 里
+# 声明 docker-compose.yml:docker-compose.demo.yml 以注入站点环境变量）
 #
 # 用法：
 #   ./deploy.sh                          # 全量构建 5 个服务镜像
