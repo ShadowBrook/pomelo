@@ -227,10 +227,11 @@ services:
       - pomelo-net
 
   # ============ 对象存储初始化（幂等：确保媒体 bucket 存在） ============
-  # 新数据卷首启时 bucket 不存在会导致上传 PUT 404（NoSuchBucket），
-  # 本地/服务器均自动创建；mc 连不上 silo 时重试等待。
+  # 新数据卷首启时 bucket 不存在会导致上传 PUT 404（NoSuchBucket）。
+  # 复用 silo 镜像自带的 mc（minio/mc 已从 Docker Hub 下架，勿引新镜像）；
+  # mc 连不上 silo 时重试等待。
   minio-init:
-    image: minio/mc:latest
+    image: pgsty/silo:RELEASE.2026-08-06T00-00-00Z
     container_name: pomelo-minio-init
     depends_on:
       silo:
