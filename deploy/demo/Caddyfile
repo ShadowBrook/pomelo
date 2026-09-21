@@ -35,6 +35,17 @@
 		reverse_proxy livekit:7880
 	}
 
+	# @ 提及/混合内容兜底：客户端会把 http 形态的 presigned URL 改写到主域 /minio。
+	# 剥前缀转发 MinIO，并把 Host 改回签发时的 publicEndpoint（基线默认 localhost:9002），
+	# SigV4 校验才能通过；若修改了 POMELO_MEDIA_PUBLIC_ENDPOINT，此处 Host 需同步。
+	# 服务器必须正确注入 POMELO_MEDIA_PUBLIC_ENDPOINT=https://{$MEDIA_DOMAIN}（见 §6），
+	# 该路由仅为误配置兜底。
+	handle /minio/* {
+		reverse_proxy silo:9000 {
+			header_up Host localhost:9002
+		}
+	}
+
 	# 前端静态资源（SPA 回退到 index.html）
 	handle {
 		root * /srv/dist

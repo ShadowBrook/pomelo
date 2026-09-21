@@ -121,6 +121,14 @@ docker logs pomelo-caddy 2>&1 | grep -i "certificate obtained"   # 两张证书�
 curl -s https://pomelo.host/api/health             # {"status":"ok"}
 curl -sI https://oss.pomelo.host | head -1         # 200/403 均说明 MinIO 已可达
 docker logs pomelo-livekit 2>&1 | grep -iE "nodeip|webhook"      # nodeIP=公网IP
+
+# presigned URL 的 host 自检（上传/图片能否用的关键）：
+# 登录响应里的 avatar 若为 http://localhost:9002/... 说明 POMELO_MEDIA_PUBLIC_ENDPOINT
+# 没生效（漏挂 demo overlay / .env 缺 DEMO_MEDIA_DOMAIN）——此时上传会被客户端
+# 改写到主域 /minio 而 Caddy 无此路由，PUT 直接 405。修复：重新挂 overlay 启动。
+docker exec pomelo printenv | grep MEDIA_PUBLIC   # 期望 https://oss.pomelo.host
+# 兜底路由（已入 deploy/demo/Caddyfile 模板，服务器 rsync 后重建 caddy 生效）：
+docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d caddy
 ```
 
 站点相关全部经环境注入（`docker-compose.demo.yml` → ConfigHolder `POMELO_*` 覆盖），**换域名无需重打镜像**：
@@ -129,6 +137,11 @@ docker logs pomelo-livekit 2>&1 | grep -iE "nodeip|webhook"      # nodeIP=公网
 - `POMELO_MEDIA_PUBLIC_ENDPOINT=https://oss.pomelo.host`
 - webhook 兜底已在 `conf/livekit.demo.yaml` 启用（`https://pomelo.host/api/livekit/webhook`）：
   logic 进程被杀/断网导致客户端发不出 END 时，由房间事件触发服务端强制收尾。
+
+> **POMELO_MEDIA_PUBLIC_ENDPOINT 必须是 https 的 oss 子域**（基线 config.yaml 默认
+> `http://localhost:9002`，仅开发机适用）。若服务端下发 http 形态的 presigned URL：
+> https 页面按混合内容规则禁直连，web 客户端会改写到主域 `/minio/...`，而主域 Caddy
+> 无此路由 → 静态处理器对 PUT 返回 **405**（表现为改头像/发图失败）。
 
 ## 6.5 版本升级（已有部署更新，2026-09-20 起）
 
