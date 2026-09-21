@@ -18,6 +18,8 @@
   </modules>
 
   <properties>
+    <jib.architecture>arm64</jib.architecture>
+    <jib-maven-plugin.version>3.4.4</jib-maven-plugin.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <maven-compiler-plugin.version>3.13.0</maven-compiler-plugin.version>
@@ -169,6 +171,22 @@
         <plugin>
           <artifactId>maven-shade-plugin</artifactId>
           <version>${maven-shade-plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>com.google.cloud.tools</groupId>
+          <artifactId>jib-maven-plugin</artifactId>
+          <version>${jib-maven-plugin.version}</version>
+          <configuration>
+            <from>
+              <image>eclipse-temurin:21-jre</image>
+              <platforms>
+                <platform>
+                  <architecture>${jib.architecture}</architecture>
+                  <os>linux</os>
+                </platform>
+              </platforms>
+            </from>
+          </configuration>
         </plugin>
       </plugins>
     </pluginManagement>

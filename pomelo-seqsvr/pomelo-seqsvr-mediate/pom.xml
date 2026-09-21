@@ -56,17 +56,7 @@
       <plugin>
         <groupId>com.google.cloud.tools</groupId>
         <artifactId>jib-maven-plugin</artifactId>
-        <version>3.4.0</version>
         <configuration>
-          <from>
-            <image>eclipse-temurin:21-jre</image>
-            <platforms>
-              <platform>
-                <architecture>arm64</architecture>
-                <os>linux</os>
-              </platform>
-            </platforms>
-          </from>
           <to>
             <image>pomelo/seqsvr-mediate</image>
           </to>
