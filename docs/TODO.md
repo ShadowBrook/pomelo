@@ -10,9 +10,14 @@
 - [x] DB schema 自动收敛：`db/schema.sql` 全量幂等化 + compose 一次性服务 `db-migrate`
       （每次 `up -d` 执行，pomelo 等它成功才启动）。修复线上「通话服务暂不可用」——
       老数据卷缺 `im_call.participants`（42703）。手工迁移登记制随之取消（文档 §4.1/§4.3）
-- [x] 修复 LiveKit webhook 兜底静默失效：`logic.call.webhook` 消费端泛型写成 `<String>`
-      而 ApiVerticle 发的是 JsonObject → 每次投递抛 ClassCastException（日志刷屏、
-      LiveKit 反复重投）。已改为 `<JsonObject>` 并补真实 EventBus 链路回归测试
+- [x] 修复 LiveKit webhook 兜底静默失效（两个独立缺陷）：
+      ① `logic.call.webhook` 消费端泛型写成 `<String>` 而 ApiVerticle 发 JsonObject →
+      每次投递抛 ClassCastException；② `verifyWebhook` 与 livekit-server v1.13.6 实际行为不符——
+      Authorization 是**裸 token**（我们要求 `Bearer ` 前缀）、sha256 声明是**标准 base64**
+      （我们按 hex 比对）。已用探针容器抓真实报文定位，并把它固化成 golden 用例
+- [ ] 媒体面端口放行（用户侧，腾讯云安全组）：`3478/udp`、`30000-30100/udp`、`7881/tcp`；
+      未放行时通话「能接通但两端黑屏/无声」（信令走 443 所以看起来一切正常）。
+      自检：`python3 scripts/probe-media-ports.py pomelo.host`（当前线上五项全不通）
 - [ ] 备案通过后 IP → 域名切换（用户侧）
 
 ## 二、通话（livekit-calling-plan Phase 4，另行评估）
