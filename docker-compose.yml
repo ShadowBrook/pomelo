@@ -226,6 +226,28 @@ services:
     networks:
       - pomelo-net
 
+  # ============ 对象存储初始化（幂等：确保媒体 bucket 存在） ============
+  # 新数据卷首启时 bucket 不存在会导致上传 PUT 404（NoSuchBucket），
+  # 本地/服务器均自动创建；mc 连不上 silo 时重试等待。
+  minio-init:
+    image: minio/mc:latest
+    container_name: pomelo-minio-init
+    depends_on:
+      silo:
+        condition: service_started
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        until mc alias set s http://silo:9000 "$$MINIO_ROOT_USER" "$$MINIO_ROOT_PASSWORD"; do sleep 2; done
+        mc mb --ignore-existing s/pomelo-media
+    environment:
+      MINIO_ROOT_USER: pomelo-admin
+      MINIO_ROOT_PASSWORD: pomelo-admin-password
+    restart: "no"
+    networks:
+      - pomelo-net
+
   # ============ LiveKit SFU（音视频通话媒体面） ============
 
   livekit:

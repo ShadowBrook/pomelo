@@ -82,6 +82,11 @@ docker exec pomelo-postgres psql -U pomelo -d pomelo_db \
   -c "ALTER TABLE im_message_group ADD COLUMN IF NOT EXISTS ext TEXT;"
 ```
 
+> 对象存储 bucket：compose 已内置一次性 `minio-init` 服务（minio/mc）自动创建
+> `pomelo-media`，`up -d` 时随栈启动并退出。**缺 bucket 的症状**：上传 PUT 返回
+> 404（NoSuchBucket，读侧同样 404）。手动补建：
+> `docker run --rm --network pomelo_pomelo-net minio/mc:latest sh -c "mc alias set s http://silo:9000 pomelo-admin pomelo-admin-password && mc mb --ignore-existing s/pomelo-media"`
+
 ## 4. 版本升级（日常主路径）
 
 ```bash
