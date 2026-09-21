@@ -13,8 +13,9 @@
 > **当前状态**：域名形态已上线运行（Caddy 双证书已签发、API 健康）。
 > 最近一轮功能：个性签名、群主转让/解散、@提及（元数据 + [有人@我]）、头像裁剪、修改密码。
 > 2026-09-21 修复两处线上缺陷：① 老数据卷缺 `im_call.participants` 导致通话报「通话服务暂不可用」
-> ——改为 `db-migrate` 一次性服务自动收敛 schema（§4.1）；② LiveKit webhook 因 EventBus
-> 消费端类型不匹配抛 `ClassCastException` 而静默失效——已修复并补真实链路回归测试。
+> ——改为 `db-migrate` 一次性服务自动收敛 schema（§4.1）；② LiveKit webhook 静默失效
+> ——消费端 EventBus 类型不匹配 + 验签与 livekit-server 实际报文格式不符（§4.3 的 golden 用例）。
+> 媒体面（UDP）连通性排障见 §4.4。
 
 ## 1. 拓扑（线上现状）
 
@@ -142,6 +143,8 @@ curl -s https://pomelo.host/api/user/login -H 'Content-Type: application/json' \
 # avatar 必须以 https://oss.pomelo.host 开头（详见 §5）
 # 通话链路的服务端错误都会落在这一行（建房/落库/缺列/密钥）：
 docker compose logs pomelo | grep -E "建房|通话记录写入失败|webhook" | tail -20
+# 媒体面连通性（从任意联网机器跑，不是服务器本机；黑屏/无声先查这个）
+python3 scripts/probe-media-ports.py pomelo.host
 ```
 
 安卓端 APK 仍在开发机构建后安装（服务器不配置 Android SDK）。
@@ -159,6 +162,24 @@ docker compose logs pomelo | grep -E "建房|通话记录写入失败|webhook" |
 
 **注意**：LiveKit 房间在 `callRepo.insert` 之前就已创建，落库失败时房间会被删房逻辑收尾，
 但**不会**自动重试——修完表结构重拨即可。
+
+### 4.4 排障：通话能接通但两端黑屏 / 无声
+
+信令走 `wss://pomelo.host/lk`（443，经 Caddy），媒体走**直连 UDP**，两者互不影响——
+所以「振铃、接听、计时都正常，就是没有画面/声音」几乎总是媒体面被挡：
+
+```bash
+python3 scripts/probe-media-ports.py pomelo.host    # 任一项「不通」即命中
+ss -lunp | grep -E '3478|3[0-9]{4}'                 # 服务器侧确认端口在听（docker-proxy/容器）
+docker compose ps livekit                           # 端口映射是否在
+```
+
+- 云控制台**安全组**需放行 `3478/udp`（TURN）、`30000-30100/udp`（ICE 媒体）、`7881/tcp`（TCP 回退），
+  模板见 §2。腾讯云默认拒绝，只在服务器上 `docker compose up -d` 是不够的。
+- 客户端表现：ICE 永远打不通 → 发布（publish）不完成 → `cameraEnabled` 不翻转，
+  界面上就是「摄像头没打开、画面全黑」，而且**不报错**——很容易误判成客户端 bug。
+- 排掉后用同一脚本复测，五项全「通」再拨号。
+- 跨网/移动网络下 UDP 易被丢，TURN(3478/udp) 兜底；TURN/TLS(443) 尚未配置（见 §6 与 livekit 调研文档 §2.3）。
 
 ## 5. 对象存储与 presigned URL 契约（上传/图片能否用的关键）
 

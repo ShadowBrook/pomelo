@@ -117,13 +117,38 @@ public class LiveKitTokenService implements CallTokenIssuer {
 
   /**
    * 校验 LiveKit webhook 请求：Authorization 头是以 API secret 签名的 JWT，
-   * payload 带 body 的 sha256（hex）。返回 payload；验签失败返回 null。
+   * payload 带 body 的 sha256。返回 payload；验签失败返回 null。
+   * <p>
+   * 两处与 livekit-server 实际行为对齐（此前都写错，线上 webhook 全部验签失败）：
+   * <ul>
+   *   <li>Authorization 头是**裸 token**，livekit-server 不加 {@code "Bearer "} 前缀
+   *       （两种形态都接受，便于代理/客户端保持惯例写法）；</li>
+   *   <li>sha256 声明是摘要的**标准 base64**（notifier.go:
+   *       {@code base64.StdEncoding.EncodeToString}），不是十六进制。</li>
+   * </ul>
+   * 依据：livekit-server v1.13.6 真实抓包（见 CallServiceTest 的 golden 用例）。
    */
   public JsonObject verifyWebhook(String rawBody, String authHeader) {
-    if (rawBody == null || authHeader == null || !authHeader.startsWith("Bearer ")) {
+    JsonObject payload = verifyWebhookSignature(rawBody, authHeader);
+    if (payload == null) {
       return null;
     }
-    String token = authHeader.substring("Bearer ".length()).trim();
+    // exp 校验（LiveKit webhook token 有效期短）
+    long exp = payload.getLong("exp", 0L);
+    if (exp > 0 && exp < System.currentTimeMillis() / 1000 - SKEW_SECONDS) {
+      return null;
+    }
+    return payload;
+  }
+
+  /** 签名 + body 摘要校验（不含时效），断言真实抓包报文时可单独复用 */
+  JsonObject verifyWebhookSignature(String rawBody, String authHeader) {
+    if (rawBody == null || authHeader == null) {
+      return null;
+    }
+    String token = authHeader.startsWith("Bearer ")
+      ? authHeader.substring("Bearer ".length()).trim()
+      : authHeader.trim();
     String[] parts = token.split("\\.");
     if (parts.length != 3) {
       return null;
@@ -140,13 +165,9 @@ public class LiveKitTokenService implements CallTokenIssuer {
     }
     try {
       JsonObject payload = new JsonObject(new String(Base64.getUrlDecoder().decode(parts[1]), StandardCharsets.UTF_8));
-      String bodyHash = sha256Hex(rawBody);
-      if (!bodyHash.equals(payload.getString("sha256"))) {
-        return null;
-      }
-      // exp 校验（LiveKit webhook token 有效期短）
-      long exp = payload.getLong("exp", 0L);
-      if (exp > 0 && exp < System.currentTimeMillis() / 1000 - SKEW_SECONDS) {
+      String claimedHash = payload.getString("sha256");
+      if (claimedHash == null
+        || (!claimedHash.equals(sha256Base64(rawBody)) && !claimedHash.equals(sha256Hex(rawBody)))) {
         return null;
       }
       return payload;
@@ -165,14 +186,23 @@ public class LiveKitTokenService implements CallTokenIssuer {
     }
   }
 
+  /** livekit-server webhook 的 sha256 声明编码：摘要的标准 base64 */
+  static String sha256Base64(String data) {
+    return Base64.getEncoder().encodeToString(sha256(data));
+  }
+
   static String sha256Hex(String data) {
+    byte[] digest = sha256(data);
+    StringBuilder sb = new StringBuilder(digest.length * 2);
+    for (byte b : digest) {
+      sb.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
+    }
+    return sb.toString();
+  }
+
+  private static byte[] sha256(String data) {
     try {
-      byte[] digest = MessageDigest.getInstance("SHA-256").digest(data.getBytes(StandardCharsets.UTF_8));
-      StringBuilder sb = new StringBuilder(digest.length * 2);
-      for (byte b : digest) {
-        sb.append(Character.forDigit((b >> 4) & 0xF, 16)).append(Character.forDigit(b & 0xF, 16));
-      }
-      return sb.toString();
+      return MessageDigest.getInstance("SHA-256").digest(data.getBytes(StandardCharsets.UTF_8));
     } catch (Exception e) {
       throw new IllegalStateException("SHA-256 不可用", e);
     }

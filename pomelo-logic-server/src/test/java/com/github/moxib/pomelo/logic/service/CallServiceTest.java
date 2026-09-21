@@ -29,8 +29,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -295,22 +297,31 @@ public Future<Boolean> isMember(long groupId, long userId) {
 
   /** 解 JWT payload（手签 HS256），断言 sub 与 room 用 */
   private static JsonObject jwtClaims(String jwt) {
-    return new JsonObject(new String(
-      java.util.Base64.getUrlDecoder().decode(jwt.split("\\.")[1]), java.nio.charset.StandardCharsets.UTF_8));
+    return new JsonObject(new String(Base64.getUrlDecoder().decode(jwt.split("\\.")[1]), StandardCharsets.UTF_8));
   }
 
-  /** 以测试 secret 构造合法的 LiveKit webhook 签名（payload 带 body sha256） */
-  private String webhookToken(String roomName, String body) {
+  /**
+   * 以测试 secret 构造 LiveKit 形态的 webhook token：claims 与 livekit-server
+   * notifier.go 一致（iss/exp/nbf/iat + **base64** 的 body sha256），签名 HS256。
+   * 返回值是裸 token——LiveKit 不写 "Bearer " 前缀（见 goldenWebhookFromLiveKit）。
+   */
+  private String webhookToken(String body) {
+    return signAsLiveKit("devkey", "test-secret-not-for-deployment", body, System.currentTimeMillis() / 1000 + 300);
+  }
+
+  private static String signAsLiveKit(String apiKey, String secret, String body, long exp) {
     long now = System.currentTimeMillis() / 1000;
     JsonObject claims = new JsonObject()
-      .put("iss", "devkey")
-      .put("exp", now + 300)
-      .put("sha256", LiveKitTokenService.sha256Hex(body));
+      .put("iss", apiKey)
+      .put("exp", exp)
+      .put("nbf", now - 10)
+      .put("iat", now - 10)
+      .put("sha256", LiveKitTokenService.sha256Base64(body));
     String header = LiveKitTokenService.base64Url(new JsonObject().put("alg", "HS256").put("typ", "JWT").encode());
     String payloadB64 = LiveKitTokenService.base64Url(claims.encode());
     String signingInput = header + "." + payloadB64;
     return signingInput + "." + LiveKitTokenService.base64Url(
-      LiveKitTokenService.hmacSha256("test-secret-not-for-deployment", signingInput));
+      LiveKitTokenService.hmacSha256(secret, signingInput));
   }
 
   private int respCode(ImMessage resp) throws Exception {
@@ -621,7 +632,7 @@ public Future<Boolean> isMember(long groupId, long userId) {
     String room = store.rooms.keySet().iterator().next();
     String body = "{\"event\":\"participant_left\",\"room\":{\"name\":\"" + room + "\"}}";
 
-    int status = await(service.onLiveKitWebhook(body, "Bearer " + webhookToken(room, body)));
+    int status = await(service.onLiveKitWebhook(body, webhookToken(body)));
     assertEquals(200, status);
 
     CallProto.CallEventPush push = lastPush(pushRouter, CALLER);
@@ -644,8 +655,51 @@ public Future<Boolean> isMember(long groupId, long userId) {
   @DisplayName("webhook：非通话房间返回 404")
   void webhookIgnoresForeignRooms() throws Exception {
     String body = "{\"event\":\"room_finished\",\"room\":{\"name\":\"someone-elses-room\"}}";
-    int status = await(service.onLiveKitWebhook(body, "Bearer " + webhookToken("someone-elses-room", body)));
+    // 带 "Bearer " 前缀的写法也要接受（LiveKit 实际不写，但代理/客户端惯例会带）
+    int status = await(service.onLiveKitWebhook(body, "Bearer " + webhookToken(body)));
     assertEquals(404, status);
+  }
+
+  @Test
+  @DisplayName("LiveKit 真实 webhook 报文形态（v1.13.6 抓包）：裸 token + base64 sha256 必须验签通过")
+  void livekitRealWebhookShape() {
+    // 抓包来源：本地探针容器 livekit/livekit-server:v1.13.6 投递的 room_finished 事件（逐字复制）
+    String realBody = "{\"event\":\"room_finished\",\"room\":{\"sid\":\"RM_baJtL2P8po3h\",\"name\":\"probe-room-1\","
+      + "\"emptyTimeout\":60,\"departureTimeout\":20,\"creationTime\":\"1789993781\","
+      + "\"creationTimeMs\":\"1789993781098\",\"turnPassword\":\"f0Vab4JftTN2BEz4oaNYUHfEXWn9i4f41ESMaC6gbu9A\","
+      + "\"enabledCodecs\":[{\"mime\":\"audio/PCMU\"},{\"mime\":\"audio/PCMA\"},{\"mime\":\"audio/opus\"},"
+      + "{\"mime\":\"audio/red\"},{\"mime\":\"video/VP8\"},{\"mime\":\"video/H264\"},{\"mime\":\"video/VP9\"},"
+      + "{\"mime\":\"video/AV1\"},{\"mime\":\"video/H265\"},{\"mime\":\"video/rtx\"}]},"
+      + "\"id\":\"EV_9qg6yj55BVYN\",\"createdAt\":\"1789993841\"}";
+    String realToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9."
+      + "eyJpc3MiOiJkZXZrZXkiLCJleHAiOjE3ODk5OTQxNDEsIm5iZiI6MTc4OTk5Mzg0MSwiaWF0IjoxNzg5OTkzODQxLCJzaGEyNTYiOiJCUjBsQUxQM1ZHSXd3QWNGSCtSQkZSRXoramt5L28vU2pqSzNHWkNJMTVrPSJ9."
+      + "T6w_hWBHbzwKYv8-ah9s6h6pLJ_hlGHrCkx0LlCZNL8";
+    String probeSecret = "probe-secret-1234567890-abcdefghijklmnop";
+
+    assertFalse(realToken.startsWith("Bearer "), "LiveKit 的 Authorization 头是裸 token，没有 Bearer 前缀");
+
+    // 抓包 token 已过期，无法整体复验；但它绑定的 body 摘要必须与实现的编码一致
+    JsonObject claims = jwtClaims(realToken);
+    assertEquals("devkey", claims.getString("iss"));
+    assertEquals(LiveKitTokenService.sha256Base64(realBody), claims.getString("sha256"),
+      "sha256 声明是标准 base64（曾按 hex 比对，线上 webhook 全部验签失败）");
+
+    // 真实抓包 token 的签名 + body 绑定必须能过（对象是 livekit-server 自己签的）
+    LiveKitTokenService realLiveKit = new LiveKitTokenService("devkey", probeSecret, 900, "ws://lk:7880");
+    assertNotNull(realLiveKit.verifyWebhookSignature(realBody, realToken),
+      "livekit-server v1.13.6 真实签发的 token 必须验签通过");
+
+    // 时效门：过期 token 整体校验拒绝，但签名本身仍有效（确定性用例，不依赖抓包时间）
+    String expired = signAsLiveKit("devkey", probeSecret, realBody, System.currentTimeMillis() / 1000 - 3600);
+    assertNotNull(realLiveKit.verifyWebhookSignature(realBody, expired));
+    assertNull(realLiveKit.verifyWebhook(realBody, expired), "过期 token 必须拒绝");
+
+    // 同一 secret + 同一载荷形态重签，走完整验签链路（裸 token 与 Bearer 前缀都要过）
+    String fresh = signAsLiveKit("devkey", probeSecret, realBody, System.currentTimeMillis() / 1000 + 300);
+    assertNotNull(realLiveKit.verifyWebhook(realBody, fresh));
+    assertNotNull(realLiveKit.verifyWebhook(realBody, "Bearer " + fresh));
+    assertNull(realLiveKit.verifyWebhook(realBody + " ", fresh), "body 被改动必须验签失败");
+    assertNull(realLiveKit.verifyWebhook(realBody, fresh.replaceFirst("^..", "xx")), "签名被改动必须验签失败");
   }
 
   @Test
@@ -662,7 +716,7 @@ public Future<Boolean> isMember(long groupId, long userId) {
       new CallService(busVertx, pushRouter, groupRepoOf(CALLEE), callRepo, store, tokens,
         rooms, new SnowflakeIdGenerator(1), msgRepo, seqClient(), RING_TIMEOUT, 3_600_000L, 5);
       int status = await(busVertx.eventBus().<Integer>request("logic.call.webhook",
-          new JsonObject().put("body", body).put("auth", "Bearer " + webhookToken(room, body)))
+          new JsonObject().put("body", body).put("auth", webhookToken(body)))
         .map(reply -> reply.body()));
       assertEquals(200, status);
       assertEquals(1, callRepo.ended);
