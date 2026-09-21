@@ -7,6 +7,10 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.json.JsonObject;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,19 +83,57 @@ public final class ConfigHolder {
   /**
    * 遍历环境变量，将 POMELO_ 前缀的变量映射到嵌套路径。
    * 例如 POMELO_DATABASE_HOST=pg.example.com → database.host = "pg.example.com"
+   * <p>
+   * 驼峰键（如 media.publicEndpoint）经「大写环境变量 + 下划线」无法直接表达
+   * （POMELO_MEDIA_PUBLIC_ENDPOINT 按旧规则会映射成 media.public.endpoint 而静默失效），
+   * 因此先对「既有配置路径」做归一化（去点/下划线 + 小写）匹配，命中后写入真实路径；
+   * 未匹配到既有路径的环境变量退回点号直转，保持既有行为。
    */
   private static JsonObject applyEnvOverrides(JsonObject base) {
+    return applyEnv(base, System.getenv());
+  }
+
+  /** 供测试注入环境变量 */
+  static JsonObject applyEnv(JsonObject base, Map<String, String> env) {
     JsonObject result = base.copy();
-    System.getenv().forEach((key, value) -> {
-      if (key.startsWith("POMELO_")) {
-        String path = key.substring("POMELO_".length())
-          .toLowerCase()
-          .replace('_', '.');
+    if (env.isEmpty()) {
+      return result;
+    }
+    Set<String> knownPaths = new HashSet<>();
+    collectPaths(result, "", knownPaths);
+    env.forEach((envKey, value) -> {
+      String normalized = normalizePath(envKey);
+      String matched = knownPaths.stream()
+        .filter(path -> normalizePath(path).equals(normalized))
+        .findFirst()
+        .orElse(null);
+      if (matched != null) {
+        setNested(result, matched, value);
+        LOG.debug("Env override: {} = {}", matched, value);
+      } else {
+        String path = envKey.toLowerCase().replace('_', '.');
         setNested(result, path, value);
-        LOG.debug("Env override: {} = {}", path, value);
+        LOG.debug("Env override (new path): {} = {}", path, value);
       }
     });
     return result;
+  }
+
+  /** 收集配置树全部叶子路径（点分） */
+  private static void collectPaths(JsonObject node, String prefix, Set<String> out) {
+    for (String key : node.fieldNames()) {
+      String path = prefix.isEmpty() ? key : prefix + "." + key;
+      Object value = node.getValue(key);
+      if (value instanceof JsonObject nested) {
+        collectPaths(nested, path, out);
+      } else {
+        out.add(path);
+      }
+    }
+  }
+
+  private static String normalizePath(String path) {
+    return path.toLowerCase().replace("_", "").replace(".", "");
   }
 
   /**
