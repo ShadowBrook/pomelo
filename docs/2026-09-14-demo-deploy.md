@@ -78,7 +78,10 @@ cp .env.demo.example .env     # 含 COMPOSE_FILE（自动合并 demo overlay）
 ./deploy.sh                   # 构建 5 个业务镜像 + 生成 conf/jwt.env、conf/livekit.env（随机密钥）
                               # 末尾自动 docker compose up -d
 # 3) 前端构建（dist 即 Caddy 挂载路径，即时生效）
-cd ~/pomelo-web && npm ci && npm run build
+cd ~/pomelo-web && npm ci
+cp .env.example .env.local      # 站点文案/备案号等站点级配置写这里（*.local 不入库）
+                                # 例：VITE_ICP_BEIAN=皖ICP备2026032119号（登录页底部展示并跳转工信部）
+npm run build
 
 # 4) DB 迁移：无需手工执行——compose 的一次性服务 db-migrate 已在 up -d 时跑完
 docker compose ps --all | grep db-migrate      # Exited (0) 即成功
@@ -89,6 +92,10 @@ docker compose ps --all | grep db-migrate      # Exited (0) 即成功
 > 上传 PUT 返回 404（NoSuchBucket，读侧同样 404）。手动补建：
 > `docker run --rm --network pomelo_pomelo-net --entrypoint /bin/sh pgsty/silo:RELEASE.2026-08-06T00-00-00Z -c 'mc alias set s http://silo:9000 pomelo-admin pomelo-admin-password >/dev/null && mc mb --ignore-existing s/pomelo-media'`
 
+> 前端站点文案（备案号等）：写在 `~/pomelo-web/.env.local`（模板 `.env.example`，`*.local` 已 gitignore，
+> 值不入库）。`VITE_*` 是**构建期**注入（Vite 内联进产物）——改值必须重新 `npm run build`，
+> 它不是运行时变量；未配置时登录页只显示版权，不显示备案号。
+
 ## 4. 版本升级（日常主路径）
 
 ```bash
@@ -98,7 +105,7 @@ cd ~/pomelo-web && git pull
 # 后端两个镜像重建 + 容器滚动更新（deploy.sh 末尾自动 up -d）
 cd ~/pomelo && ./deploy.sh pomelo-logic-server pomelo-gateway
 
-# 前端（原地构建，Caddy 立即提供新产物）
+# 前端（原地构建，Caddy 立即提供新产物；Vite 自动读取 ~/pomelo-web/.env.local）
 cd ~/pomelo-web && npm run build
 
 # DB 迁移：随 up -d 自动执行（db-migrate），无需手工步骤；见 §4.1
