@@ -6,7 +6,9 @@
 
 - [ ] 腾讯云服务器镜像更新：`pomelo/pomelo` + `pomelo/gateway` 传输（`docker save/load`）后 `up -d`；含头像功能 + signature 列迁移：
       `ALTER TABLE im_user ADD COLUMN IF NOT EXISTS signature VARCHAR(128) NOT NULL DEFAULT '';`
-- [ ] 生产 nginx 加 `/minio/` 同源代理（`proxy_pass http://silo:9000/;`，注意末尾斜杠剥前缀），或把 `media.publicEndpoint` 换成 https 公网域名——否则线上 Safari 直传报 Load failed
+- [x] 生产 OSS 请求收口：`POMELO_MEDIA_PUBLIC_ENDPOINT=https://oss.pomelo.host`（服务器 env 必须生效，
+      登录响应 avatar 的 host 自检见部署文档 §6）；前端生产构建不做任何改写（dev-only /minio 代理），
+      Caddy 主域 /minio 兜底路由已加（660b9da），正确配置下不参与
 - [ ] 备案通过后 IP → 域名切换（用户侧）
 
 ## 二、通话（livekit-calling-plan Phase 4，另行评估）
