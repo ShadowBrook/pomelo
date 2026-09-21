@@ -128,10 +128,11 @@ public class CallService extends ServiceBase {
     this.maxParticipants = Math.max(2, maxParticipants);
     this.roomEmptyTimeoutSec = (int) Math.max(60, maxDurationMs / 1000);
 
-    // webhook 由 ApiVerticle 经 EventBus 转入（原始 body + Authorization 头），
-    // 回复值为 HTTP 状态码
-    vertx.eventBus().<String>consumer("logic.call.webhook", msg -> {
-      JsonObject envelope = new JsonObject(msg.body());
+    // webhook 由 ApiVerticle 经 EventBus 转入（{body, auth} 信封），回复值为 HTTP 状态码。
+    // 泛型参数必须与发送端一致（JsonObject）：写成 <String> 时取值处抛
+    // ClassCastException，webhook 会静默全废（LiveKit 反复重投）
+    vertx.eventBus().<JsonObject>consumer("logic.call.webhook", msg -> {
+      JsonObject envelope = msg.body();
       onLiveKitWebhook(envelope.getString("body"), envelope.getString("auth"))
         .onSuccess(msg::reply)
         .onFailure(e -> {
@@ -245,6 +246,9 @@ public class CallService extends ServiceBase {
               .recover(err -> {
                 LOG.error("建房/落库失败，回滚忙键 callId={}: {}", callId, err.getMessage());
                 cleanupKeys(session);
+                // 落库/写 Redis 失败时房间已经建出来了：本地删掉，否则空房间要挂到
+                // empty_timeout（= 通话上限，最长 2 小时）才被回收
+                deleteRoomQuietly(room);
                 return Future.succeededFuture(buildErrorResp(message, CMD_CALL_INVITE_RESP_VALUE,
                   ErrorCode.INTERNAL_ERROR, "通话服务暂不可用"));
               });
@@ -693,6 +697,18 @@ public class CallService extends ServiceBase {
     store.deleteSession(session.callId);
     for (Long member : session.effectiveParticipants()) {
       store.clearBusy(member);
+    }
+  }
+
+  /**
+   * 尽力删房：失败只记日志（empty_timeout 兜底回收）。
+   * 签发失败等异常是同步抛出的，必须就地挡住，别让回滚路径再炸一次。
+   */
+  private void deleteRoomQuietly(String room) {
+    try {
+      rooms.deleteRoom(room).onFailure(e -> LOG.warn("回滚删房失败 room={}: {}", room, e.getMessage()));
+    } catch (Exception e) {
+      LOG.warn("回滚删房异常 room={}: {}", room, e.getMessage());
     }
   }
 

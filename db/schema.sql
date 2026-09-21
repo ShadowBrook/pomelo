@@ -1,6 +1,10 @@
 -- ============================================================================
--- Pomelo IM 数据库初始化脚本
--- PostgreSQL 17
+-- Pomelo IM 数据库初始化 + 迁移脚本（幂等：新库建表、旧库补列，可反复执行）
+-- PostgreSQL 17+
+--
+-- 全新数据卷：由 docker-entrypoint-initdb.d 自动执行；
+-- 既有数据卷：由 compose 的一次性服务 db-migrate 在每次 up -d 时执行（见 docker-compose.yml）。
+-- 因此这里的每条语句都必须可重复执行——新增 DDL 一律用 IF NOT EXISTS 形态。
 -- ============================================================================
 
 -- 1. 用户表
@@ -27,7 +31,7 @@ COMMENT ON COLUMN im_user.status       IS '0=离线, 1=在线';
 COMMENT ON COLUMN im_user.created_at   IS '创建时间 (Unix毫秒)';
 COMMENT ON COLUMN im_user.updated_at   IS '更新时间 (Unix毫秒)';
 
-CREATE INDEX idx_user_status ON im_user(status);
+CREATE INDEX IF NOT EXISTS idx_user_status ON im_user(status);
 
 
 -- 2. 群组元数据表
@@ -87,17 +91,17 @@ COMMENT ON COLUMN im_message_c2c.status       IS '0=已发送, 1=已送达, 2=�
 COMMENT ON COLUMN im_message_c2c.created_at   IS '创建时间 (Unix毫秒)';
 COMMENT ON COLUMN im_message_c2c.client_msg_id IS '客户端消息 ID (发送端生成, 服务端按 (sender_id, client_msg_id) 幂等去重)';
 
-CREATE TABLE im_message_c2c_p0 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 0);
-CREATE TABLE im_message_c2c_p1 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 1);
-CREATE TABLE im_message_c2c_p2 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 2);
-CREATE TABLE im_message_c2c_p3 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 3);
+CREATE TABLE IF NOT EXISTS im_message_c2c_p0 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 0);
+CREATE TABLE IF NOT EXISTS im_message_c2c_p1 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 1);
+CREATE TABLE IF NOT EXISTS im_message_c2c_p2 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 2);
+CREATE TABLE IF NOT EXISTS im_message_c2c_p3 PARTITION OF im_message_c2c FOR VALUES WITH (modulus 4, remainder 3);
 
 -- 会话维度查询索引（双向会话，按 conversation_id + created_at DESC + id DESC 排序）
-CREATE INDEX idx_c2c_conversation ON im_message_c2c (conversation_id, created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_c2c_conversation ON im_message_c2c (conversation_id, created_at DESC, id DESC);
 -- 离线拉取索引（收件人信箱按 seq 增量有序拉取；seq 为收件人同步版本号）
-CREATE INDEX idx_c2c_recipient_pending ON im_message_c2c (recipient_id, seq) WHERE status < 2;
+CREATE INDEX IF NOT EXISTS idx_c2c_recipient_pending ON im_message_c2c (recipient_id, seq) WHERE status < 2;
 -- BRIN 索引：全局时间范围扫描，体积极小
-CREATE INDEX idx_c2c_created_at_brin ON im_message_c2c USING BRIN (created_at);
+CREATE INDEX IF NOT EXISTS idx_c2c_created_at_brin ON im_message_c2c USING BRIN (created_at);
 
 
 -- 4. 群聊消息表
@@ -126,14 +130,14 @@ COMMENT ON COLUMN im_message_group.content     IS '文本内容或资源链接 (
 COMMENT ON COLUMN im_message_group.seq         IS '群同步版本号（设计保留，群消息暂未接入；群内排序建议按 created_at）';
 COMMENT ON COLUMN im_message_group.created_at  IS '创建时间 (Unix毫秒)';
 
-CREATE TABLE im_message_group_p0 PARTITION OF im_message_group FOR VALUES WITH (modulus 4, remainder 0);
-CREATE TABLE im_message_group_p1 PARTITION OF im_message_group FOR VALUES WITH (modulus 4, remainder 1);
-CREATE TABLE im_message_group_p2 PARTITION OF im_message_group FOR VALUES WITH (modulus 4, remainder 2);
-CREATE TABLE im_message_group_p3 PARTITION OF im_message_group FOR VALUES WITH (modulus 4, remainder 3);
+CREATE TABLE IF NOT EXISTS im_message_group_p0 PARTITION OF im_message_group FOR VALUES WITH (modulus 4, remainder 0);
+CREATE TABLE IF NOT EXISTS im_message_group_p1 PARTITION OF im_message_group FOR VALUES WITH (modulus 4, remainder 1);
+CREATE TABLE IF NOT EXISTS im_message_group_p2 PARTITION OF im_message_group FOR VALUES WITH (modulus 4, remainder 2);
+CREATE TABLE IF NOT EXISTS im_message_group_p3 PARTITION OF im_message_group FOR VALUES WITH (modulus 4, remainder 3);
 
-CREATE INDEX idx_group_conversation ON im_message_group (group_id, created_at DESC);
-CREATE INDEX idx_group_created_at_brin ON im_message_group USING BRIN (created_at);
-CREATE INDEX idx_group_seq ON im_message_group (seq);
+CREATE INDEX IF NOT EXISTS idx_group_conversation ON im_message_group (group_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_group_created_at_brin ON im_message_group USING BRIN (created_at);
+CREATE INDEX IF NOT EXISTS idx_group_seq ON im_message_group (seq);
 
 
 -- 5. 群组成员表
@@ -161,7 +165,7 @@ COMMENT ON COLUMN im_group_member.last_read_seq IS '已读游标 — 该成员�
 COMMENT ON COLUMN im_group_member.muted_until   IS '禁言截止时间戳 (Unix毫秒)，0=未禁言';
 COMMENT ON COLUMN im_group_member.joined_at     IS '加入时间 (Unix毫秒)';
 
-CREATE INDEX idx_group_member_user ON im_group_member (user_id);
+CREATE INDEX IF NOT EXISTS idx_group_member_user ON im_group_member (user_id);
 
 
 -- 6. 好友关系表
@@ -179,7 +183,7 @@ COMMENT ON COLUMN im_friend.friend_id   IS '好友 im_user.id';
 COMMENT ON COLUMN im_friend.status      IS '0=待接受, 1=已接受';
 COMMENT ON COLUMN im_friend.created_at  IS '创建时间 (Unix毫秒)';
 
-CREATE INDEX idx_friend_user ON im_friend (user_id);
+CREATE INDEX IF NOT EXISTS idx_friend_user ON im_friend (user_id);
 
 
 -- 7. 音视频通话记录表
@@ -205,8 +209,8 @@ COMMENT ON COLUMN im_call.media_type   IS '0=音频, 1=视频';
 COMMENT ON COLUMN im_call.state        IS '0=振铃中, 1=接通, 2=已结束';
 COMMENT ON COLUMN im_call.end_reason   IS '1=取消 2=拒绝 3=挂断 4=忙线 5=超时 6=对端掉线';
 
-CREATE INDEX idx_im_call_caller ON im_call (caller_id, created_at DESC);
-CREATE INDEX idx_im_call_callee ON im_call (callee_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_im_call_caller ON im_call (caller_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_im_call_callee ON im_call (callee_id, created_at DESC);
 
 -- 2026-09-20 用户资料增强：个性签名
 ALTER TABLE im_user ADD COLUMN IF NOT EXISTS signature VARCHAR(128) NOT NULL DEFAULT '';

@@ -52,6 +52,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      # 先跑完 schema 收敛（补列/建表），避免带着旧表结构启动
+      db-migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
     restart: unless-stopped
@@ -96,7 +99,7 @@ services:
       - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql
-      # 初始化建表脚本
+      # 初始化建表脚本（仅空数据卷首启时执行一次）
       - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U pomelo -d pomelo_db"]
@@ -104,6 +107,30 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
+    networks:
+      - pomelo-net
+
+  # ============ schema 收敛（幂等：新库建表、老卷补列） ============
+  # 老数据卷不会重跑 initdb，代码升级新增的列只在 schema.sql 里，不落库就会在
+  # 运行期报 42703 缺列（典型：im_call.participants → 「通话服务暂不可用」）。
+  # 每次 up -d 都跑一遍；失败即非零退出，pomelo 不会带着旧表结构启动。
+  db-migrate:
+    image: postgres:latest
+    container_name: pomelo-db-migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./db/schema.sql:/schema.sql:ro
+    entrypoint:
+      - psql
+      - postgres://pomelo:pomelo123@postgres:5432/pomelo_db
+      - -v
+      - ON_ERROR_STOP=1
+      - -q
+      - -f
+      - /schema.sql
+    restart: "no"
     networks:
       - pomelo-net
 
