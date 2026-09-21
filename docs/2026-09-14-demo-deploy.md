@@ -65,11 +65,14 @@ Maven 发行版本体由 `./mvnw` 自动下载；内网拉取慢时可设 `MVNW_
 ## 3. 首次部署（拉代码 → 构建 → 启动）
 
 ```bash
-# 1) 克隆（分支跟随当前功能线，合并主干后改回 main）
+# 1) 克隆（两条线都已合入 main，服务器一律跟 main）
 cd ~
-git clone -b feat/remove-push-broadcast git@github.com:ShadowBrook/pomelo.git pomelo
-git clone -b feat/webrtc-calling git@github.com:ShadowBrook/pomelo-web.git pomelo-web
+git clone git@github.com:ShadowBrook/pomelo.git pomelo
+git clone git@github.com:ShadowBrook/pomelo-web.git pomelo-web
 # 路径约定：~/pomelo 与 ~/pomelo-web 并排（Caddy 挂载 ../pomelo-web/dist）
+# ⚠️ 服务器跟 main，功能分支经 PR/merge 合入后才可见：git pull 后**必须确认拿到预期提交**
+#    （`git log --oneline -1`；跟错分支时 pull 是静默成功的空操作，本地构建产物也不会变——
+#     2026-09-21 备案号"部署了没生效"就是这个：clone 停在 main，而提交还在功能线上）
 
 # 2) 后端 + 全量启动（首次约 15-30 分钟：Maven 发行版 + 全量依赖 + 基础镜像拉取）
 cd ~/pomelo
@@ -82,6 +85,7 @@ cd ~/pomelo-web && npm ci
 cp .env.example .env.local      # 站点文案/备案号等站点级配置写这里（*.local 不入库）
                                 # 例：VITE_ICP_BEIAN=皖ICP备XXXXXXXXXX号（登录页底部展示并跳转工信部）
 npm run build
+grep -c "beian.miit.gov.cn" dist/assets/Login-*.js   # 备案号自检：≥1 才说明构建读到了变量
 
 # 4) DB 迁移：无需手工执行——compose 的一次性服务 db-migrate 已在 up -d 时跑完
 docker compose ps --all | grep db-migrate      # Exited (0) 即成功
