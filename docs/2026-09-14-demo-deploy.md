@@ -96,6 +96,19 @@ docker compose ps --all | grep db-migrate      # Exited (0) 即成功
 > 值不入库）。`VITE_*` 是**构建期**注入（Vite 内联进产物）——改值必须重新 `npm run build`，
 > 它不是运行时变量；未配置时登录页只显示版权，不显示备案号。
 
+> 前端构建报 `Cannot find module '.../lightningcss/node/index.mjs'`（或其它 native/optional
+> 依赖缺失）：`node_modules` 是半成品（安装中断、换过 Node 版本、或从别处拷过依赖目录），
+> npm 不会局部回滚，必须整目录重装：
+>
+> ```bash
+> cd ~/pomelo-web && rm -rf node_modules && npm ci
+> ls node_modules/lightningcss/node/index.mjs    # 自检：应存在
+> ```
+>
+> `npm ci` 严格按 `package-lock.json` 装（含 `lightningcss-linux-x64-gnu` 原生包，Lock 里已固定）。
+> 若 `npm ci` 自身失败（镜像源缺包/网络），把报错贴出来；应急可换官方源：
+> `npm ci --registry=https://registry.npmjs.org`。构建失败不影响线上——Caddy 仍服务上一次的 `dist`。
+
 ## 4. 版本升级（日常主路径）
 
 ```bash
