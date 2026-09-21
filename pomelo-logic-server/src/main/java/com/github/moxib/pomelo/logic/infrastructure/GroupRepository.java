@@ -27,6 +27,18 @@ public interface GroupRepository {
 
   Future<Void> removeMember(long groupId, long userId);
 
+  /**
+   * 转让群主：原子校验原群主并更新 owner_id，同时调整双方角色（原群主→成员、新群主→群主）。
+   * groupId 不存在或 owner_id 不匹配时返回 0。
+   */
+  Future<Integer> transferOwnership(long groupId, long fromOwnerId, long toUserId);
+
+  /**
+   * 解散群聊：仅当 owner_id 匹配时删除群与其全部成员关系（历史消息保留）。
+   * 返回删除的成员关系行数；群不存在或 owner 不匹配时返回 0。
+   */
+  Future<Integer> dissolveGroup(long groupId, long ownerId);
+
   Future<Boolean> isMember(long groupId, long userId);
 
   /**
@@ -40,7 +52,7 @@ public interface GroupRepository {
   Future<Void> updateLastReadSeq(long groupId, long userId, long seq);
 
   Future<Boolean> saveMessage(long id, long groupId, long senderNumericId,
-                               int msgType, String content, long seq, long createdAt, long clientMsgId);
+                               int msgType, String content, String ext, long seq, long createdAt, long clientMsgId);
 
   /**
    * 按 (groupId, senderId, clientMsgId) 查询已有群消息，用于客户端重试幂等。

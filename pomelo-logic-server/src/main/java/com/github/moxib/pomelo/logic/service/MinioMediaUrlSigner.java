@@ -123,4 +123,24 @@ public class MinioMediaUrlSigner implements MediaUrlSigner {
       || msgType == CommonProto.MsgType.MSG_TYPE_FILE_VALUE
       || msgType == CommonProto.MsgType.MSG_TYPE_EMOJI_VALUE;
   }
+
+  /**
+   * 头像读侧签名：avatar 列存对象 key 时签发 presigned GET；
+   * 空值返回空串，历史存量外部 URL 原样返回。
+   */
+  @Override
+  public String signAvatar(String avatar) {
+    if (avatar == null || avatar.isBlank()) {
+      return "";
+    }
+    if (!ObjectKeys.isWellFormed(avatar)) {
+      return avatar;
+    }
+    try {
+      return presigner.presignGet(avatar);
+    } catch (Exception e) {
+      LOG.warn("头像 URL 签名失败，原样返回: {}", e.getMessage());
+      return avatar;
+    }
+  }
 }

@@ -100,6 +100,14 @@ enum Cmd {
     CMD_GROUP_KICK_REQ      = 0x0074;
     // S→C 移除群成员响应
     CMD_GROUP_KICK_RESP     = 0x0075;
+    // C→S 转让群主（仅群主；目标须为成员）
+    CMD_GROUP_TRANSFER_REQ  = 0x0076;
+    // S→C 转让响应
+    CMD_GROUP_TRANSFER_RESP = 0x0077;
+    // C→S 解散群聊（仅群主；成员全部移除，历史消息保留）
+    CMD_GROUP_DISSOLVE_REQ  = 0x0078;
+    // S→C 解散响应
+    CMD_GROUP_DISSOLVE_RESP = 0x0079;
     // C→S 获取群信息请求
     CMD_GROUP_GET_INFO_REQ  = 0x0086;
     // S→C 获取群信息响应
@@ -157,6 +165,12 @@ enum Cmd {
     CMD_CALL_TOKEN_REQ   = 0x00B7;
     // S→C 入会材料响应
     CMD_CALL_TOKEN_RESP  = 0x00B8;
+
+    // 用户资料（0xC0 段避开 CALL 0xB0）
+    // C→S 更新资料（当前仅头像）
+    CMD_PROFILE_UPDATE_REQ  = 0x00C0;
+    // S→C 更新资料响应
+    CMD_PROFILE_UPDATE_RESP = 0x00C1;
 
     // S→C 通用错误响应
     CMD_ERROR = 0xFFFF;

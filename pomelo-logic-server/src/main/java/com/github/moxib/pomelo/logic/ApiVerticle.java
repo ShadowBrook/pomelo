@@ -1,12 +1,16 @@
 package com.github.moxib.pomelo.logic;
 
 import com.github.moxib.pomelo.config.ConfigHolder;
+import com.github.moxib.pomelo.config.JwtTokenParser;
 import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.config.TlsConfig;
+import com.github.moxib.pomelo.logic.infrastructure.MinioObjectPresigner;
 import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
 import com.github.moxib.pomelo.logic.infrastructure.TokenService;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
+import com.github.moxib.pomelo.logic.service.MediaUrlSigner;
+import com.github.moxib.pomelo.logic.service.MinioMediaUrlSigner;
 import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
@@ -44,21 +48,27 @@ public class ApiVerticle extends VerticleBase {
     VALUES ($1, $2, $3, $4, $5, 0, $6, $6) ON CONFLICT (user_name) DO NOTHING
     """;
   private static final String FIND_USER_SQL = """
-    SELECT id, user_name, nickname, avatar, status, created_at FROM im_user WHERE id = $1
+    SELECT id, user_name, nickname, avatar, signature, status, created_at FROM im_user WHERE id = $1
+    """;
+  private static final String FIND_PASSWORD_SQL = """
+    SELECT password FROM im_user WHERE id = $1
+    """;
+  private static final String UPDATE_PASSWORD_SQL = """
+    UPDATE im_user SET password = $1, updated_at = $2 WHERE id = $3
     """;
   private static final String FIND_BY_USERNAME_SQL = """
-    SELECT id, user_name, nickname, avatar, password, status, created_at
+    SELECT id, user_name, nickname, avatar, signature, password, status, created_at
     FROM im_user WHERE user_name = $1
     """;
   private static final String LIST_FRIENDS_SQL = """
-    SELECT u.id, u.user_name, u.nickname, u.avatar, u.status, f.created_at AS friended_at
+    SELECT u.id, u.user_name, u.nickname, u.avatar, u.signature, u.status, f.created_at AS friended_at
     FROM im_friend f
     JOIN im_user me ON f.user_id = me.id
     JOIN im_user u  ON f.friend_id = u.id
     WHERE me.id = $1 AND f.status = 1 ORDER BY f.created_at DESC
     """;
   private static final String LIST_PENDING_SQL = """
-    SELECT u.id, u.user_name, u.nickname, u.avatar, u.status, f.created_at AS requested_at
+    SELECT u.id, u.user_name, u.nickname, u.avatar, u.signature, u.status, f.created_at AS requested_at
     FROM im_friend f
     JOIN im_user me ON f.friend_id = me.id
     JOIN im_user u  ON f.user_id = u.id
@@ -67,6 +77,7 @@ public class ApiVerticle extends VerticleBase {
 
   private final HashingStrategy strategy = HashingStrategy.load();
   private final SecureRandom random = new SecureRandom();
+  private JwtTokenParser jwtParser;
 
   private int port;
   private final SnowflakeIdGenerator snowflake;
@@ -74,6 +85,8 @@ public class ApiVerticle extends VerticleBase {
   private HttpServer server;
   private Pool pgPool;
   private SessionRouteTable routeTable;
+  // 头像列存对象 key，出囗统一换 presigned GET URL（与消息媒体同一套签名器）
+  private MediaUrlSigner mediaUrlSigner;
 
   public ApiVerticle(SnowflakeIdGenerator snowflake) {
     this.snowflake = snowflake;
@@ -84,6 +97,8 @@ public class ApiVerticle extends VerticleBase {
     this.port = ConfigHolder.getInt("api.http.port", 8888);
     pgPool = PgPoolFactory.get(vertx);
     routeTable = new SessionRouteTable(vertx);
+    mediaUrlSigner = new MinioMediaUrlSigner(new MinioObjectPresigner());
+    jwtParser = new JwtTokenParser(vertx);
 
     return RedisFactory.get(vertx).connect()
       .compose(v -> {
@@ -94,6 +109,7 @@ public class ApiVerticle extends VerticleBase {
         router.get("/metrics").handler(this::metrics);
         router.post("/api/user/register").handler(this::register);
         router.post("/api/user/login").handler(this::login);
+        router.post("/api/user/change-password").handler(this::changePassword);
         router.get("/api/user/:userId/profile").handler(this::profile);
         router.get("/api/friends/:userId").handler(this::friends);
         router.get("/api/friends/:userId/pending").handler(this::pending);
@@ -196,7 +212,8 @@ public class ApiVerticle extends VerticleBase {
           .put("userId", userId)
           .put("userName", r.getString("user_name"))
           .put("nickname", r.getString("nickname"))
-          .put("avatar", r.getString("avatar"))
+          .put("avatar", mediaUrlSigner.signAvatar(r.getString("avatar")))
+          .put("signature", r.getString("signature"))
           .put("token", token));
       })
       .onFailure(e -> fail(ctx, 500, "登录失败"));
@@ -220,11 +237,57 @@ public class ApiVerticle extends VerticleBase {
           .put("userId", String.valueOf(r.getLong("id")))
           .put("userName", r.getString("user_name"))
           .put("nickname", r.getString("nickname"))
-          .put("avatar", r.getString("avatar"))
+          .put("avatar", mediaUrlSigner.signAvatar(r.getString("avatar")))
+          .put("signature", r.getString("signature"))
           .put("status", r.getInteger("status"))
           .put("createdAt", r.getLong("created_at")));
       })
       .onFailure(e -> fail(ctx, 500, "查询失败"));
+  }
+
+  /**
+   * POST /api/user/change-password — 修改密码（Authorization: Bearer JWT）。
+   * 校验原密码后写新 hash；成功后已签发 token 仍然有效（JWT 无状态，客户端自行重新登录换取新 token）。
+   */
+  private void changePassword(RoutingContext ctx) {
+    String auth = ctx.request().getHeader("Authorization");
+    if (auth == null || !auth.startsWith("Bearer ")) {
+      fail(ctx, 401, "请先登录");
+      return;
+    }
+    JsonObject body = ctx.body().asJsonObject();
+    String oldPassword = body == null ? null : body.getString("oldPassword");
+    String newPassword = body == null ? null : body.getString("newPassword");
+    if (isBlank(oldPassword) || isBlank(newPassword) || newPassword.length() < 6) {
+      fail(ctx, 400, "新密码至少 6 位");
+      return;
+    }
+    jwtParser.validate(auth.substring(7).trim())
+      .onSuccess(claims -> {
+        long id = claims != null ? claims.getLong("id", 0L) : 0L;
+        if (id == 0) {
+          fail(ctx, 401, "登录已过期");
+          return;
+        }
+        pgPool.preparedQuery(FIND_PASSWORD_SQL).execute(Tuple.of(id))
+          .onSuccess(rows -> {
+            if (rows.size() == 0) {
+              fail(ctx, 404, "用户不存在");
+              return;
+            }
+            String hash = rows.iterator().next().getString("password");
+            if (!strategy.verify(hash, oldPassword)) {
+              fail(ctx, 401, "原密码错误");
+              return;
+            }
+            pgPool.preparedQuery(UPDATE_PASSWORD_SQL)
+              .execute(Tuple.of(hashPassword(newPassword), System.currentTimeMillis(), id))
+              .onSuccess(r -> ok(ctx, 200, new JsonObject().put("message", "密码已修改")))
+              .onFailure(e -> fail(ctx, 500, "修改失败"));
+          })
+          .onFailure(e -> fail(ctx, 500, "修改失败"));
+      })
+      .onFailure(e -> fail(ctx, 401, "登录已过期"));
   }
 
   /** GET /api/friends/:userId */
@@ -286,7 +349,8 @@ public class ApiVerticle extends VerticleBase {
             .put("userId", String.valueOf(r.getLong("id")))
             .put("userName", r.getString("user_name"))
             .put("nickname", r.getString("nickname"))
-            .put("avatar", r.getString("avatar"))
+            .put("avatar", mediaUrlSigner.signAvatar(r.getString("avatar")))
+            .put("signature", r.getString("signature"))
             .put("online", online)
             .put(timeField, r.getLong(timeField)));
         }

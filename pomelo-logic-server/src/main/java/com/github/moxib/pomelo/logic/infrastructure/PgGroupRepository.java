@@ -58,6 +58,29 @@ public class PgGroupRepository implements GroupRepository {
     DELETE FROM im_group_member WHERE group_id = $1 AND user_id = $2
     """;
 
+  // CTE 原子转让：仅当 owner 匹配才更新 owner_id；随后调整双方角色（原群主→成员、新群主→群主）。
+  // 外层 rowCount 为角色更新的行数（1~2），0 表示群不存在或 owner 不匹配。
+  private static final String TRANSFER_OWNERSHIP_SQL = """
+    WITH g AS (
+      UPDATE im_group SET owner_id = $3, updated_at = $4
+      WHERE id = $1 AND owner_id = $2
+      RETURNING id
+    )
+    UPDATE im_group_member gm
+    SET role = CASE WHEN gm.user_id = $2 THEN 0 ELSE 2 END
+    FROM g
+    WHERE gm.group_id = $1 AND gm.user_id IN ($2, $3)
+    """;
+
+  // CTE 原子解散：仅当 owner 匹配才删群，随后删除全部成员关系；历史消息保留。
+  // 外层 rowCount 为删除的成员关系行数（群主必在成员中，成功时 >= 1），0 表示群不存在或 owner 不匹配。
+  private static final String DISSOLVE_GROUP_SQL = """
+    WITH g AS (
+      DELETE FROM im_group WHERE id = $1 AND owner_id = $2 RETURNING id
+    )
+    DELETE FROM im_group_member WHERE group_id = $1 AND EXISTS (SELECT 1 FROM g)
+    """;
+
   private static final String IS_MEMBER_SQL = """
     SELECT 1 FROM im_group_member WHERE group_id = $1 AND user_id = $2
     """;
@@ -91,12 +114,12 @@ public class PgGroupRepository implements GroupRepository {
   // 幂等唯一键 uq_group_client_msg (group_id, sender_id, client_msg_id) 由分区键 group_id 参与构成，
   // 重试冲突时 DO NOTHING，rowCount=0 由调用方查回原消息
   private static final String SAVE_MSG_SQL = """
-    INSERT INTO im_message_group (id, sender_id, group_id, msg_type, content, seq, created_at, client_msg_id)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8) ON CONFLICT (group_id, sender_id, client_msg_id) DO NOTHING
+    INSERT INTO im_message_group (id, sender_id, group_id, msg_type, content, ext, seq, created_at, client_msg_id)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (group_id, sender_id, client_msg_id) DO NOTHING
     """;
 
   private static final String FIND_BY_GROUP_SENDER_CLIENT_MSG_SQL = """
-    SELECT id, sender_id, group_id, msg_type, content, seq, created_at
+    SELECT id, sender_id, group_id, msg_type, content, ext, seq, created_at
     FROM im_message_group WHERE group_id = $1 AND sender_id = $2 AND client_msg_id = $3
     ORDER BY id DESC LIMIT 1
     """;
@@ -114,13 +137,13 @@ public class PgGroupRepository implements GroupRepository {
     """;
 
   private static final String PULL_MSG_BACKWARD_SQL = """
-    SELECT msg.id, msg.sender_id, msg.group_id, msg.msg_type, msg.content, msg.seq, msg.created_at
+    SELECT msg.id, msg.sender_id, msg.group_id, msg.msg_type, msg.content, msg.ext, msg.seq, msg.created_at
     FROM im_message_group msg
     WHERE msg.group_id = $1 AND msg.seq < $2 ORDER BY msg.seq DESC LIMIT $3
     """;
 
   private static final String PULL_MSG_FORWARD_SQL = """
-    SELECT msg.id, msg.sender_id, msg.group_id, msg.msg_type, msg.content, msg.seq, msg.created_at
+    SELECT msg.id, msg.sender_id, msg.group_id, msg.msg_type, msg.content, msg.ext, msg.seq, msg.created_at
     FROM im_message_group msg
     WHERE msg.group_id = $1 AND msg.seq > $2 ORDER BY msg.seq LIMIT $3
     """;
@@ -200,6 +223,24 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
+  public Future<Integer> transferOwnership(long groupId, long fromOwnerId, long toUserId) {
+    return pool.preparedQuery(TRANSFER_OWNERSHIP_SQL)
+      .execute(Tuple.of(groupId, fromOwnerId, toUserId, System.currentTimeMillis()))
+      .map(rows -> rows.rowCount())
+      .onSuccess(count -> LOG.info("群主转让: groupId={} from={} to={} rows={}", groupId, fromOwnerId, toUserId, count))
+      .onFailure(e -> LOG.error("群主转让失败: groupId={} {}", groupId, e.getMessage()));
+  }
+
+  @Override
+  public Future<Integer> dissolveGroup(long groupId, long ownerId) {
+    return pool.preparedQuery(DISSOLVE_GROUP_SQL)
+      .execute(Tuple.of(groupId, ownerId))
+      .map(rows -> rows.rowCount())
+      .onSuccess(count -> LOG.info("群聊解散: groupId={} owner={} membersRemoved={}", groupId, ownerId, count))
+      .onFailure(e -> LOG.error("群聊解散失败: groupId={} {}", groupId, e.getMessage()));
+  }
+
+  @Override
   public Future<Boolean> isMember(long groupId, long userId) {
     return pool.preparedQuery(IS_MEMBER_SQL)
       .execute(Tuple.of(groupId, userId))
@@ -248,9 +289,9 @@ public class PgGroupRepository implements GroupRepository {
 
   @Override
   public Future<Boolean> saveMessage(long id, long groupId, long senderNumericId,
-                                     int msgType, String content, long seq, long createdAt, long clientMsgId) {
+                                     int msgType, String content, String ext, long seq, long createdAt, long clientMsgId) {
     return pool.preparedQuery(SAVE_MSG_SQL)
-      .execute(Tuple.of(id, senderNumericId, groupId, msgType, content, seq, createdAt, clientMsgId))
+      .execute(Tuple.of(id, senderNumericId, groupId, msgType, content, ext, seq, createdAt, clientMsgId))
       .map(r -> {
         boolean inserted = r.rowCount() > 0;
         if (inserted) {
@@ -279,6 +320,7 @@ public class PgGroupRepository implements GroupRepository {
           row.getLong("group_id"),
           row.getInteger("msg_type"),
           row.getString("content"),
+          row.getString("ext"),
           row.getLong("seq"),
           row.getLong("created_at"));
       });
@@ -323,7 +365,7 @@ public class PgGroupRepository implements GroupRepository {
         for (Row row : rows) {
           list.add(new GroupMsgWithSender(
             row.getLong("id"), row.getLong("sender_id"), row.getLong("group_id"),
-            row.getInteger("msg_type"), row.getString("content"),
+            row.getInteger("msg_type"), row.getString("content"), row.getString("ext"),
             row.getLong("seq"), row.getLong("created_at")));
         }
         return list;

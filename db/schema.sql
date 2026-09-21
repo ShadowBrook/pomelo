@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS im_user (
     id         BIGINT       PRIMARY KEY,           -- Snowflake 全局唯一 ID（对外标识）
     user_name  VARCHAR(64)  UNIQUE NOT NULL,       -- 用户名（登录凭证）
     nickname   VARCHAR(128) NOT NULL,
-    avatar     VARCHAR(512),                      -- 头像URL
+    avatar     VARCHAR(512),                      -- 头像URL（对象 key）
+    signature  VARCHAR(128) NOT NULL DEFAULT '',  -- 个性签名
     password   VARCHAR(256) NOT NULL,             -- bcrypt hash
     status     SMALLINT     NOT NULL DEFAULT 0,   -- 0=离线, 1=在线
     created_at BIGINT       NOT NULL,             -- Unix毫秒
@@ -107,6 +108,7 @@ CREATE TABLE IF NOT EXISTS im_message_group (
     group_id   BIGINT       NOT NULL,             -- im_group.id (雪花ID 内部主键)
     msg_type   SMALLINT     NOT NULL,             -- 1=text, 2=image, 3=voice, 4=video, 5=file, 6=emoji, 7=system
     content    TEXT,                              -- 文本内容或资源链接
+    ext        TEXT,                              -- 客户端扩展元数据 JSON（如 @ 提及 mentioned_user_ids）
     seq        BIGINT       NOT NULL,             -- 群同步版本号
     created_at BIGINT       NOT NULL,             -- 创建时间 (Unix毫秒)
     client_msg_id BIGINT    NOT NULL,             -- 客户端消息 ID (发送端生成, 重试幂等去重)
@@ -205,3 +207,9 @@ COMMENT ON COLUMN im_call.end_reason   IS '1=取消 2=拒绝 3=挂断 4=忙线 5
 
 CREATE INDEX idx_im_call_caller ON im_call (caller_id, created_at DESC);
 CREATE INDEX idx_im_call_callee ON im_call (callee_id, created_at DESC);
+
+-- 2026-09-20 用户资料增强：个性签名
+ALTER TABLE im_user ADD COLUMN IF NOT EXISTS signature VARCHAR(128) NOT NULL DEFAULT '';
+
+-- 2026-09-20 @ 提及元数据：群消息扩展字段
+ALTER TABLE im_message_group ADD COLUMN IF NOT EXISTS ext TEXT;

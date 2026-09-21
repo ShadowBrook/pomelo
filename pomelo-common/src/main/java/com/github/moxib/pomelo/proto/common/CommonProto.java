@@ -336,6 +336,38 @@ public final class CommonProto {
     CMD_GROUP_KICK_RESP(117),
     /**
      * <pre>
+     * C→S 转让群主（仅群主；目标须为成员）
+     * </pre>
+     *
+     * <code>CMD_GROUP_TRANSFER_REQ = 118;</code>
+     */
+    CMD_GROUP_TRANSFER_REQ(118),
+    /**
+     * <pre>
+     * S→C 转让响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_TRANSFER_RESP = 119;</code>
+     */
+    CMD_GROUP_TRANSFER_RESP(119),
+    /**
+     * <pre>
+     * C→S 解散群聊（仅群主；成员全部移除，历史消息保留）
+     * </pre>
+     *
+     * <code>CMD_GROUP_DISSOLVE_REQ = 120;</code>
+     */
+    CMD_GROUP_DISSOLVE_REQ(120),
+    /**
+     * <pre>
+     * S→C 解散响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_DISSOLVE_RESP = 121;</code>
+     */
+    CMD_GROUP_DISSOLVE_RESP(121),
+    /**
+     * <pre>
      * C→S 获取群信息请求
      * </pre>
      *
@@ -540,6 +572,23 @@ public final class CommonProto {
      * <code>CMD_CALL_TOKEN_RESP = 184;</code>
      */
     CMD_CALL_TOKEN_RESP(184),
+    /**
+     * <pre>
+     * 用户资料（0xC0 段避开 CALL 0xB0）
+     * C→S 更新资料（当前仅头像）
+     * </pre>
+     *
+     * <code>CMD_PROFILE_UPDATE_REQ = 192;</code>
+     */
+    CMD_PROFILE_UPDATE_REQ(192),
+    /**
+     * <pre>
+     * S→C 更新资料响应
+     * </pre>
+     *
+     * <code>CMD_PROFILE_UPDATE_RESP = 193;</code>
+     */
+    CMD_PROFILE_UPDATE_RESP(193),
     /**
      * <pre>
      * S→C 通用错误响应
@@ -861,6 +910,38 @@ public final class CommonProto {
     public static final int CMD_GROUP_KICK_RESP_VALUE = 117;
     /**
      * <pre>
+     * C→S 转让群主（仅群主；目标须为成员）
+     * </pre>
+     *
+     * <code>CMD_GROUP_TRANSFER_REQ = 118;</code>
+     */
+    public static final int CMD_GROUP_TRANSFER_REQ_VALUE = 118;
+    /**
+     * <pre>
+     * S→C 转让响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_TRANSFER_RESP = 119;</code>
+     */
+    public static final int CMD_GROUP_TRANSFER_RESP_VALUE = 119;
+    /**
+     * <pre>
+     * C→S 解散群聊（仅群主；成员全部移除，历史消息保留）
+     * </pre>
+     *
+     * <code>CMD_GROUP_DISSOLVE_REQ = 120;</code>
+     */
+    public static final int CMD_GROUP_DISSOLVE_REQ_VALUE = 120;
+    /**
+     * <pre>
+     * S→C 解散响应
+     * </pre>
+     *
+     * <code>CMD_GROUP_DISSOLVE_RESP = 121;</code>
+     */
+    public static final int CMD_GROUP_DISSOLVE_RESP_VALUE = 121;
+    /**
+     * <pre>
      * C→S 获取群信息请求
      * </pre>
      *
@@ -1067,6 +1148,23 @@ public final class CommonProto {
     public static final int CMD_CALL_TOKEN_RESP_VALUE = 184;
     /**
      * <pre>
+     * 用户资料（0xC0 段避开 CALL 0xB0）
+     * C→S 更新资料（当前仅头像）
+     * </pre>
+     *
+     * <code>CMD_PROFILE_UPDATE_REQ = 192;</code>
+     */
+    public static final int CMD_PROFILE_UPDATE_REQ_VALUE = 192;
+    /**
+     * <pre>
+     * S→C 更新资料响应
+     * </pre>
+     *
+     * <code>CMD_PROFILE_UPDATE_RESP = 193;</code>
+     */
+    public static final int CMD_PROFILE_UPDATE_RESP_VALUE = 193;
+    /**
+     * <pre>
      * S→C 通用错误响应
      * </pre>
      *
@@ -1137,6 +1235,10 @@ public final class CommonProto {
         case 115: return CMD_GROUP_INVITE_RESP;
         case 116: return CMD_GROUP_KICK_REQ;
         case 117: return CMD_GROUP_KICK_RESP;
+        case 118: return CMD_GROUP_TRANSFER_REQ;
+        case 119: return CMD_GROUP_TRANSFER_RESP;
+        case 120: return CMD_GROUP_DISSOLVE_REQ;
+        case 121: return CMD_GROUP_DISSOLVE_RESP;
         case 134: return CMD_GROUP_GET_INFO_REQ;
         case 135: return CMD_GROUP_GET_INFO_RESP;
         case 136: return CMD_GROUP_GET_MEMBERS_REQ;
@@ -1163,6 +1265,8 @@ public final class CommonProto {
         case 182: return CMD_CALL_EVENT_PUSH;
         case 183: return CMD_CALL_TOKEN_REQ;
         case 184: return CMD_CALL_TOKEN_RESP;
+        case 192: return CMD_PROFILE_UPDATE_REQ;
+        case 193: return CMD_PROFILE_UPDATE_RESP;
         case 65535: return CMD_ERROR;
         default: return null;
       }
@@ -3444,7 +3548,7 @@ java.lang.String defaultValue) {
       "\003 \001(\003\022/\n\003ext\030\004 \003(\0132\".im.common.MessageCo" +
       "ntent.ExtEntry\032*\n\010ExtEntry\022\013\n\003key\030\001 \001(\t\022" +
       "\r\n\005value\030\002 \001(\t:\0028\001\"*\n\tErrorBody\022\014\n\004code\030" +
-      "\001 \001(\005\022\017\n\007message\030\002 \001(\t*\272\014\n\003Cmd\022\017\n\013CMD_UN" +
+      "\001 \001(\005\022\017\n\007message\030\002 \001(\t*\347\r\n\003Cmd\022\017\n\013CMD_UN" +
       "KNOWN\020\000\022\020\n\014CMD_AUTH_REQ\020\001\022\021\n\rCMD_AUTH_RE" +
       "SP\020\002\022\022\n\016CMD_LOGOUT_REQ\020\003\022\023\n\017CMD_LOGOUT_R" +
       "ESP\020\004\022\017\n\013CMD_C2C_REQ\020\020\022\020\n\014CMD_C2C_RESP\020\021" +
@@ -3465,34 +3569,38 @@ java.lang.String defaultValue) {
       "D_GROUP_CREATE_REQ\020p\022\031\n\025CMD_GROUP_CREATE" +
       "_RESP\020q\022\030\n\024CMD_GROUP_INVITE_REQ\020r\022\031\n\025CMD" +
       "_GROUP_INVITE_RESP\020s\022\026\n\022CMD_GROUP_KICK_R" +
-      "EQ\020t\022\027\n\023CMD_GROUP_KICK_RESP\020u\022\033\n\026CMD_GRO" +
-      "UP_GET_INFO_REQ\020\206\001\022\034\n\027CMD_GROUP_GET_INFO" +
-      "_RESP\020\207\001\022\036\n\031CMD_GROUP_GET_MEMBERS_REQ\020\210\001" +
-      "\022\037\n\032CMD_GROUP_GET_MEMBERS_RESP\020\211\001\022 \n\033CMD" +
-      "_GROUP_GET_MY_GROUPS_REQ\020\220\001\022!\n\034CMD_GROUP" +
-      "_GET_MY_GROUPS_RESP\020\221\001\022#\n\036CMD_GROUP_MEMB" +
-      "ER_CHANGE_NOTIFY\020\223\001\022\033\n\026CMD_GROUP_PULL_MS" +
-      "G_REQ\020\224\001\022\034\n\027CMD_GROUP_PULL_MSG_RESP\020\225\001\022\026" +
-      "\n\021CMD_GROUP_ACK_REQ\020\226\001\022\027\n\022CMD_GROUP_ACK_" +
-      "RESP\020\227\001\022\033\n\026CMD_GROUP_MSG_READ_REQ\020\230\001\022\034\n\027" +
-      "CMD_GROUP_MSG_READ_RESP\020\231\001\022\035\n\030CMD_GROUP_" +
-      "READ_STATE_REQ\020\232\001\022\036\n\031CMD_GROUP_READ_STAT" +
-      "E_RESP\020\233\001\022\023\n\016CMD_UPLOAD_REQ\020\240\001\022\024\n\017CMD_UP" +
-      "LOAD_RESP\020\241\001\022\030\n\023CMD_CALL_INVITE_REQ\020\260\001\022\031" +
-      "\n\024CMD_CALL_INVITE_RESP\020\261\001\022\030\n\023CMD_CALL_AC" +
-      "CEPT_REQ\020\262\001\022\031\n\024CMD_CALL_ACCEPT_RESP\020\263\001\022\025" +
-      "\n\020CMD_CALL_END_REQ\020\264\001\022\026\n\021CMD_CALL_END_RE" +
-      "SP\020\265\001\022\030\n\023CMD_CALL_EVENT_PUSH\020\266\001\022\027\n\022CMD_C" +
-      "ALL_TOKEN_REQ\020\267\001\022\030\n\023CMD_CALL_TOKEN_RESP\020" +
-      "\270\001\022\017\n\tCMD_ERROR\020\377\377\003*\324\001\n\007MsgType\022\024\n\020MSG_T" +
-      "YPE_UNKNOWN\020\000\022\021\n\rMSG_TYPE_TEXT\020\001\022\022\n\016MSG_" +
-      "TYPE_IMAGE\020\002\022\022\n\016MSG_TYPE_VOICE\020\003\022\022\n\016MSG_" +
-      "TYPE_VIDEO\020\004\022\021\n\rMSG_TYPE_FILE\020\005\022\022\n\016MSG_T" +
-      "YPE_EMOJI\020\006\022\024\n\020MSG_TYPE_FORWARD\020\010\022\022\n\016MSG" +
-      "_TYPE_REPLY\020\t\022\023\n\017MSG_TYPE_SYSTEM\020c*!\n\007Ac" +
-      "kType\022\014\n\010RECEIVED\020\000\022\010\n\004SEEN\020\001B3\n$com.git" +
-      "hub.moxib.pomelo.proto.commonB\013CommonPro" +
-      "tob\006proto3"
+      "EQ\020t\022\027\n\023CMD_GROUP_KICK_RESP\020u\022\032\n\026CMD_GRO" +
+      "UP_TRANSFER_REQ\020v\022\033\n\027CMD_GROUP_TRANSFER_" +
+      "RESP\020w\022\032\n\026CMD_GROUP_DISSOLVE_REQ\020x\022\033\n\027CM" +
+      "D_GROUP_DISSOLVE_RESP\020y\022\033\n\026CMD_GROUP_GET" +
+      "_INFO_REQ\020\206\001\022\034\n\027CMD_GROUP_GET_INFO_RESP\020" +
+      "\207\001\022\036\n\031CMD_GROUP_GET_MEMBERS_REQ\020\210\001\022\037\n\032CM" +
+      "D_GROUP_GET_MEMBERS_RESP\020\211\001\022 \n\033CMD_GROUP" +
+      "_GET_MY_GROUPS_REQ\020\220\001\022!\n\034CMD_GROUP_GET_M" +
+      "Y_GROUPS_RESP\020\221\001\022#\n\036CMD_GROUP_MEMBER_CHA" +
+      "NGE_NOTIFY\020\223\001\022\033\n\026CMD_GROUP_PULL_MSG_REQ\020" +
+      "\224\001\022\034\n\027CMD_GROUP_PULL_MSG_RESP\020\225\001\022\026\n\021CMD_" +
+      "GROUP_ACK_REQ\020\226\001\022\027\n\022CMD_GROUP_ACK_RESP\020\227" +
+      "\001\022\033\n\026CMD_GROUP_MSG_READ_REQ\020\230\001\022\034\n\027CMD_GR" +
+      "OUP_MSG_READ_RESP\020\231\001\022\035\n\030CMD_GROUP_READ_S" +
+      "TATE_REQ\020\232\001\022\036\n\031CMD_GROUP_READ_STATE_RESP" +
+      "\020\233\001\022\023\n\016CMD_UPLOAD_REQ\020\240\001\022\024\n\017CMD_UPLOAD_R" +
+      "ESP\020\241\001\022\030\n\023CMD_CALL_INVITE_REQ\020\260\001\022\031\n\024CMD_" +
+      "CALL_INVITE_RESP\020\261\001\022\030\n\023CMD_CALL_ACCEPT_R" +
+      "EQ\020\262\001\022\031\n\024CMD_CALL_ACCEPT_RESP\020\263\001\022\025\n\020CMD_" +
+      "CALL_END_REQ\020\264\001\022\026\n\021CMD_CALL_END_RESP\020\265\001\022" +
+      "\030\n\023CMD_CALL_EVENT_PUSH\020\266\001\022\027\n\022CMD_CALL_TO" +
+      "KEN_REQ\020\267\001\022\030\n\023CMD_CALL_TOKEN_RESP\020\270\001\022\033\n\026" +
+      "CMD_PROFILE_UPDATE_REQ\020\300\001\022\034\n\027CMD_PROFILE" +
+      "_UPDATE_RESP\020\301\001\022\017\n\tCMD_ERROR\020\377\377\003*\324\001\n\007Msg" +
+      "Type\022\024\n\020MSG_TYPE_UNKNOWN\020\000\022\021\n\rMSG_TYPE_T" +
+      "EXT\020\001\022\022\n\016MSG_TYPE_IMAGE\020\002\022\022\n\016MSG_TYPE_VO" +
+      "ICE\020\003\022\022\n\016MSG_TYPE_VIDEO\020\004\022\021\n\rMSG_TYPE_FI" +
+      "LE\020\005\022\022\n\016MSG_TYPE_EMOJI\020\006\022\024\n\020MSG_TYPE_FOR" +
+      "WARD\020\010\022\022\n\016MSG_TYPE_REPLY\020\t\022\023\n\017MSG_TYPE_S" +
+      "YSTEM\020c*!\n\007AckType\022\014\n\010RECEIVED\020\000\022\010\n\004SEEN" +
+      "\020\001B3\n$com.github.moxib.pomelo.proto.comm" +
+      "onB\013CommonProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,

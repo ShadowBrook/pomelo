@@ -10,6 +10,7 @@ import com.github.moxib.pomelo.proto.group.GroupProto;
 import com.github.moxib.pomelo.proto.heartbeat.HeartbeatProto;
 import com.github.moxib.pomelo.proto.pull.PullProto;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
+import com.github.moxib.pomelo.proto.profile.ProfileProto;
 import com.github.moxib.pomelo.proto.relation.RelationProto;
 import com.github.moxib.pomelo.proto.upload.UploadProto;
 import com.google.protobuf.Message;
@@ -110,6 +111,10 @@ public class ProtobufCodec<T> implements MessageCodec<T> {
     registerProto(CommonProto.Cmd.CMD_GROUP_INVITE_RESP_VALUE, GroupMgmtProto.InviteToGroupResp.parser(), GroupMgmtProto.InviteToGroupResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_KICK_REQ_VALUE, GroupMgmtProto.KickMemberReq.parser(), GroupMgmtProto.KickMemberReq.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_KICK_RESP_VALUE, GroupMgmtProto.KickMemberResp.parser(), GroupMgmtProto.KickMemberResp.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_TRANSFER_REQ_VALUE, GroupMgmtProto.TransferGroupReq.parser(), GroupMgmtProto.TransferGroupReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_TRANSFER_RESP_VALUE, GroupMgmtProto.TransferGroupResp.parser(), GroupMgmtProto.TransferGroupResp.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_DISSOLVE_REQ_VALUE, GroupMgmtProto.DissolveGroupReq.parser(), GroupMgmtProto.DissolveGroupReq.class);
+    registerProto(CommonProto.Cmd.CMD_GROUP_DISSOLVE_RESP_VALUE, GroupMgmtProto.DissolveGroupResp.parser(), GroupMgmtProto.DissolveGroupResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_GET_INFO_REQ_VALUE, GroupMgmtProto.GetGroupInfoReq.parser(), GroupMgmtProto.GetGroupInfoReq.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_GET_INFO_RESP_VALUE, GroupMgmtProto.GetGroupInfoResp.parser(), GroupMgmtProto.GetGroupInfoResp.class);
     registerProto(CommonProto.Cmd.CMD_GROUP_GET_MEMBERS_REQ_VALUE, GroupMgmtProto.GetGroupMembersReq.parser(), GroupMgmtProto.GetGroupMembersReq.class);
@@ -140,6 +145,10 @@ public class ProtobufCodec<T> implements MessageCodec<T> {
     registerProto(CommonProto.Cmd.CMD_CALL_EVENT_PUSH_VALUE, CallProto.CallEventPush.parser(), CallProto.CallEventPush.class);
     registerProto(CommonProto.Cmd.CMD_CALL_TOKEN_REQ_VALUE, CallProto.CallTokenReq.parser(), CallProto.CallTokenReq.class);
     registerProto(CommonProto.Cmd.CMD_CALL_TOKEN_RESP_VALUE, CallProto.CallTokenResp.parser(), CallProto.CallTokenResp.class);
+
+    // 用户资料
+    registerProto(CommonProto.Cmd.CMD_PROFILE_UPDATE_REQ_VALUE, ProfileProto.ProfileUpdateReq.parser(), ProfileProto.ProfileUpdateReq.class);
+    registerProto(CommonProto.Cmd.CMD_PROFILE_UPDATE_RESP_VALUE, ProfileProto.ProfileUpdateResp.parser(), ProfileProto.ProfileUpdateResp.class);
   }
 
   /**

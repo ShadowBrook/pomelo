@@ -10,4 +10,13 @@ public interface MediaUrlSigner {
    * 永不抛异常。
    */
   String signContent(int msgType, String content);
+
+  /**
+   * 头像读侧签名：im_user.avatar 存的是对象 key，转换为 presigned GET URL。
+   * 空值返回空串；非 key 形态（历史存量外部 URL）原样返回。
+   * 默认实现为透传，测试桩无需关心签名行为。
+   */
+  default String signAvatar(String avatar) {
+    return avatar == null ? "" : avatar;
+  }
 }

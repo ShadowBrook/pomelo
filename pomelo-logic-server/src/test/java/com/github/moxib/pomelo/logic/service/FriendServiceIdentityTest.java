@@ -76,7 +76,7 @@ class FriendServiceIdentityTest {
         // no-op
       }
     };
-    return new FriendService(pool.proxy(), noopPush, 20);
+    return new FriendService(pool.proxy(), noopPush, 20, (msgType, content) -> content);
   }
 
   /** 构造 Protobuf 好友请求：body 带 userId，varHeader 是网关注入的认证身份 */

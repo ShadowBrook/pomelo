@@ -126,10 +126,20 @@ class CallServiceTest {
     @Override public Future<Boolean> isFriend(long x, long y) {
       return Future.succeededFuture((x == CALLER && friends.contains(y)) || (y == CALLER && friends.contains(x)));
     }
-    @Override public Future<Boolean> isMember(long groupId, long userId) {
+    @Override
+  public Future<Integer> transferOwnership(long groupId, long fromOwnerId, long toUserId) {
+    return Future.succeededFuture(0);
+  }
+
+  @Override
+  public Future<Integer> dissolveGroup(long groupId, long ownerId) {
+    return Future.succeededFuture(0);
+  }
+
+public Future<Boolean> isMember(long groupId, long userId) {
       return Future.succeededFuture(groupId == TEST_GROUP && userId == CALLER && callerMember);
     }
-    @Override public Future<Boolean> saveMessage(long id, long groupId, long sender, int msgType, String content, long seq, long createdAt, long clientMsgId) {
+    @Override public Future<Boolean> saveMessage(long id, long groupId, long sender, int msgType, String content, String ext, long seq, long createdAt, long clientMsgId) {
       savedMeta.add(new long[]{id, groupId, sender, msgType, clientMsgId});
       savedContents.add(content);
       return Future.succeededFuture(true);
