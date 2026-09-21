@@ -93,9 +93,15 @@ public final class ConfigHolder {
     return applyEnv(base, System.getenv());
   }
 
-  /** 供测试注入环境变量 */
-  static JsonObject applyEnv(JsonObject base, Map<String, String> env) {
+  /** 供测试注入环境变量（传入原始环境变量表，本方法负责过滤 POMELO_ 前缀） */
+  static JsonObject applyEnv(JsonObject base, Map<String, String> rawEnv) {
     JsonObject result = base.copy();
+    Map<String, String> env = new LinkedHashMap<>();
+    rawEnv.forEach((key, value) -> {
+      if (key.startsWith("POMELO_")) {
+        env.put(key.substring("POMELO_".length()), value);
+      }
+    });
     if (env.isEmpty()) {
       return result;
     }
