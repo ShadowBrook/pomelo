@@ -1,11 +1,37 @@
-# Pomelo 演示/生产反代（Caddy 2）—— 双域名形态（主站 + 对象存储），全流量收口 443
+# Pomelo 演示/生产反代（Caddy 2）—— 双域名形态（主站 + 对象存储）+ TCP 网关 layer4 接入
 # 用法见 docs/2026-09-14-demo-deploy.md；域名经 docker-compose.demo.yml 注入环境变量：
-#   SITE_DOMAIN  = pomelo.host         （前端 + /api + /ws + /tcp + /lk）
+#   SITE_DOMAIN  = pomelo.host         （前端 + /api + /ws + /lk + TCP 9000）
 #   MEDIA_DOMAIN = oss.pomelo.host     （对象存储 presigned URL 直连 MinIO）
 #
 # 证书：域名形态由 Caddy 向 Let's Encrypt 自动签发续期（需 80/443 公网可达，国内服务器
 # 域名需已完成备案）。import.d 目录保持为空。
 # 纯 IP 备选形态：见 import.d/tls-local.caddy.example。
+#
+# 镜像：需含 layer4 模块的自定义构建（官方 caddy:2 无 l4，起不来），见
+# deploy/demo/caddy-l4/Dockerfile，docker compose build caddy 生成 pomelo/caddy-l4:2。
+
+# =====================================================================
+# 全局选项：layer4 应用 —— 原生客户端 TCP 接入（tcps://host:9000）
+# 终结 TLS 后明文转发容器内网 gateway:9000。tls handler 不自签证书，
+# 但复用下方 {$SITE_DOMAIN} HTTP 站点 ACME 签发的证书（同一实例共享证书缓存），
+# 原生客户端因此拿到正规 Let's Encrypt 证书，无需信任自签。
+# 网关侧须为明文：docker-compose.demo.yml 将 gateway 的 POMELO_TLS_ENABLED 置 false
+# （WS 9001 同理经本文件 /ws 明文反代，TLS 统一在边缘终结）。
+# =====================================================================
+{
+	layer4 {
+		:9000 {
+			# 仅放行 SNI=主域 的握手；无 SNI / 其它 SNI 一律断开（挡扫描器直连）
+			@sni {
+				tls sni {$SITE_DOMAIN}
+			}
+			route @sni {
+				tls
+				proxy pomelo-gateway:9000
+			}
+		}
+	}
+}
 
 {$SITE_DOMAIN} {
 	import /etc/caddy/import.d/*.caddy
@@ -20,16 +46,10 @@
 		}
 	}
 
-	# IM 长连接双入口（同源 443，与前端 useIMClient 的地址派生一致）。
-	# 网关 TCP/WS 两侧共享同一套 ImMessage 帧协议（4 字节长度前缀 + ImMessage），
-	# /ws 与 /tcp 只是路径语义区分：web 走 /ws；原生客户端把服务器地址设为
-	# wss://host/tcp 即以 WebSocket 隧道承载同一协议（传输层不再是裸 TCP——
-	# 裸 TCP 上路由器读不到路径，无法按路径转发；TLS 在边缘统一终结，
-	# 网关本体为明文，见 docker-compose.demo.yml 的 POMELO_TLS_ENABLED=false）。
+	# 网关 WebSocket（同源 /ws，与前端 useIMClient 的地址派生一致）。
+	# TLS 在边缘统一终结：demo 形态网关本体为明文（POMELO_TLS_ENABLED=false），
+	# 故此处直连明文上游，不再 https + skip_verify。
 	handle /ws {
-		reverse_proxy pomelo-gateway:9001
-	}
-	handle /tcp {
 		reverse_proxy pomelo-gateway:9001
 	}
 
