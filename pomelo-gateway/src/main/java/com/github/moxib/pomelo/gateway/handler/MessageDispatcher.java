@@ -10,13 +10,14 @@ import com.github.moxib.pomelo.model.PushCodec;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.auth.AuthProto;
 import com.github.moxib.pomelo.proto.common.CommonProto;
+import com.github.moxib.pomelo.proto.ctrl.CtrlProto;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -25,11 +26,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 
 /**
- * 消息分发器 — Gateway 侧（EventBus 转发 + 精确路由推送）。
+ * 消息分发器 — Gateway 侧（EventBus 转发 + 精确路由推送 + 同端型互踢）。
  */
 public class MessageDispatcher {
 
   private static final Logger LOG = LoggerFactory.getLogger(MessageDispatcher.class);
+
+  /** 顶号通知文案（客户端据此登出并回到登录页） */
+  static final String KICK_REASON = "账号在其他同类型设备上登录，本会话已下线";
 
   private final Vertx vertx;
   private final SessionRegistry sessionRegistry;
@@ -50,7 +54,17 @@ public class MessageDispatcher {
     if (routeTable.isRoutingAvailable()) {
       // 集群：logic 按路由精确投递到本节点专属地址（广播兜底已移除，不再订阅 gateway.push）
       vertx.eventBus().consumer("gateway.push." + nodeId, msg -> deliverPush(msg.body()));
-      LOG.info("Push consumer registered: gateway.push.{}", nodeId);
+      // 集群：顶号时旧会话可能在其他节点，经此地址通知对方节点执行本地踢
+      vertx.eventBus().<JsonObject>consumer("gateway.kick." + nodeId, msg -> {
+        JsonObject kick = msg.body();
+        SessionRegistry.Session old =
+          sessionRegistry.getSession(kick.getString("userId"), kick.getString("platform"));
+        if (old != null) {
+          LOG.info("跨节点踢下线: userId={} platform={}", old.getUserId(), old.getPlatform());
+          kickLocal(old, kick.getString("reason", KICK_REASON));
+        }
+      });
+      LOG.info("Push/kick consumer registered: gateway.push.{}, gateway.kick.{}", nodeId, nodeId);
     } else {
       // 单进程：logic 经本地 EventBus 点对点投递到本地址
       vertx.eventBus().consumer("gateway.push", msg -> deliverPush(msg.body()));
@@ -59,7 +73,7 @@ public class MessageDispatcher {
   }
 
   /**
-   * 节点下线：清理本节点注册的 session 路由。
+   * 节点下线：清理本节点注册的 session 路由（按端型槽位）。
    * 用户连接随节点关闭断开，重连到其他节点后由新节点重新注册；
    * 节点存活标记由 cluster manager 的 nodeInfo 目录自行过期，无需在此清理。
    */
@@ -67,8 +81,8 @@ public class MessageDispatcher {
     if (!stopped.compareAndSet(false, true)) {
       return Future.succeededFuture();
     }
-    for (String userId : sessionRegistry.getOnlineUserIds()) {
-      routeTable.unregister(userId);
+    for (SessionRegistry.Session session : sessionRegistry.getOnlineSessions()) {
+      routeTable.unregister(session.getUserId(), session.getPlatform());
     }
     return Future.succeededFuture();
   }
@@ -97,10 +111,21 @@ public class MessageDispatcher {
   private void deliverToConnection(PushEnvelope env) {
     // push target 统一使用 NanoID (userId)
     String userId = env.getTargetUserId();
-    Connection conn = sessionRegistry.getConnectionByUserId(userId);
-    if (conn == null) {
+    String platform = env.getTargetPlatform();
+    if (platform == null || platform.isEmpty()) {
+      // 不区分端型：投递给该用户在本节点的全部端会话
+      for (SessionRegistry.Session session : sessionRegistry.getSessionsByUserId(userId)) {
+        writePush(session, env);
+      }
       return;
     }
+    SessionRegistry.Session session = sessionRegistry.getSession(userId, platform);
+    if (session != null) {
+      writePush(session, env);
+    }
+  }
+
+  private void writePush(SessionRegistry.Session session, PushEnvelope env) {
     // e2e 投递延迟（服务端落库 → gateway 写入连接）；sentAt=0 为旧格式信封，跳过
     long sentAt = env.getSentAtEpochMs();
     if (sentAt > 0) {
@@ -115,18 +140,29 @@ public class MessageDispatcher {
       .messageId(env.getCorrelationMsgId() != null ? env.getCorrelationMsgId() : "")
       .body(env.getBody())
       .build();
-    conn.write(imMsg.encodeToWire());
+    session.connection.write(imMsg.encodeToWire());
+  }
+
+  /**
+   * 断连清理：注销会话并条件删除其端型路由。
+   * TCP/WS Verticle 的 closeHandler/exceptionHandler 统一走这里。
+   */
+  public void onConnectionClosed(Connection connection) {
+    SessionRegistry.Session session = sessionRegistry.unregisterByConnection(connection);
+    if (session != null) {
+      routeTable.unregister(session.getUserId(), session.getPlatform());
+    }
   }
 
   public void dispatch(Connection connection, ImMessage message) {
     // 身份只取本节点 SessionRegistry 的认证结果；客户端携带的同名 varHeader 一律不可信
-    String authenticatedUserId = sessionRegistry.getUserIdByConnection(connection);
+    SessionRegistry.Session session = sessionRegistry.getSessionByConnection(connection);
     int cmd = message.getCmd();
 
-    if (authenticatedUserId != null) {
+    if (session != null) {
       // 任何消息都证明用户在线，重置心跳定时器（以会话身份为准）
-      sessionRegistry.resetHeartbeatTimer(authenticatedUserId, heartbeatTimeoutMs);
-      normalizeSenderHeaders(message, authenticatedUserId);
+      sessionRegistry.resetHeartbeatTimer(session, heartbeatTimeoutMs);
+      normalizeSenderHeaders(message, session);
     } else if (cmd != CMD_PING_VALUE && cmd != CMD_AUTH_REQ_VALUE) {
       // 未认证连接仅放行心跳与认证，防止伪造 varHeader 调用业务命令
       LOG.warn("未认证连接请求业务命令，已拒绝: cmd=0x{} remote={}",
@@ -167,20 +203,18 @@ public class MessageDispatcher {
    * peerId、token 等其余头保留（属于请求参数或客户端自身凭证）。
    * 重建头 Map 而非原地修改，避免依赖解码产物可变。
    */
-  private void normalizeSenderHeaders(ImMessage message, String userId) {
+  private void normalizeSenderHeaders(ImMessage message, SessionRegistry.Session session) {
     Map<String, String> normalized = new HashMap<>();
     Map<String, String> headers = message.getVarHeaders();
     if (headers != null) {
       normalized.putAll(headers);
     }
-    normalized.put("userId", userId);
-    String userName = sessionRegistry.getUserName(userId);
-    if (userName != null) {
-      normalized.put("userName", userName);
+    normalized.put("userId", session.getUserId());
+    if (session.userName != null) {
+      normalized.put("userName", session.userName);
     }
-    String nickname = sessionRegistry.getNickname(userId);
-    if (nickname != null) {
-      normalized.put("nickname", nickname);
+    if (session.nickname != null) {
+      normalized.put("nickname", session.nickname);
     }
     message.setVarHeaders(normalized);
   }
@@ -199,21 +233,22 @@ public class MessageDispatcher {
     }
     if (response.getCmd() == CMD_LOGOUT_RESP_VALUE) {
       // 以连接的认证身份注销，不信任请求中携带的 userId
-      String userId = sessionRegistry.unregisterByConnection(connection);
-      if (userId != null) {
-        routeTable.unregister(userId);
-        LOG.info("Session 已注销: userId={}", userId);
+      SessionRegistry.Session session = sessionRegistry.unregisterByConnection(connection);
+      if (session != null) {
+        routeTable.unregister(session.getUserId(), session.getPlatform());
+        LOG.info("Session 已注销: userId={} platform={}", session.getUserId(), session.getPlatform());
       }
     }
   }
 
-  /** AUTH_REQ 的 token 验签 + 注册 session */
+  /** AUTH_REQ 的 token 验签 + 注册 session + 同端型顶号踢下线 */
   private void registerSessionFromToken(Connection connection, ImMessage request) {
-    String token = extractToken(request);
-    if (token == null || token.isEmpty()) {
+    AuthProto.AuthReq auth = decodeAuthReq(request);
+    if (auth == null || auth.getToken() == null || auth.getToken().isEmpty()) {
       return;
     }
-    jwtParser.validate(token)
+    String platform = SessionRouteTable.normalizePlatform(auth.getPlatform());
+    jwtParser.validate(auth.getToken())
       .onSuccess(claims -> {
         if (claims == null) {
           LOG.warn("Token 无效，无法注册 session");
@@ -227,12 +262,56 @@ public class MessageDispatcher {
         }
         String userName = claims.getString("userName", "");
         String nickname = claims.getString("nickname", "");
-        sessionRegistry.register(userId, id, connection, userName, nickname, null);
-        routeTable.register(userId);
-        sessionRegistry.startHeartbeatTimer(userId, heartbeatTimeoutMs);
-        LOG.info("Session 已注册: userId={} id={}", userId, id);
+        // 同端型槽位注册；被顶掉的旧会话先通知后断连（客户端据此登出而非重连）
+        SessionRegistry.Session old =
+          sessionRegistry.register(userId, platform, id, connection, userName, nickname, null);
+        if (old != null && old.connection != connection) {
+          LOG.info("顶号踢下线: userId={} platform={} remote={}",
+            userId, platform, old.connection.remoteAddress());
+          kickLocal(old, KICK_REASON);
+        }
+        // 跨节点顶号：必须在该端型路由被本节点覆盖前解析出旧节点
+        routeTable.resolve(userId, platform)
+          .compose(oldNode -> {
+            if (oldNode != null && !oldNode.equals(routeTable.getNodeId())) {
+              kickRemote(oldNode, userId, platform, KICK_REASON);
+            }
+            return routeTable.register(userId, platform);
+          });
+        sessionRegistry.startHeartbeatTimer(
+          sessionRegistry.getSession(userId, platform), heartbeatTimeoutMs);
+        LOG.info("Session 已注册: userId={} id={} platform={}", userId, id, platform);
       })
       .onFailure(e -> LOG.warn("Token 解析失败，无法注册 session: {}", e.getMessage()));
+  }
+
+  /**
+   * 本地踢下线：先投递 KICK_OFFLINE 通知，写完成后再断连，
+   * 保证客户端先收到原因（据此登出回登录页）而非当作普通断线重连。
+   */
+  void kickLocal(SessionRegistry.Session old, String reason) {
+    byte[] body = CtrlProto.CtrlNotify.newBuilder()
+      .setCtrlType(CtrlProto.CtrlType.CTRL_TYPE_KICK_OFFLINE)
+      .setReason(reason)
+      .build().toByteArray();
+    ImMessage notify = ImMessage.builder()
+      .magic(ImMessage.MAGIC_NUMBER)
+      .version(ImMessage.WIRE_PROTOCOL_VERSION)
+      .codecId((byte) 0)
+      .cmd(CMD_CTRL_NOTIFY_VALUE)
+      .body(body)
+      .build();
+    old.connection.write(notify.encodeToWire())
+      .onComplete(v -> old.connection.close());
+  }
+
+  /** 跨节点踢下线：通知旧路由所在节点执行本地踢（覆盖路由前发出） */
+  private void kickRemote(String nodeId, String userId, String platform, String reason) {
+    JsonObject kick = new JsonObject()
+      .put("userId", userId)
+      .put("platform", platform)
+      .put("reason", reason);
+    vertx.eventBus().send("gateway.kick." + nodeId, kick);
   }
 
   /** 判断 AUTH_RESP 是否成功（code == 0），body 一律按 Protobuf 解析 */
@@ -249,16 +328,16 @@ public class MessageDispatcher {
     }
   }
 
-  /** 从 AUTH_REQ 请求提取 token（body 一律按 Protobuf 解析） */
-  private String extractToken(ImMessage request) {
+  /** 解析 AUTH_REQ 请求体（token + platform），失败返回 null */
+  private AuthProto.AuthReq decodeAuthReq(ImMessage request) {
     byte[] body = request.getBody();
     if (body == null || body.length == 0) {
       return null;
     }
     try {
-      return ((AuthProto.AuthReq) ProtobufCodec.getCodec(CMD_AUTH_REQ_VALUE).decode(body)).getToken();
+      return (AuthProto.AuthReq) ProtobufCodec.getCodec(CMD_AUTH_REQ_VALUE).decode(body);
     } catch (Exception e) {
-      LOG.warn("AUTH_REQ token 提取失败: {}", e.getMessage());
+      LOG.warn("AUTH_REQ 解析失败: {}", e.getMessage());
       return null;
     }
   }

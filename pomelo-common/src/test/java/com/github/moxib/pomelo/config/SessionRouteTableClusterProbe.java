@@ -39,10 +39,11 @@ class SessionRouteTableClusterProbe {
       assertFalse(await(routeTable.isNodeAlive(UUID.randomUUID().toString())), "未知节点应判死");
 
       String user = "probe-" + UUID.randomUUID();
-      await(routeTable.register(user));
-      assertEquals(cmNodeId, await(routeTable.resolve(user)), "路由应指向本节点");
-      await(routeTable.unregister(user));
-      assertNull(await(routeTable.resolve(user)), "注销后路由应清空");
+      await(routeTable.register(user, SessionRouteTable.PLATFORM_WEB));
+      assertEquals(cmNodeId, await(routeTable.resolve(user, SessionRouteTable.PLATFORM_WEB)),
+        "路由应指向本节点");
+      await(routeTable.unregister(user, SessionRouteTable.PLATFORM_WEB));
+      assertNull(await(routeTable.resolve(user, SessionRouteTable.PLATFORM_WEB)), "注销后路由应清空");
       System.out.println("PROBE nodeId=" + cmNodeId + " 存活/路由读写校验通过");
     } finally {
       CountDownLatch closed = new CountDownLatch(1);

@@ -20,10 +20,13 @@ import org.junit.jupiter.api.Test;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -169,5 +172,43 @@ class C2CServiceTest {
     ChatProto.C2CNotify notify = ChatProto.C2CNotify.parseFrom(captured.get().getBody());
     String content = notify.getMessage().getContent().toStringUtf8();
     assertTrue(content.endsWith("?signed"), "notify content 应被签名: " + content);
+  }
+
+  @Test
+  @DisplayName("notify 同时投递收件人与发送者（多端同步）并携带 clientMsgId")
+  void notifyFannedToRecipientAndSender() throws Exception {
+    CountDownLatch pushed = new CountDownLatch(2);
+    List<PushEnvelope> captured = new CopyOnWriteArrayList<>();
+    PushRouter capturingPush = new PushRouter(vertx) {
+      @Override
+      public void push(PushEnvelope env) {
+        captured.add(env);
+        pushed.countDown();
+      }
+    };
+    SeqClientService seqClient = new SeqClientService(vertx) {
+      @Override
+      public Future<Long> fetchNextSequence(long id) { return Future.succeededFuture(42L); }
+    };
+    C2CService service = new C2CService(capturingPush, stubRepo(), seqClient,
+      new SnowflakeIdGenerator(1), (msgType, content) -> content);
+
+    ImMessage req = pbC2CReq(100L, 200L, 1, "hello");
+
+    CountDownLatch done = new CountDownLatch(1);
+    service.process(req).onComplete(ar -> done.countDown());
+    assertTrue(done.await(10, TimeUnit.SECONDS));
+    assertTrue(pushed.await(10, TimeUnit.SECONDS), "收件人与发送者应各收到一次推送");
+    assertEquals(2, captured.size());
+
+    Set<String> targets = captured.stream().map(PushEnvelope::getTargetUserId).collect(Collectors.toSet());
+    assertEquals(Set.of("200", "100"), targets, "应分别投递收件人与发送者");
+
+    for (PushEnvelope env : captured) {
+      ChatProto.C2CNotify notify = ChatProto.C2CNotify.parseFrom(env.getBody());
+      assertEquals(1L, notify.getClientMsgId(), "notify 应回带 clientMsgId 供客户端合并去重");
+      assertEquals(42L, notify.getSeq());
+      assertNotEquals(0L, notify.getMessageId(), "notify 应携带服务端雪花消息 ID");
+    }
   }
 }

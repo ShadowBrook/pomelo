@@ -3,7 +3,10 @@ package com.github.moxib.pomelo.model;
 /**
  * Logic-Server → Gateway 的推送信封。
  * 在 EventBus 上以 {@link PushCodec} 二进制编码传输，各 Gateway 节点收到后
- * 根据 targetUserId 查本地 SessionRegistry 投递。
+ * 根据 targetUserId + targetPlatform 查本地 SessionRegistry 投递。
+ *
+ * targetPlatform 为空表示不区分端型——Gateway 投递给该用户在本节点的所有端会话；
+ * 非空时只投递对应该端型的会话（集群扇出时 PushRouter 会按端型复制信封）。
  *
  * body 为推送体字节，一律为 Protobuf 编码（codecId 冻结为 0），
  * Gateway 直接投递无需转换。
@@ -11,6 +14,7 @@ package com.github.moxib.pomelo.model;
 public class PushEnvelope {
 
   private String targetUserId;
+  private String targetPlatform = "";
   private int cmd;
   private byte[] body;
   private String correlationMsgId;
@@ -25,8 +29,20 @@ public class PushEnvelope {
     this.body = body;
   }
 
+  /** 按端型复制信封（集群扇出用）：共享 body 字节，携带同一 sentAt */
+  public PushEnvelope forPlatform(String platform) {
+    PushEnvelope copy = new PushEnvelope(targetUserId, cmd, body);
+    copy.setTargetPlatform(platform);
+    copy.setCorrelationMsgId(correlationMsgId);
+    copy.setSentAtEpochMs(sentAtEpochMs);
+    return copy;
+  }
+
   public String getTargetUserId() { return targetUserId; }
   public void setTargetUserId(String targetUserId) { this.targetUserId = targetUserId; }
+
+  public String getTargetPlatform() { return targetPlatform != null ? targetPlatform : ""; }
+  public void setTargetPlatform(String targetPlatform) { this.targetPlatform = targetPlatform; }
 
   public int getCmd() { return cmd; }
   public void setCmd(int cmd) { this.cmd = cmd; }

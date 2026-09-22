@@ -121,6 +121,10 @@ public class PullService extends ServiceBase {
           mc.putExt("senderNickname", senderInfo.nickname());
         }
         mc.putExt("seq", String.valueOf(r.getSeq()));
+        // clientMsgId 供多端/重连场景与本地乐观气泡合并去重
+        if (r.getClientMsgId() != 0) {
+          mc.putExt("clientMsgId", String.valueOf(r.getClientMsgId()));
+        }
         resp.addMessages(mc);
       }
     }

@@ -4,7 +4,6 @@ import com.github.moxib.pomelo.config.SessionRouteTable;
 import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import com.github.moxib.pomelo.model.PushCodec;
 import com.github.moxib.pomelo.model.PushEnvelope;
-import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,10 +12,11 @@ import java.util.Map;
 
 /**
  * Logic-Server 推送路由器。
- * 集群模式按 SessionRouteTable 精确路由到目标 Gateway 节点；目标不在线（无路由）
- * 或所在节点已死时直接丢弃——推送只是降低在线收信延迟的优化，消息可靠性由
- * seq + ACK + PULL 离线同步保证，不做广播兜底（离线用户占比高，广播是纯放大）。
- * 非集群单进程模式下经本地 EventBus 点对点投递给本进程 Gateway。
+ * 集群模式按 SessionRouteTable 解析用户全部端型路由并逐一投递（web/android 各端
+ * 同步收信）；目标端不在线（无路由）或所在节点已死时直接丢弃——推送只是降低在线
+ * 收信延迟的优化，消息可靠性由 seq + ACK + PULL 离线同步保证，不做广播兜底。
+ * 非集群单进程模式下经本地 EventBus 点对点投递给本进程 Gateway（信封不带端型，
+ * Gateway 投递给该用户在本节点的全部端会话）。
  */
 public class PushRouter {
 
@@ -39,8 +39,8 @@ public class PushRouter {
   }
 
   /**
-   * 推送消息。集群模式仅精确路由：目标在线投递，离线/死节点/路由查询失败丢弃并按原因计数；
-   * 单进程模式本地投递。mode 标签：precise / dropped / local。
+   * 推送消息（按端型扇出）。集群模式对用户的每个在线端型各投递一次（复制信封携带端型）；
+   * 单进程模式本地投递一次。mode 标签：precise / dropped / local。
    * Prometheus 要求同名指标 tag key 一致，所有路径统一携带 reason（不适用时为 none）。
    */
   public void push(PushEnvelope env) {
@@ -51,36 +51,43 @@ public class PushRouter {
       vertx.eventBus().send(LOCAL_PUSH_ADDRESS, PushCodec.encode(env));
       return;
     }
-    routeTable.resolve(targetUserId)
-      .compose(nodeId -> {
-        if (nodeId == null || nodeId.isEmpty()) {
-          return Future.succeededFuture(Map.entry("", false));
+    routeTable.resolveAll(targetUserId)
+      .onSuccess(routes -> {
+        if (routes.isEmpty()) {
+          PomeloMetrics.counter("im.push.delivery.total", "mode", "dropped", "reason", "no_route").increment();
+          LOG.debug("Push dropped (no_route): target={} cmd={}", targetUserId, env.getCmd());
+          return;
         }
-        // 路由指向的节点已死（gateway 崩溃）时连接随节点消亡，用户必然离线
-        return routeTable.isNodeAlive(nodeId).map(alive -> Map.entry(nodeId, alive));
-      })
-      .onSuccess(route -> {
-        String nodeId = route.getKey();
-        boolean alive = route.getValue();
-        if (!nodeId.isEmpty() && alive) {
-          // 精确路由到存活的 Gateway 节点
-          PomeloMetrics.counter("im.push.delivery.total", "mode", "precise", "reason", "none").increment();
-          String addr = "gateway.push." + nodeId;
-          vertx.eventBus().send(addr, PushCodec.encode(env));
-          LOG.debug("Push sent directly: target={} node={} cmd={}", targetUserId, nodeId, env.getCmd());
-        } else {
-          if (!nodeId.isEmpty()) {
-            // 仅当路由仍指向该死节点时清理，避免误删用户刚迁移到新节点的路由
-            routeTable.unregister(targetUserId, nodeId);
-          }
-          String reason = nodeId.isEmpty() ? "no_route" : "dead_node";
-          PomeloMetrics.counter("im.push.delivery.total", "mode", "dropped", "reason", reason).increment();
-          LOG.debug("Push dropped ({}): target={} cmd={}", reason, targetUserId, env.getCmd());
+        for (Map.Entry<String, String> route : routes.entrySet()) {
+          deliverToNode(env, route.getKey(), route.getValue(), targetUserId);
         }
       })
       .onFailure(e -> {
         LOG.warn("Route lookup failed for {}, push dropped (由客户端离线 PULL 补偿)", targetUserId, e);
         PomeloMetrics.counter("im.push.delivery.total", "mode", "dropped", "reason", "lookup_failed").increment();
       });
+  }
+
+  /**
+   * 投递到单个端型所在节点。路由指向的节点已死（gateway 崩溃）时连接随节点消亡，
+   * 用户在该端型上必然离线：条件清理残留路由并丢弃。
+   */
+  private void deliverToNode(PushEnvelope env, String platform, String nodeId, String targetUserId) {
+    routeTable.isNodeAlive(nodeId).onSuccess(alive -> {
+      if (alive) {
+        // 精确路由到存活的 Gateway 节点（信封复制并携带端型，gateway 据此选会话）
+        PomeloMetrics.counter("im.push.delivery.total", "mode", "precise", "reason", "none").increment();
+        String addr = "gateway.push." + nodeId;
+        vertx.eventBus().send(addr, PushCodec.encode(env.forPlatform(platform)));
+        LOG.debug("Push sent: target={} platform={} node={} cmd={}",
+          targetUserId, platform, nodeId, env.getCmd());
+      } else {
+        // 仅当路由仍指向该死节点时清理，避免误删用户刚迁移到新节点的路由
+        routeTable.unregister(targetUserId, platform, nodeId);
+        PomeloMetrics.counter("im.push.delivery.total", "mode", "dropped", "reason", "dead_node").increment();
+        LOG.debug("Push dropped (dead_node): target={} platform={} cmd={}",
+          targetUserId, platform, env.getCmd());
+      }
+    });
   }
 }

@@ -93,7 +93,7 @@ public interface Connection {
 
     public WebSocketConnection(ServerWebSocket webSocket, Context context) {
       this.webSocket = webSocket;
-      this.writes = new BoundedWriteQueue(webSocket, () -> webSocket.close(), context);
+      this.writes = new BoundedWriteQueue(webSocket, webSocket::close, context);
     }
 
     @Override
