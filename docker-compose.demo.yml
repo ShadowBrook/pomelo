@@ -34,10 +34,16 @@ services:
 
   # 网关在 demo 形态关闭自身 TLS：9000/9001 均以明文提供给 Caddy（layer4 与 /ws 反代），
   # TLS 统一在边缘终结（原生客户端因此拿到正规 ACME 证书而非自签）。容器内网明文可接受：
-  # 9000/9001 宿主侧均只绑 127.0.0.1，不出 docker 网络。
+  # 9000/9001 宿主侧均不出 docker 网络。
   gateway:
     environment:
       POMELO_TLS_ENABLED: "false"
+    # 基线给网关绑的宿主 127.0.0.1:9000 与 caddy 发布的 0.0.0.0:9000 冲突（overlay 的
+    # ports 是追加语义，去不掉基线条目），用 !override 整体覆盖：demo 形态网关只留
+    # 9001，裸 TCP 9000 由 caddy 独占发布（layer4 TLS 终结 → gateway:9000）。
+    # 需 docker compose v2.24+（2023-12）；过旧时报 unknown tag !override，先升级插件
+    ports: !override
+      - "${POMELO_WS_BIND:-127.0.0.1}:9001:9001"
 
   caddy:
     # 自定义镜像：官方 caddy:2 无 layer4 模块，起不来（Caddyfile 有 layer4 全局块）
