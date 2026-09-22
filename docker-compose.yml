@@ -67,10 +67,11 @@ services:
     image: pomelo/gateway
     container_name: pomelo-gateway
     ports:
-      # TCP Gateway：本变量仅服务于基线（开发/局域网联调）形态；公网（demo overlay）
-      # 形态下 9000 由 caddy 的 layer4 监听并发布（TLS 终结 → gateway:9000），overlay
-      # 已用 !override 移除本条绑定——切勿在 demo 的 .env 设 POMELO_TCP_BIND=0.0.0.0
-      - "${POMELO_TCP_BIND:-127.0.0.1}:9000:9000"
+      # TCP Gateway 宿主端口（容器内恒为 9000）。公网（demo overlay）形态下 caddy
+      # 独占发布宿主 9000（layer4 TLS 终结 → gateway:9000），网关宿主侧经 demo .env
+      # 的 POMELO_TCP_HOST_PORT=9002 挪开避免同机双绑；该绑定仅供开发/局域网联调
+      # 与服务器本机排障（openssl s_client 等）使用
+      - "${POMELO_TCP_BIND:-127.0.0.1}:${POMELO_TCP_HOST_PORT:-9000}:9000"
       # WebSocket Gateway：开发默认放开给局域网真机联调；生产 .env 设
       # POMELO_WS_BIND=127.0.0.1（Caddy /ws 走 docker 内网反代，宿主端口无需公开）
       - "${POMELO_WS_BIND:-0.0.0.0}:9001:9001"

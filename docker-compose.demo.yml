@@ -7,7 +7,7 @@
 #   DEMO_MEDIA_DOMAIN=oss.pomelo.host  # 对象存储（presigned URL 直连 MinIO）
 #   GRAFANA_ADMIN_USER / GRAFANA_ADMIN_PASSWORD  # Grafana 登录凭据（必填）
 #   POMELO_API_BIND / POMELO_WS_BIND=127.0.0.1   # 仅反代可达，宿主端口不对公网开放
-#   （TCP 9000 由 Caddy layer4 接入并发布，无需再开网关的 POMELO_TCP_BIND）
+#   POMELO_TCP_HOST_PORT=9002          # 宿主 9000 让给 caddy 的 layer4，网关挪到 9002
 #
 # 与基线 compose 的差异：
 #   1. 新增 caddy：80/443 + 9000 反代 + Let's Encrypt 自动签发（三个域名各一张证书；
@@ -34,16 +34,11 @@ services:
 
   # 网关在 demo 形态关闭自身 TLS：9000/9001 均以明文提供给 Caddy（layer4 与 /ws 反代），
   # TLS 统一在边缘终结（原生客户端因此拿到正规 ACME 证书而非自签）。容器内网明文可接受：
-  # 9000/9001 宿主侧均不出 docker 网络。
+  # 9000/9001 宿主侧均不出 docker 网络（9001 绑 127.0.0.1；9000 宿主侧由
+  # .env 的 POMELO_TCP_HOST_PORT=9002 挪开，宿主 9000 归 caddy 的 layer4 独占）
   gateway:
     environment:
       POMELO_TLS_ENABLED: "false"
-    # 基线给网关绑的宿主 127.0.0.1:9000 与 caddy 发布的 0.0.0.0:9000 冲突（overlay 的
-    # ports 是追加语义，去不掉基线条目），用 !override 整体覆盖：demo 形态网关只留
-    # 9001，裸 TCP 9000 由 caddy 独占发布（layer4 TLS 终结 → gateway:9000）。
-    # 需 docker compose v2.24+（2023-12）；过旧时报 unknown tag !override，先升级插件
-    ports: !override
-      - "${POMELO_WS_BIND:-127.0.0.1}:9001:9001"
 
   caddy:
     # 自定义镜像：官方 caddy:2 无 layer4 模块，起不来（Caddyfile 有 layer4 全局块）

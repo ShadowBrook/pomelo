@@ -87,8 +87,9 @@ cd ~/pomelo
 cp .env.demo.example .env     # 含 COMPOSE_FILE（自动合并 demo overlay）
                               # DEMO_DOMAIN=pomelo.host / DEMO_MEDIA_DOMAIN=oss.pomelo.host
                               # ⚠️ 必改项：GRAFANA_ADMIN_PASSWORD（缺省值不可用，缺失时 compose 拒启）；
-                              #    另含 POMELO_API_BIND/POMELO_WS_BIND=127.0.0.1（仅反代可达；
-                              #    TCP 9000 由 caddy layer4 发布，勿设 POMELO_TCP_BIND，会冲突）
+                              #    POMELO_TCP_HOST_PORT=9002（宿主 9000 让给 caddy layer4，
+                              #    旧版 .env 缺这行会与 caddy 端口冲突）；
+                              #    POMELO_API_BIND/POMELO_WS_BIND=127.0.0.1（仅反代可达）
 vim .env
 ./deploy.sh                   # 构建 5 个业务镜像 + 生成 conf/jwt.env、conf/livekit.env（随机密钥）
                               # 末尾自动 docker compose up -d
@@ -138,7 +139,8 @@ cd ~/pomelo-web && git pull
 
 # 若 .env.demo.example 有新增变量（git diff .env.demo.example 检查），先同步进 .env 再重启。
 # 2026-09-22 起必补：GRAFANA_ADMIN_PASSWORD（Grafana 登录密码，缺失时 compose 拒启）、
-# POMELO_API_BIND/POMELO_WS_BIND=127.0.0.1（收紧 8888/9001，只经 Caddy 反代出公网）
+# POMELO_TCP_HOST_PORT=9002（宿主 9000 让给 caddy layer4，网关宿主绑定挪 9002，
+# 缺失会与 caddy 端口冲突）、POMELO_API_BIND/POMELO_WS_BIND=127.0.0.1（收紧 8888/9001）
 vim .env
 
 # Caddy 换 layer4 自定义镜像（pomelo/caddy-l4:2）+ TCP 9000 接入 + 网关切明文，
