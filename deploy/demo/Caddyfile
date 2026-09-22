@@ -1,11 +1,37 @@
-# Pomelo 演示/生产反代（Caddy 2）—— 双域名形态（主站 + 对象存储）
+# Pomelo 演示/生产反代（Caddy 2）—— 双域名形态（主站 + 对象存储）+ TCP 网关 layer4 接入
 # 用法见 docs/2026-09-14-demo-deploy.md；域名经 docker-compose.demo.yml 注入环境变量：
-#   SITE_DOMAIN  = pomelo.host         （前端 + /api + /ws + /lk）
+#   SITE_DOMAIN  = pomelo.host         （前端 + /api + /ws + /lk + TCP 9000）
 #   MEDIA_DOMAIN = oss.pomelo.host     （对象存储 presigned URL 直连 MinIO）
 #
 # 证书：域名形态由 Caddy 向 Let's Encrypt 自动签发续期（需 80/443 公网可达，国内服务器
 # 域名需已完成备案）。import.d 目录保持为空。
 # 纯 IP 备选形态：见 import.d/tls-local.caddy.example。
+#
+# 镜像：需含 layer4 模块的自定义构建（官方 caddy:2 无 l4，起不来），见
+# deploy/demo/caddy-l4/Dockerfile，docker compose build caddy 生成 pomelo/caddy-l4:2。
+
+# =====================================================================
+# 全局选项：layer4 应用 —— 原生客户端 TCP 接入（tcps://host:9000）
+# 终结 TLS 后明文转发容器内网 gateway:9000。tls handler 不自签证书，
+# 但复用下方 {$SITE_DOMAIN} HTTP 站点 ACME 签发的证书（同一实例共享证书缓存），
+# 原生客户端因此拿到正规 Let's Encrypt 证书，无需信任自签。
+# 网关侧须为明文：docker-compose.demo.yml 将 gateway 的 POMELO_TLS_ENABLED 置 false
+# （WS 9001 同理经本文件 /ws 明文反代，TLS 统一在边缘终结）。
+# =====================================================================
+{
+	layer4 {
+		:9000 {
+			# 仅放行 SNI=主域 的握手；无 SNI / 其它 SNI 一律断开（挡扫描器直连）
+			@sni {
+				tls sni {$SITE_DOMAIN}
+			}
+			route @sni {
+				tls
+				proxy pomelo-gateway:9000
+			}
+		}
+	}
+}
 
 {$SITE_DOMAIN} {
 	import /etc/caddy/import.d/*.caddy
@@ -20,16 +46,11 @@
 		}
 	}
 
-	# 网关 WebSocket（同源 /ws，与前端 useIMClient 的地址派生一致）
-	# 注：原始 TCP 网关（tcps://host:9000，原生客户端接入）不经 Caddy——官方 caddy 镜像
-	# 无 layer4 模块，无法代理非 HTTP 流量；公网形态由 .env 设 POMELO_TCP_BIND=0.0.0.0
-	# 直接发布宿主 9000（见 docker-compose.demo.yml 与 docs/2026-09-14-demo-deploy.md §2）。
+	# 网关 WebSocket（同源 /ws，与前端 useIMClient 的地址派生一致）。
+	# TLS 在边缘统一终结：demo 形态网关本体为明文（POMELO_TLS_ENABLED=false），
+	# 故此处直连明文上游，不再 https + skip_verify。
 	handle /ws {
-		reverse_proxy https://pomelo-gateway:9001 {
-			transport http {
-				tls_insecure_skip_verify
-			}
-		}
+		reverse_proxy pomelo-gateway:9001
 	}
 
 	# LiveKit 信令：剥掉 /lk 前缀（与 Vite 开发代理一致，LiveKit 只识别根路径）
