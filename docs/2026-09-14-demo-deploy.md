@@ -21,7 +21,7 @@
 
 ```
 浏览器/手机
-  │ https://pomelo.host               https://oss.pomelo.host
+  │ https://pomelo.host               https://oss.pomelo.host        https://grafana.pomelo.host
   ▼
 Caddy (80/443, Let's Encrypt 自动签发续期)
   ├─ /                → 前端静态资源 (~/pomelo-web/dist，Caddy 挂载)
@@ -29,7 +29,10 @@ Caddy (80/443, Let's Encrypt 自动签发续期)
   ├─ /ws              → pomelo-gateway:9001 (WSS)
   ├─ /lk/*            → livekit:7880 (剥前缀，LiveKit 信令)
   ├─ /minio/*         → silo:9000 (兜底路由，正常配置下不参与，见 §5)
-  └─ oss 子域整站     → silo:9000 (MinIO S3，presigned URL 直连)
+  ├─ oss 子域整站     → silo:9000 (MinIO S3，presigned URL 直连)
+  └─ grafana 子域整站 → grafana:3000 (Grafana 登录凭据在服务器 .env，匿名只读已关闭)
+原生客户端 TCP 直连（不经 Caddy，官方镜像无 layer4 模块）：
+  tcps://pomelo.host:9000 → pomelo-gateway:9000（.env 设 POMELO_TCP_BIND=0.0.0.0 发布）
 ICE 媒体直连（不经 Caddy）：7881/tcp + 3478/udp + 30000-30100/udp
 livekit → https://pomelo.host/api/livekit/webhook（webhook 兜底，已启用）
 ```
@@ -44,7 +47,13 @@ livekit → https://pomelo.host/api/livekit/webhook（webhook 兜底，已启用
 | Git + Deploy Key | `ssh-keygen -t ed25519`，公钥分别添加到 GitHub 两个仓库的 **Settings → Deploy keys**（勾选只读即可） | 拉取私有仓库 |
 
 防火墙（腾讯云控制台，默认拒绝）只放行：**80/tcp、443/tcp+udp、7881/tcp、3478/udp、
-30000-30100/udp**。切勿放行 5432/6379/8888/9001/9002（基线 compose 已全部绑 127.0.0.1）。
+30000-30100/udp、9000/tcp**。切勿放行 5432/6379/8888/9001/9002——基线 compose 里
+这些宿主端口经 `.env` 的 `POMELO_API_BIND` / `POMELO_WS_BIND` 绑到 127.0.0.1
+（demo overlay 的 `.env` 模板默认即如此，API/WS 只经 Caddy 反代出公网）；
+9000（TCP 网关）由 `POMELO_TCP_BIND=0.0.0.0` 对公网发布，供原生客户端
+`tcps://host:9000` 直连（Caddy 无 layer4 模块代理不了原始 TCP）。注意网关
+9000 的 TLS 证书是 `./scripts/gen-dev-cert.sh` 生成的自签证书（SAN 为 localhost），
+严格校验证书的客户端需在 conf/tls 换成正规证书。
 
 Maven 依赖加速（可选，腾讯内网镜像）——`~/.m2/settings.xml`：
 
@@ -78,8 +87,17 @@ git clone git@github.com:ShadowBrook/pomelo-web.git pomelo-web
 cd ~/pomelo
 cp .env.demo.example .env     # 含 COMPOSE_FILE（自动合并 demo overlay）
                               # DEMO_DOMAIN=pomelo.host / DEMO_MEDIA_DOMAIN=oss.pomelo.host
+                              # ⚠️ 必改项：GRAFANA_ADMIN_PASSWORD（缺省值不可用，缺失时 compose 拒启）；
+                              #    另含 POMELO_TCP_BIND=0.0.0.0（TCP 网关公网直连）与
+                              #    POMELO_API_BIND/POMELO_WS_BIND=127.0.0.1（仅反代可达）
+vim .env
 ./deploy.sh                   # 构建 5 个业务镜像 + 生成 conf/jwt.env、conf/livekit.env（随机密钥）
                               # 末尾自动 docker compose up -d
+# Grafana 入口：https://grafana.pomelo.host（凭据即 .env 的 GRAFANA_ADMIN_USER/PASSWORD）。
+# ⚠️ 首启前就要定好密码：GF_SECURITY_ADMIN_PASSWORD 只在 grafana-data 卷首次初始化时生效，
+#    已初始化过的旧部署需在 UI 里改密，或 docker compose down && docker volume rm
+#    pomelo_grafana-data 后重建（看板由 provisioning 只读挂载，不会丢）
+# 需在 DNS 加一条 A 记录：grafana.pomelo.host → 服务器公网 IP（与 oss 子域同法）
 # 3) 前端构建（dist 即 Caddy 挂载路径，即时生效）
 cd ~/pomelo-web && npm ci
 cp .env.example .env.local      # 站点文案/备案号等站点级配置写这里（*.local 不入库）
@@ -118,6 +136,15 @@ docker compose ps --all | grep db-migrate      # Exited (0) 即成功
 ```bash
 cd ~/pomelo && git pull          # 注意拉到最新（含 ConfigHolder 修复）
 cd ~/pomelo-web && git pull
+
+# 若 .env.demo.example 有新增变量（git diff .env.demo.example 检查），先同步进 .env 再重启。
+# 2026-09-22 起必补：GRAFANA_ADMIN_PASSWORD（Grafana 登录密码，缺失时 compose 拒启）、
+# POMELO_TCP_BIND=0.0.0.0（TCP 网关公网直连）、POMELO_API_BIND/POMELO_WS_BIND=127.0.0.1
+# （收紧 8888/9001，只经 Caddy 反代出公网——这两项不补则宿主端口维持旧的 0.0.0.0 全开形态）
+vim .env
+
+# compose 文件/env 变更需重建相关容器（端口绑定与环境变量只在重建时生效）
+cd ~/pomelo && docker compose up -d caddy grafana pomelo pomelo-gateway
 
 # 后端两个镜像重建 + 容器滚动更新（deploy.sh 末尾自动 up -d）
 cd ~/pomelo && ./deploy.sh pomelo-logic-server pomelo-gateway
@@ -256,6 +283,11 @@ curl -s https://pomelo.host/api/user/register -H 'Content-Type: application/json
 - Redis 未设密码（演示取舍），但 6379 未对公网开放（绑定回环 + 云防火墙）；长期运行建议加 `requirepass` 并同步各服务 redis 配置。
 - `conf/jwt.env`、`conf/livekit.env` 是 0600 随机密钥，泄露等同接管签发权；MinIO accessKey/secret 不出服务端。
 - 服务器上的构建密钥面：GitHub Deploy Key（只读）泄露影响限于拉代码；Maven settings 的镜像配置无秘密。
+- 宿主端口公网暴露面以 `.env` 的三个 BIND 变量为准（8888/9001 必须 127.0.0.1，9000 按
+  原生客户端需要放开）；自检：`docker ps --format '{{.Names}}\t{{.Ports}}' | grep -E "8888|9001"`，
+  出现 `0.0.0.0` 即配错。
+- Grafana 公网入口已关匿名只读并强制登录（demo overlay `GF_AUTH_ANONYMOUS_ENABLED=false`，
+  凭据经服务器 `.env` 注入，`.env` 已 gitignore 不入库）。
 
 ## 9. 备选：开发机构建 + 镜像传输（服务器不构建时）
 
@@ -285,6 +317,11 @@ cd ~/pomelo && docker compose -f docker-compose.yml -f docker-compose.demo.yml u
 3. `.env` 改 `DEMO_DOMAIN=1.15.179.198`（DEMO_MEDIA_DOMAIN 保留不动，该形态不使用）
 4. 确认 `conf/tls/dev-server.crt` SAN 含该 IP（Mac 上 `mkcert -cert-file conf/tls/dev-server.crt -key-file conf/tls/dev-server.key localhost pomelo pomelo-gateway 127.0.0.1 ::1 1.15.179.198`），并同步 conf/tls 到服务器
 5. `docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d caddy` 重建 Caddy；演示设备装一次 `pomelo-web/public/rootCA.pem`（iOS 描述文件 + 完全信任；Android 安装 CA 证书）
+
+注意：Grafana 子域入口（`grafana.{$SITE_DOMAIN}`）是域名形态专属——纯 IP 形态下
+`grafana.<IP>` 不是合法主机名，Caddy 签不出证书。过渡期看监控走 SSH 隧道：
+`ssh -L 3000:127.0.0.1:3000 ubuntu@<IP>` 后本机开 `http://localhost:3000`
+（基线 compose 已把 3000 绑在 127.0.0.1）。
 
 > **IP 形态功能降级**：对象存储走 `oss` 子域的 https presigned URL，纯 IP 形态下该子域不可用，
 > 图片/视频/文件/头像等媒体功能无法使用（仅文字与音视频通话可用）。此形态仅为备案前过渡。

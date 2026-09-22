@@ -25,7 +25,9 @@ services:
     image: pomelo/pomelo
     container_name: pomelo
     ports:
-      - "8888:8888"   # HTTP API（开发：放开给局域网真机联调；生产环境改回 127.0.0.1 走反代）
+      # 开发默认放开给局域网真机联调；生产 .env 设 POMELO_API_BIND=127.0.0.1
+      # （Caddy /api 走 docker 内网反代，宿主端口无需公开）
+      - "${POMELO_API_BIND:-0.0.0.0}:8888:8888"
     environment:
       TZ: "Asia/Shanghai"
       # 集群 EventBus（与 gateway / seqsvr 同 Redis 集群）
@@ -65,8 +67,12 @@ services:
     image: pomelo/gateway
     container_name: pomelo-gateway
     ports:
-      - "127.0.0.1:9000:9000"   # TCP Gateway（Web 端不用；原生客户端接入时再放开）
-      - "9001:9001"   # WebSocket Gateway（开发：放开给局域网真机联调；生产环境改回 127.0.0.1 走反代）
+      # TCP Gateway：原生客户端 tcps://host:9000 直连。Caddy（官方镜像无 layer4 模块）
+      # 无法代理原始 TCP，公网形态在 .env 设 POMELO_TCP_BIND=0.0.0.0 直接发布宿主端口
+      - "${POMELO_TCP_BIND:-127.0.0.1}:9000:9000"
+      # WebSocket Gateway：开发默认放开给局域网真机联调；生产 .env 设
+      # POMELO_WS_BIND=127.0.0.1（Caddy /ws 走 docker 内网反代，宿主端口无需公开）
+      - "${POMELO_WS_BIND:-0.0.0.0}:9001:9001"
     environment:
       TZ: "Asia/Shanghai"
       VERTX_CLUSTER: "true"
@@ -328,9 +334,10 @@ services:
     container_name: pomelo-grafana
     environment:
       TZ: "Asia/Shanghai"
-      # 开发环境：匿名只读免登录看板；编辑用 admin 账号
-      GF_SECURITY_ADMIN_USER: "admin"
-      GF_SECURITY_ADMIN_PASSWORD: "pomelo123"
+      # 开发环境：匿名只读免登录看板；编辑用 admin 账号。
+      # 生产（demo overlay）会关闭匿名，密码经仓库根 .env 的 GRAFANA_ADMIN_PASSWORD 注入
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-pomelo123}
       GF_AUTH_ANONYMOUS_ENABLED: "true"
       GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
       GF_USERS_ALLOW_SIGN_UP: "false"
