@@ -6,6 +6,8 @@
 # 服务器不构建镜像时用 §9 镜像传输法（开发机 build 后 docker save/load）。
 # =====================================================================
 FROM caddy:2-builder AS builder
+# Go 模块走国内代理：proxy.golang.org 国内不可达（与 docs §2 Maven 配腾讯镜像同因）
+ENV GOPROXY=https://goproxy.cn,direct
 RUN xcaddy build --with github.com/mholt/caddy-l4
 
 FROM caddy:2
