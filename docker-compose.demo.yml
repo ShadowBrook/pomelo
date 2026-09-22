@@ -10,8 +10,8 @@
 #   （TCP 9000 由 Caddy layer4 接入并发布，无需再开网关的 POMELO_TCP_BIND）
 #
 # 与基线 compose 的差异：
-#   1. 新增 caddy：80/443 + 9000 反代 + Let's Encrypt 自动签发（三个域名各一张证书；
-#      TCP 9000 走 layer4 TLS 终结，镜像为 pomelo/caddy-l4:2，见 deploy/demo/caddy-l4/）
+#   1. 新增 caddy：80/443 反代 + Let's Encrypt 自动签发（三个域名各一张证书）；
+#      IM 长连接 /ws 与 /tcp 双路径均反代 gateway:9001，全流量收口 443
 #   2. gateway：POMELO_TLS_ENABLED=false（TLS 在 Caddy 边缘统一终结，网关本体明文）
 #   3. livekit：换用 conf/livekit.demo.yaml（use_external_ip: true + webhook 兜底），
 #      去掉 --node-ip
@@ -32,23 +32,20 @@ services:
     # 公网部署靠 use_external_ip 自动探测公网 IP，不再用 --node-ip 宣告固定地址
     command: --config /etc/livekit/livekit.yaml
 
-  # 网关在 demo 形态关闭自身 TLS：9000/9001 均以明文提供给 Caddy（layer4 与 /ws 反代），
-  # TLS 统一在边缘终结（原生客户端因此拿到正规 ACME 证书而非自签）。容器内网明文可接受：
-  # 9000/9001 宿主侧均只绑 127.0.0.1，不出 docker 网络。
+  # 网关在 demo 形态关闭自身 TLS：9001 以明文提供给 Caddy（/ws 与 /tcp 反代），
+  # TLS 统一在边缘终结。容器内网明文可接受：9001 宿主侧只绑 127.0.0.1，
+  # 不出 docker 网络；裸 TCP 9000 公网形态不再暴露（原生客户端走 wss://host/tcp）。
   gateway:
     environment:
       POMELO_TLS_ENABLED: "false"
 
   caddy:
-    # 自定义镜像：官方 caddy:2 无 layer4 模块，起不来（Caddyfile 有 layer4 全局块）
-    build: ./deploy/demo/caddy-l4
-    image: pomelo/caddy-l4:2
+    image: caddy:2
     container_name: pomelo-caddy
     ports:
       - "80:80"         # HTTP→HTTPS 跳转 + ACME HTTP-01 校验（域名形态必需）
       - "443:443"
       - "443:443/udp"   # HTTP/3
-      - "9000:9000"     # TCP 网关（layer4 TLS 终结 → gateway:9000，原生客户端 tcps://）
     volumes:
       - ./deploy/demo/Caddyfile:/etc/caddy/Caddyfile:ro
       - ./deploy/demo/import.d:/etc/caddy/import.d:ro

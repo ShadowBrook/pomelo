@@ -23,19 +23,22 @@
 浏览器/手机
   │ https://pomelo.host               https://oss.pomelo.host        https://grafana.pomelo.host
   ▼
-Caddy (80/443/9000, Let's Encrypt 自动签发续期；镜像 pomelo/caddy-l4:2，含 layer4 模块)
+Caddy (80/443, Let's Encrypt 自动签发续期)
   ├─ /                → 前端静态资源 (~/pomelo-web/dist，Caddy 挂载)
   ├─ /api/*           → pomelo:8888 (HTTPS 自签，跳过校验)
-  ├─ /ws              → pomelo-gateway:9001 (明文反代，TLS 在边缘终结)
+  ├─ /ws              → pomelo-gateway:9001 (web 端 IM 长连接)
+  ├─ /tcp             → pomelo-gateway:9001 (原生长连接，wss://host/tcp)
   ├─ /lk/*            → livekit:7880 (剥前缀，LiveKit 信令)
   ├─ /minio/*         → silo:9000 (兜底路由，正常配置下不参与，见 §5)
   ├─ oss 子域整站     → silo:9000 (MinIO S3，presigned URL 直连)
-  ├─ grafana 子域整站 → grafana:3000 (Grafana 登录凭据在服务器 .env，匿名只读已关闭)
-  └─ layer4 :9000     → TLS 终结（复用主域 ACME 证书）→ pomelo-gateway:9000 明文
-                        （原生客户端 tcps://pomelo.host:9000，SNI 不符直接断开；
-                         gateway 在 demo 形态 POMELO_TLS_ENABLED=false，见 overlay）
+  └─ grafana 子域整站 → grafana:3000 (Grafana 登录凭据在服务器 .env，匿名只读已关闭)
 ICE 媒体直连（不经 Caddy）：7881/tcp + 3478/udp + 30000-30100/udp
 livekit → https://pomelo.host/api/livekit/webhook（webhook 兜底，已启用）
+
+IM 长连接说明：网关 TCP/WS 两侧共享同一套 ImMessage 帧协议，/ws 与 /tcp 只是
+路径语义区分，都反代 gateway:9001（TLS 在边缘终结，demo 形态网关本体明文）。
+原生客户端（Android）服务器地址填 wss://pomelo.host/tcp 即可（ImClient 按
+scheme 切换传输，帧协议不变）；裸 TCP 9000 公网形态不发布，公网只开 80/443。
 ```
 
 ## 2. 服务器一次性环境（首次配置）
@@ -48,11 +51,11 @@ livekit → https://pomelo.host/api/livekit/webhook（webhook 兜底，已启用
 | Git + Deploy Key | `ssh-keygen -t ed25519`，公钥分别添加到 GitHub 两个仓库的 **Settings → Deploy keys**（勾选只读即可） | 拉取私有仓库 |
 
 防火墙（腾讯云控制台，默认拒绝）只放行：**80/tcp、443/tcp+udp、7881/tcp、3478/udp、
-30000-30100/udp、9000/tcp**。切勿放行 5432/6379/8888/9001/9002——基线 compose 里
+30000-30100/udp**。切勿放行 5432/6379/8888/9000/9001/9002——基线 compose 里
 这些宿主端口经 `.env` 的 `POMELO_API_BIND` / `POMELO_WS_BIND` 绑到 127.0.0.1
 （demo overlay 的 `.env` 模板默认即如此，API/WS 只经 Caddy 反代出公网）。
-9000 由 Caddy 的 layer4 监听并发布（TLS 终结复用主域 ACME 证书，原生客户端
-`tcps://pomelo.host:9000` 拿到正规证书，无需信任自签；网关本体保持 127.0.0.1）。
+原生长连接走 `wss://pomelo.host/tcp`（与 /ws 同为 443 上的 WebSocket 反代，
+帧协议与裸 TCP 网关完全一致），公网无需放行 9000。
 
 Maven 依赖加速（可选，腾讯内网镜像）——`~/.m2/settings.xml`：
 
@@ -141,10 +144,9 @@ cd ~/pomelo-web && git pull
 # POMELO_API_BIND/POMELO_WS_BIND=127.0.0.1（收紧 8888/9001，只经 Caddy 反代出公网）
 vim .env
 
-# Caddy 换 layer4 自定义镜像（pomelo/caddy-l4:2）+ TCP 9000 接入 + 网关切明文，
-# 均为 compose 定义变更，需重建相关容器（端口/环境变量只在重建时生效）
-cd ~/pomelo && docker compose build caddy
-docker compose up -d caddy grafana gateway pomelo
+# Caddy 反代定义变更（/ws、/tcp、grafana 子域等）+ 网关切明文，
+# 需重建相关容器（端口/环境变量只在重建时生效）
+cd ~/pomelo && docker compose up -d caddy grafana gateway pomelo
 
 # 后端两个镜像重建 + 容器滚动更新（deploy.sh 末尾自动 up -d）
 cd ~/pomelo && ./deploy.sh pomelo-logic-server pomelo-gateway
@@ -296,14 +298,11 @@ curl -s https://pomelo.host/api/user/register -H 'Content-Type: application/json
 ```bash
 # 开发机（Apple Silicon → 服务器 x86_64 必须交叉构建 amd64）：
 JIB_PROXY=127.0.0.1:5780 JIB_PLATFORMS=linux/amd64 ./deploy.sh pomelo-logic-server pomelo-gateway
-# caddy-l4 镜像同样交叉构建（本地拉不动 caddy:2-builder 时可宿主 xcaddy 交叉编译后
-# COPY 进 caddy:2，见 deploy/demo/caddy-l4/Dockerfile 注释）：
-docker build --platform linux/amd64 -t pomelo/caddy-l4:2 deploy/demo/caddy-l4/
-docker save pomelo/pomelo pomelo/gateway pomelo/caddy-l4:2 | gzip > pomelo-update.tgz
+docker save pomelo/pomelo pomelo/gateway | gzip > pomelo-update.tgz
 scp pomelo-update.tgz ubuntu@1.15.179.198:
 # 服务器
 docker load < pomelo-update.tgz
-cd ~/pomelo && docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d pomelo gateway pomelo-gateway caddy
+cd ~/pomelo && docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d pomelo gateway caddy
 # 前端：开发机 npm run build 后 rsync dist/ 到 ~/pomelo-web/dist/
 ```
 
@@ -321,12 +320,13 @@ cd ~/pomelo && docker compose -f docker-compose.yml -f docker-compose.demo.yml u
 4. 确认 `conf/tls/dev-server.crt` SAN 含该 IP（Mac 上 `mkcert -cert-file conf/tls/dev-server.crt -key-file conf/tls/dev-server.key localhost pomelo pomelo-gateway 127.0.0.1 ::1 1.15.179.198`），并同步 conf/tls 到服务器
 5. `docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d caddy` 重建 Caddy；演示设备装一次 `pomelo-web/public/rootCA.pem`（iOS 描述文件 + 完全信任；Android 安装 CA 证书）
 
-注意：Grafana 子域入口（`grafana.{$SITE_DOMAIN}`）与 Caddy layer4 的 ACME TLS 终结
-（TCP 9000）都是域名形态专属——纯 IP 形态下 `grafana.<IP>` 不是合法主机名，l4 的
-`tls sni {$SITE_DOMAIN}` 也匹配不上 IP 直连。过渡期：TCP 网关改走网关直发（`.env` 设
-`POMELO_TCP_BIND=0.0.0.0`，基线参数化端口已支持；客户端信任 mkcert 自签或 SDK 的
-信任策略），监控走 SSH 隧道：`ssh -L 3000:127.0.0.1:3000 ubuntu@<IP>` 后本机开
-`http://localhost:3000`（基线 compose 已把 3000 绑在 127.0.0.1）。
+注意：Grafana 子域入口（`grafana.{$SITE_DOMAIN}`）是域名形态专属——纯 IP 形态下
+`grafana.<IP>` 不是合法主机名，Caddy 签不出证书。过渡期看监控走 SSH 隧道：
+`ssh -L 3000:127.0.0.1:3000 ubuntu@<IP>` 后本机开 `http://localhost:3000`
+（基线 compose 已把 3000 绑在 127.0.0.1）。原生长连接在 IP 形态可用
+`wss://<IP>:9001`（.env 设 `POMELO_WS_BIND=0.0.0.0` 临时放开，配 mkcert 证书），
+或 `.env` 设 `POMELO_TCP_BIND=0.0.0.0` 让原生端直接 `tcps://<IP>:9000`；
+域名形态（备案后）一律收口到 `wss://pomelo.host/tcp`。
 
 > **IP 形态功能降级**：对象存储走 `oss` 子域的 https presigned URL，纯 IP 形态下该子域不可用，
 > 图片/视频/文件/头像等媒体功能无法使用（仅文字与音视频通话可用）。此形态仅为备案前过渡。
