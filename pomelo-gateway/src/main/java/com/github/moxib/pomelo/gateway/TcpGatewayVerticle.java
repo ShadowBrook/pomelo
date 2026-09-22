@@ -135,15 +135,13 @@ public class TcpGatewayVerticle extends VerticleBase {
         } else {
           LOG.error("TCP 连接异常：{}", socket.remoteAddress(), throwable);
         }
-        String userId = sessionRegistry.unregisterByConnection(conn);
-        dispatcher.getRouteTable().unregister(userId);
+        dispatcher.onConnectionClosed(conn);
         socket.close();
       });
 
       socket.closeHandler(v -> {
         LOG.info("TCP 客户端断开连接：{}", socket.remoteAddress());
-        String userId = sessionRegistry.unregisterByConnection(conn);
-        dispatcher.getRouteTable().unregister(userId);
+        dispatcher.onConnectionClosed(conn);
       });
     };
   }

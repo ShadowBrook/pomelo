@@ -160,12 +160,13 @@ public class C2CService extends ServiceBase {
   }
 
   private void publishC2CNotify(MessageRecord record, String senderUserName, String senderNickname) {
-    String recipientUserId = String.valueOf(record.getRecipientId());
     byte[] body = buildC2CNotifyBody(record, senderUserName, senderNickname);
-    PushEnvelope env = new PushEnvelope(recipientUserId, CMD_C2C_NOTIFY_VALUE, body);
-    pushRouter.push(env);
-    LOG.debug("C2CNotify pushed: recipientId={} msgId={} seq={}",
-      record.getRecipientId(), record.getId(), record.getSeq());
+    // 多端同步：收件人 + 发送者的全部在线端型各投一份。发送者发起端会同时收到
+    // C2C_RESP 与本回推，客户端按 clientMsgId 与乐观气泡合并，不会出现重复气泡
+    pushRouter.push(new PushEnvelope(String.valueOf(record.getRecipientId()), CMD_C2C_NOTIFY_VALUE, body));
+    pushRouter.push(new PushEnvelope(String.valueOf(record.getSenderId()), CMD_C2C_NOTIFY_VALUE, body));
+    LOG.debug("C2CNotify pushed: recipientId={} senderId={} msgId={} seq={}",
+      record.getRecipientId(), record.getSenderId(), record.getId(), record.getSeq());
   }
 
   private byte[] buildC2CNotifyBody(MessageRecord record, String senderUserName, String senderNickname) {
@@ -186,6 +187,7 @@ public class C2CService extends ServiceBase {
       .setMessage(msgContentBuilder)
       .setSeq(record.getSeq())
       .setMessageId(record.getId())
+      .setClientMsgId(record.getClientMsgId())
       .build();
     return notify.toByteArray();
   }

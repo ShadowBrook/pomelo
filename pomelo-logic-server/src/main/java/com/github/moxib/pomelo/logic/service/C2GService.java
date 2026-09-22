@@ -160,7 +160,7 @@ public class C2GService extends ServiceBase {
             ctx.getMsgType(), ctx.getContent(), ctx.getExt(), seq, now, ctx.getMessageId())
           .compose(inserted -> {
             if (inserted) {
-              pushToGroupMembers(ctx, internalGroupId, seq, snowflakeId, senderNumericId);
+              pushToGroupMembers(ctx, internalGroupId, seq, snowflakeId);
               return Future.succeededFuture(new C2GRespResult(0, "success", snowflakeId, ctx.getGroupId(), seq, now));
             }
             // 幂等唯一键 (group_id, sender_id, client_msg_id) 冲突：客户端重试。
@@ -179,14 +179,13 @@ public class C2GService extends ServiceBase {
       });
   }
 
-  private void pushToGroupMembers(GroupMsgContext ctx, long internalGroupId, long seq, long snowflakeId, long senderNumericId) {
+  private void pushToGroupMembers(GroupMsgContext ctx, long internalGroupId, long seq, long snowflakeId) {
     groupRepo.findMembers(internalGroupId).onSuccess(members -> {
       byte[] body = buildC2GNotifyBody(ctx, seq, snowflakeId);
       int pushCount = 0;
       for (GroupMemberRecord member : members) {
-        if (member.getUserId() == senderNumericId) {
-          continue;
-        }
+        // 发送者也在推送目标内（多端同步）：发送者的其余端靠 clientMsgId
+        // 与乐观气泡合并去重，发起端不会出现重复气泡
         String targetUserId = String.valueOf(member.getUserId());
         PushEnvelope env = new PushEnvelope(targetUserId, CMD_C2G_NOTIFY_VALUE, body);
         pushRouter.push(env);
@@ -194,7 +193,7 @@ public class C2GService extends ServiceBase {
       }
       LOG.debug("C2GNotify 推送完成: groupId={} memberCount={} seq={}",
         ctx.getGroupId(), pushCount, seq);
-    }).onFailure(e -> LOG.warn("获取群成员失败 groupId={}: {}", ctx.getGroupId(), e.getMessage()));
+    }).onFailure(e -> LOG.warn("获取群成员失败 groupId={}: {}", internalGroupId, e.getMessage()));
   }
 
   private byte[] buildC2GNotifyBody(GroupMsgContext ctx, long seq, long snowflakeId) {
@@ -218,6 +217,7 @@ public class C2GService extends ServiceBase {
       .setName(ctx.getGroupName() != null ? ctx.getGroupName() : "")
       .setSeq(seq)
       .setMessageId(snowflakeId)
+      .setClientMsgId(ctx.getMessageId())
       .build()
       .toByteArray();
   }

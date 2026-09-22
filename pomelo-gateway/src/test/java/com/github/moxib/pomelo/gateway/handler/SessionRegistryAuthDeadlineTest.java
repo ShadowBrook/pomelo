@@ -47,7 +47,7 @@ class SessionRegistryAuthDeadlineTest {
     SessionRegistry registry = new SessionRegistry(vertx);
     FakeConnection conn = new FakeConnection();
     registry.startAuthDeadline(conn, DEADLINE_MS);
-    registry.register("100", 100L, conn, "u", "n");
+    registry.register("100", "web", 100L, conn, "u", "n", null);
 
     vertx.setTimer(OBSERVE_MS, id -> ctx.verify(() -> {
       assertFalse(conn.closed.get(), "认证成功应取消认证截止定时器");

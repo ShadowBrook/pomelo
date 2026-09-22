@@ -379,13 +379,25 @@ public class ApiVerticle extends VerticleBase {
     });
   }
 
+  /**
+   * 在线 = 任一端型有 session 路由 且 指向的节点存活，
+   * 与推送路由(PushRouter)判断一致，崩溃残留路由不会误报在线。
+   */
   private Future<Boolean> isOnline(String userId) {
-    return routeTable.resolve(userId)
-      .compose(nodeId -> {
-        if (nodeId == null || nodeId.isEmpty()) {
+    return routeTable.resolveAll(userId)
+      .compose(routes -> {
+        if (routes.isEmpty()) {
           return Future.succeededFuture(false);
         }
-        return routeTable.isNodeAlive(nodeId);
+        return Future.all(routes.values().stream().map(routeTable::isNodeAlive).toList())
+          .map(cf -> {
+            for (int i = 0; i < cf.size(); i++) {
+              if (cf.<Boolean>resultAt(i)) {
+                return true;
+              }
+            }
+            return false;
+          });
       })
       .recover(e -> Future.succeededFuture(false));
   }

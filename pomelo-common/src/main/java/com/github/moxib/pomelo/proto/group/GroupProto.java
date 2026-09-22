@@ -2189,6 +2189,25 @@ public final class GroupProto {
      * @return The messageId.
      */
     long getMessageId();
+
+    /**
+     * <pre>
+     * 客户端消息 ID (多端回推时与本地乐观气泡按此合并去重)
+     * </pre>
+     *
+     * <code>optional int64 client_msg_id = 7;</code>
+     * @return Whether the clientMsgId field is set.
+     */
+    boolean hasClientMsgId();
+    /**
+     * <pre>
+     * 客户端消息 ID (多端回推时与本地乐观气泡按此合并去重)
+     * </pre>
+     *
+     * <code>optional int64 client_msg_id = 7;</code>
+     * @return The clientMsgId.
+     */
+    long getClientMsgId();
   }
   /**
    * Protobuf type {@code im.group.C2GNotify}
@@ -2408,6 +2427,33 @@ public final class GroupProto {
       return messageId_;
     }
 
+    public static final int CLIENT_MSG_ID_FIELD_NUMBER = 7;
+    private long clientMsgId_ = 0L;
+    /**
+     * <pre>
+     * 客户端消息 ID (多端回推时与本地乐观气泡按此合并去重)
+     * </pre>
+     *
+     * <code>optional int64 client_msg_id = 7;</code>
+     * @return Whether the clientMsgId field is set.
+     */
+    @java.lang.Override
+    public boolean hasClientMsgId() {
+      return ((bitField0_ & 0x00000010) != 0);
+    }
+    /**
+     * <pre>
+     * 客户端消息 ID (多端回推时与本地乐观气泡按此合并去重)
+     * </pre>
+     *
+     * <code>optional int64 client_msg_id = 7;</code>
+     * @return The clientMsgId.
+     */
+    @java.lang.Override
+    public long getClientMsgId() {
+      return clientMsgId_;
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -2440,6 +2486,9 @@ public final class GroupProto {
       if (((bitField0_ & 0x00000008) != 0)) {
         output.writeInt64(6, messageId_);
       }
+      if (((bitField0_ & 0x00000010) != 0)) {
+        output.writeInt64(7, clientMsgId_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -2471,6 +2520,10 @@ public final class GroupProto {
       if (((bitField0_ & 0x00000008) != 0)) {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(6, messageId_);
+      }
+      if (((bitField0_ & 0x00000010) != 0)) {
+        size += com.google.protobuf.CodedOutputStream
+          .computeInt64Size(7, clientMsgId_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -2511,6 +2564,11 @@ public final class GroupProto {
         if (getMessageId()
             != other.getMessageId()) return false;
       }
+      if (hasClientMsgId() != other.hasClientMsgId()) return false;
+      if (hasClientMsgId()) {
+        if (getClientMsgId()
+            != other.getClientMsgId()) return false;
+      }
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -2545,6 +2603,11 @@ public final class GroupProto {
         hash = (37 * hash) + MESSAGE_ID_FIELD_NUMBER;
         hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
             getMessageId());
+      }
+      if (hasClientMsgId()) {
+        hash = (37 * hash) + CLIENT_MSG_ID_FIELD_NUMBER;
+        hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
+            getClientMsgId());
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -2693,6 +2756,7 @@ public final class GroupProto {
         name_ = "";
         seq_ = 0L;
         messageId_ = 0L;
+        clientMsgId_ = 0L;
         return this;
       }
 
@@ -2750,6 +2814,10 @@ public final class GroupProto {
         if (((from_bitField0_ & 0x00000020) != 0)) {
           result.messageId_ = messageId_;
           to_bitField0_ |= 0x00000008;
+        }
+        if (((from_bitField0_ & 0x00000040) != 0)) {
+          result.clientMsgId_ = clientMsgId_;
+          to_bitField0_ |= 0x00000010;
         }
         result.bitField0_ |= to_bitField0_;
       }
@@ -2818,6 +2886,9 @@ public final class GroupProto {
         if (other.hasMessageId()) {
           setMessageId(other.getMessageId());
         }
+        if (other.hasClientMsgId()) {
+          setClientMsgId(other.getClientMsgId());
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
@@ -2876,6 +2947,11 @@ public final class GroupProto {
                 bitField0_ |= 0x00000020;
                 break;
               } // case 48
+              case 56: {
+                clientMsgId_ = input.readInt64();
+                bitField0_ |= 0x00000040;
+                break;
+              } // case 56
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -3352,6 +3428,62 @@ public final class GroupProto {
         onChanged();
         return this;
       }
+
+      private long clientMsgId_ ;
+      /**
+       * <pre>
+       * 客户端消息 ID (多端回推时与本地乐观气泡按此合并去重)
+       * </pre>
+       *
+       * <code>optional int64 client_msg_id = 7;</code>
+       * @return Whether the clientMsgId field is set.
+       */
+      @java.lang.Override
+      public boolean hasClientMsgId() {
+        return ((bitField0_ & 0x00000040) != 0);
+      }
+      /**
+       * <pre>
+       * 客户端消息 ID (多端回推时与本地乐观气泡按此合并去重)
+       * </pre>
+       *
+       * <code>optional int64 client_msg_id = 7;</code>
+       * @return The clientMsgId.
+       */
+      @java.lang.Override
+      public long getClientMsgId() {
+        return clientMsgId_;
+      }
+      /**
+       * <pre>
+       * 客户端消息 ID (多端回推时与本地乐观气泡按此合并去重)
+       * </pre>
+       *
+       * <code>optional int64 client_msg_id = 7;</code>
+       * @param value The clientMsgId to set.
+       * @return This builder for chaining.
+       */
+      public Builder setClientMsgId(long value) {
+
+        clientMsgId_ = value;
+        bitField0_ |= 0x00000040;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 客户端消息 ID (多端回推时与本地乐观气泡按此合并去重)
+       * </pre>
+       *
+       * <code>optional int64 client_msg_id = 7;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearClientMsgId() {
+        bitField0_ = (bitField0_ & ~0x00000040);
+        clientMsgId_ = 0L;
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -3447,13 +3579,14 @@ public final class GroupProto {
       "t\"}\n\007C2GResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 " +
       "\001(\t\022\022\n\nmessage_id\030\003 \001(\003\022\020\n\010group_id\030\004 \001(" +
       "\003\022\023\n\013server_time\030\005 \001(\003\022\020\n\003seq\030\006 \001(\003H\000\210\001\001" +
-      "B\006\n\004_seq\"\272\001\n\tC2GNotify\022\021\n\tsender_id\030\001 \001(" +
+      "B\006\n\004_seq\"\350\001\n\tC2GNotify\022\021\n\tsender_id\030\001 \001(" +
       "\003\022\020\n\010group_id\030\002 \001(\003\022*\n\007message\030\003 \001(\0132\031.i" +
       "m.common.MessageContent\022\021\n\004name\030\004 \001(\tH\000\210" +
       "\001\001\022\020\n\003seq\030\005 \001(\003H\001\210\001\001\022\027\n\nmessage_id\030\006 \001(\003" +
-      "H\002\210\001\001B\007\n\005_nameB\006\n\004_seqB\r\n\013_message_idB1\n" +
-      "#com.github.moxib.pomelo.proto.groupB\nGr" +
-      "oupProtob\006proto3"
+      "H\002\210\001\001\022\032\n\rclient_msg_id\030\007 \001(\003H\003\210\001\001B\007\n\005_na" +
+      "meB\006\n\004_seqB\r\n\013_message_idB\020\n\016_client_msg" +
+      "_idB1\n#com.github.moxib.pomelo.proto.gro" +
+      "upB\nGroupProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -3477,7 +3610,7 @@ public final class GroupProto {
     internal_static_im_group_C2GNotify_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_C2GNotify_descriptor,
-        new java.lang.String[] { "SenderId", "GroupId", "Message", "Name", "Seq", "MessageId", });
+        new java.lang.String[] { "SenderId", "GroupId", "Message", "Name", "Seq", "MessageId", "ClientMsgId", });
     com.github.moxib.pomelo.proto.common.CommonProto.getDescriptor();
   }
 

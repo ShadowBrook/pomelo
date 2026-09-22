@@ -49,4 +49,6 @@ message C2GNotify {
     optional int64 seq               = 5;
     // 消息 ID (Snowflake，客户端用于去重/排序/ACK)
     optional int64 message_id        = 6;
+    // 客户端消息 ID (多端回推时与本地乐观气泡按此合并去重)
+    optional int64 client_msg_id     = 7;
 }
