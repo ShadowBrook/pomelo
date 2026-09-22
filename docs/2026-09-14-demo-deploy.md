@@ -87,8 +87,8 @@ cd ~/pomelo
 cp .env.demo.example .env     # 含 COMPOSE_FILE（自动合并 demo overlay）
                               # DEMO_DOMAIN=pomelo.host / DEMO_MEDIA_DOMAIN=oss.pomelo.host
                               # ⚠️ 必改项：GRAFANA_ADMIN_PASSWORD（缺省值不可用，缺失时 compose 拒启）；
-                              #    另含 POMELO_TCP_BIND=0.0.0.0（TCP 网关公网直连）与
-                              #    POMELO_API_BIND/POMELO_WS_BIND=127.0.0.1（仅反代可达）
+                              #    另含 POMELO_API_BIND/POMELO_WS_BIND=127.0.0.1（仅反代可达；
+                              #    TCP 9000 由 caddy layer4 发布，勿设 POMELO_TCP_BIND，会冲突）
 vim .env
 ./deploy.sh                   # 构建 5 个业务镜像 + 生成 conf/jwt.env、conf/livekit.env（随机密钥）
                               # 末尾自动 docker compose up -d
