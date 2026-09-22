@@ -26,6 +26,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static com.github.moxib.pomelo.proto.common.CommonProto.Cmd.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -70,15 +72,30 @@ class GroupRenameTest {
   }
 
   private static ImMessage updateReq(long operatorId, String groupId, String name) {
+    GroupMgmtProto.UpdateGroupReq.Builder b = GroupMgmtProto.UpdateGroupReq.newBuilder()
+      .setGroupId(groupId == null ? 0 : Long.parseLong(groupId));
+    if (name != null) {
+      b.setName(name);
+    }
+    return reqOf(operatorId, b);
+  }
+
+  private static ImMessage updateDescReq(long operatorId, String groupId, String description) {
+    GroupMgmtProto.UpdateGroupReq.Builder b = GroupMgmtProto.UpdateGroupReq.newBuilder()
+      .setGroupId(groupId == null ? 0 : Long.parseLong(groupId));
+    if (description != null) {
+      b.setDescription(description);
+    }
+    return reqOf(operatorId, b);
+  }
+
+  private static ImMessage reqOf(long operatorId, GroupMgmtProto.UpdateGroupReq.Builder b) {
     Map<String, String> headers = new HashMap<>();
     headers.put("userId", String.valueOf(operatorId));
-    byte[] body = GroupMgmtProto.UpdateGroupReq.newBuilder()
-      .setGroupId(groupId == null ? 0 : Long.parseLong(groupId))
-      .setName(name == null ? "" : name).build().toByteArray();
     return ImMessage.builder()
       .magic(ImMessage.MAGIC_NUMBER).version(ImMessage.WIRE_PROTOCOL_VERSION)
       .codecId((byte) 0).cmd(CMD_GROUP_UPDATE_REQ_VALUE).messageId("m-1")
-      .body(body).varHeaders(headers).build();
+      .body(b.build().toByteArray()).varHeaders(headers).build();
   }
 
   private static int codeOf(ImMessage resp) throws Exception {
@@ -103,6 +120,7 @@ class GroupRenameTest {
         GroupMgmtProto.GroupMemberChangeNotify.parseFrom(env.getBody());
       assertEquals(GroupMgmtProto.GroupMemberChangeNotify.ChangeType.INFO_UPDATED, notify.getType());
       assertEquals("新群名", notify.getName());
+      assertFalse(notify.hasDescription(), "只改群名时通知不应携带公告字段");
     }
   }
 
@@ -144,6 +162,53 @@ class GroupRenameTest {
   }
 
   @Test
+  @DisplayName("群主改公告：落库公告，INFO_UPDATED 携带新公告且不携带群名")
+  void ownerUpdatesDescription() throws Exception {
+    repo.members = List.of(member(OWNER_ID, 2), member(MEMBER_ID, 0));
+    ImMessage resp = call(service.process(updateDescReq(OWNER_ID, String.valueOf(GROUP_ID), "  今晚八点开会  ")));
+    assertEquals(0, codeOf(resp));
+    assertNull(repo.renamedName.get(), "只改公告时不应触碰群名");
+    assertEquals("今晚八点开会", repo.updatedDesc.get(), "落库的公告应去除首尾空白");
+    assertEquals(2, pushes.size());
+    GroupMgmtProto.GroupMemberChangeNotify notify =
+      GroupMgmtProto.GroupMemberChangeNotify.parseFrom(pushes.get(0).getBody());
+    assertEquals(GroupMgmtProto.GroupMemberChangeNotify.ChangeType.INFO_UPDATED, notify.getType());
+    assertEquals("今晚八点开会", notify.getDescription());
+    assertFalse(notify.hasName(), "只改公告时通知不应携带群名");
+  }
+
+  @Test
+  @DisplayName("清空公告：空串是合法值（与「未提供」区分）")
+  void clearDescription() throws Exception {
+    repo.members = List.of(member(OWNER_ID, 2));
+    ImMessage resp = call(service.process(updateDescReq(OWNER_ID, String.valueOf(GROUP_ID), "")));
+    assertEquals(0, codeOf(resp));
+    assertEquals("", repo.updatedDesc.get());
+    GroupMgmtProto.GroupMemberChangeNotify notify =
+      GroupMgmtProto.GroupMemberChangeNotify.parseFrom(pushes.get(0).getBody());
+    assertEquals("", notify.getDescription());
+  }
+
+  @Test
+  @DisplayName("普通成员改公告被拒")
+  void memberCannotUpdateDescription() throws Exception {
+    repo.members = List.of(member(OWNER_ID, 2), member(MEMBER_ID, 0));
+    ImMessage resp = call(service.process(updateDescReq(MEMBER_ID, String.valueOf(GROUP_ID), "越权公告")));
+    assertTrue(codeOf(resp) != 0);
+    assertNull(repo.updatedDesc.get());
+    assertEquals(0, pushes.size());
+  }
+
+  @Test
+  @DisplayName("name 与 description 都不提供 → 400")
+  void nothingToUpdate() throws Exception {
+    repo.members = List.of(member(OWNER_ID, 2));
+    ImMessage resp = call(service.process(updateDescReq(OWNER_ID, String.valueOf(GROUP_ID), null)));
+    assertTrue(codeOf(resp) != 0);
+    assertEquals(0, pushes.size());
+  }
+
+  @Test
   @DisplayName("群不存在（改名未生效）返回错误且不推送")
   void groupMissing() throws Exception {
     repo.members = List.of(member(OWNER_ID, 2));
@@ -157,10 +222,12 @@ class GroupRenameTest {
   private class FakeGroupRepo implements GroupRepository {
     List<GroupMemberRecord> members = List.of();
     final AtomicReference<String> renamedName = new AtomicReference<>(null);
+    final AtomicReference<String> updatedDesc = new AtomicReference<>(null);
     int renameRows = 1;
 
-    @Override public Future<Integer> updateGroupName(long groupId, String name) {
+    @Override public Future<Integer> updateGroupInfo(long groupId, String name, String description) {
       renamedName.set(name);
+      updatedDesc.set(description);
       return Future.succeededFuture(renameRows);
     }
     @Override public Future<List<GroupMemberRecord>> findMembers(long groupId) {

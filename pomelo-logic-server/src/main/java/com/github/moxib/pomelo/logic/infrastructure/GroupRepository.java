@@ -40,9 +40,10 @@ public interface GroupRepository {
   Future<Integer> dissolveGroup(long groupId, long ownerId);
 
   /**
-   * 修改群名。返回 1 表示已更新，0 表示群不存在。
+   * 修改群名/群公告（null 表示该字段不改；空串公告表示清空）。
+   * 返回 1 表示已更新，0 表示群不存在。
    */
-  Future<Integer> updateGroupName(long groupId, String name);
+  Future<Integer> updateGroupInfo(long groupId, String name, String description);
 
   Future<Boolean> isMember(long groupId, long userId);
 

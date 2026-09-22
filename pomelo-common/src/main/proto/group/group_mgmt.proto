@@ -122,6 +122,8 @@ message GroupMemberChangeNotify {
     string nickname     = 6;
     // INFO_UPDATED 时为修改后的群名，客户端据此就地刷新，无需回源查询
     optional string name = 7;
+    // INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+    optional string description = 8;
 
     enum ChangeType {
         INVITED = 0;
@@ -139,13 +141,15 @@ message GroupMemberChangeNotify {
 }
 
 // ============================================================================
-// 修改群信息（群名等；仅群主/管理员）
+// 修改群信息（群名 / 群公告；仅群主/管理员）
 // ============================================================================
 message UpdateGroupReq {
     // 群 ID
     int64 group_id = 1;
-    // 新群名（非空）
-    string name    = 2;
+    // 新群名（不修改则不设置；设置时不得为空串）
+    optional string name = 2;
+    // 新群公告（不修改则不设置；显式置空串表示清空公告）
+    optional string description = 3;
 }
 
 message UpdateGroupResp {

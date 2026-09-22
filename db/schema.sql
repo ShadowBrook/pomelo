@@ -217,3 +217,8 @@ ALTER TABLE im_user ADD COLUMN IF NOT EXISTS signature VARCHAR(128) NOT NULL DEF
 
 -- 2026-09-20 @ 提及元数据：群消息扩展字段
 ALTER TABLE im_message_group ADD COLUMN IF NOT EXISTS ext TEXT;
+
+-- 2026-09-22 找回密码：邮箱列（可空；唯一索引只约束非空非空串，避免历史空值冲突）
+ALTER TABLE im_user ADD COLUMN IF NOT EXISTS email VARCHAR(128);
+COMMENT ON COLUMN im_user.email IS '邮箱（找回密码验证码收件地址，可空）';
+CREATE UNIQUE INDEX IF NOT EXISTS idx_user_email ON im_user (email) WHERE email IS NOT NULL AND email <> '';

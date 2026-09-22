@@ -49,7 +49,12 @@ services:
       JAVA_OPTS: "-Xms256m -Xmx512m"
     # JWT 签名密钥（HS256 密钥即签发权）与 LiveKit token 签名密钥：
     # 均由 deploy.sh 随机生成，不入库
-    env_file: [./conf/jwt.env, ./conf/livekit.env]
+    env_file:
+      - path: ./conf/jwt.env
+      - path: ./conf/livekit.env
+      # 邮件（找回密码验证码）：模板见 conf/mail.env.example，缺省不启用（接口返回 503）
+      - path: ./conf/mail.env
+        required: false
     volumes: [./conf/tls:/certs:ro]
     depends_on:
       postgres:

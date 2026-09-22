@@ -10568,6 +10568,35 @@ public final class GroupMgmtProto {
      */
     com.google.protobuf.ByteString
         getNameBytes();
+
+    /**
+     * <pre>
+     * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+     * </pre>
+     *
+     * <code>optional string description = 8;</code>
+     * @return Whether the description field is set.
+     */
+    boolean hasDescription();
+    /**
+     * <pre>
+     * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+     * </pre>
+     *
+     * <code>optional string description = 8;</code>
+     * @return The description.
+     */
+    java.lang.String getDescription();
+    /**
+     * <pre>
+     * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+     * </pre>
+     *
+     * <code>optional string description = 8;</code>
+     * @return The bytes for description.
+     */
+    com.google.protobuf.ByteString
+        getDescriptionBytes();
   }
   /**
    * <pre>
@@ -10592,6 +10621,7 @@ public final class GroupMgmtProto {
       userName_ = "";
       nickname_ = "";
       name_ = "";
+      description_ = "";
     }
 
     @java.lang.Override
@@ -10983,6 +11013,65 @@ public final class GroupMgmtProto {
       }
     }
 
+    public static final int DESCRIPTION_FIELD_NUMBER = 8;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object description_ = "";
+    /**
+     * <pre>
+     * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+     * </pre>
+     *
+     * <code>optional string description = 8;</code>
+     * @return Whether the description field is set.
+     */
+    @java.lang.Override
+    public boolean hasDescription() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <pre>
+     * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+     * </pre>
+     *
+     * <code>optional string description = 8;</code>
+     * @return The description.
+     */
+    @java.lang.Override
+    public java.lang.String getDescription() {
+      java.lang.Object ref = description_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        description_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+     * </pre>
+     *
+     * <code>optional string description = 8;</code>
+     * @return The bytes for description.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getDescriptionBytes() {
+      java.lang.Object ref = description_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        description_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
     private byte memoizedIsInitialized = -1;
     @java.lang.Override
     public final boolean isInitialized() {
@@ -11018,6 +11107,9 @@ public final class GroupMgmtProto {
       if (((bitField0_ & 0x00000001) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 7, name_);
       }
+      if (((bitField0_ & 0x00000002) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 8, description_);
+      }
       getUnknownFields().writeTo(output);
     }
 
@@ -11052,6 +11144,9 @@ public final class GroupMgmtProto {
       if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(7, name_);
       }
+      if (((bitField0_ & 0x00000002) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(8, description_);
+      }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
       return size;
@@ -11083,6 +11178,11 @@ public final class GroupMgmtProto {
         if (!getName()
             .equals(other.getName())) return false;
       }
+      if (hasDescription() != other.hasDescription()) return false;
+      if (hasDescription()) {
+        if (!getDescription()
+            .equals(other.getDescription())) return false;
+      }
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -11112,6 +11212,10 @@ public final class GroupMgmtProto {
       if (hasName()) {
         hash = (37 * hash) + NAME_FIELD_NUMBER;
         hash = (53 * hash) + getName().hashCode();
+      }
+      if (hasDescription()) {
+        hash = (37 * hash) + DESCRIPTION_FIELD_NUMBER;
+        hash = (53 * hash) + getDescription().hashCode();
       }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
@@ -11257,6 +11361,7 @@ public final class GroupMgmtProto {
         userName_ = "";
         nickname_ = "";
         name_ = "";
+        description_ = "";
         return this;
       }
 
@@ -11312,6 +11417,10 @@ public final class GroupMgmtProto {
         if (((from_bitField0_ & 0x00000040) != 0)) {
           result.name_ = name_;
           to_bitField0_ |= 0x00000001;
+        }
+        if (((from_bitField0_ & 0x00000080) != 0)) {
+          result.description_ = description_;
+          to_bitField0_ |= 0x00000002;
         }
         result.bitField0_ |= to_bitField0_;
       }
@@ -11387,6 +11496,11 @@ public final class GroupMgmtProto {
           bitField0_ |= 0x00000040;
           onChanged();
         }
+        if (other.hasDescription()) {
+          description_ = other.description_;
+          bitField0_ |= 0x00000080;
+          onChanged();
+        }
         this.mergeUnknownFields(other.getUnknownFields());
         onChanged();
         return this;
@@ -11448,6 +11562,11 @@ public final class GroupMgmtProto {
                 bitField0_ |= 0x00000040;
                 break;
               } // case 58
+              case 66: {
+                description_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000080;
+                break;
+              } // case 66
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -11860,6 +11979,109 @@ public final class GroupMgmtProto {
         onChanged();
         return this;
       }
+
+      private java.lang.Object description_ = "";
+      /**
+       * <pre>
+       * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+       * </pre>
+       *
+       * <code>optional string description = 8;</code>
+       * @return Whether the description field is set.
+       */
+      public boolean hasDescription() {
+        return ((bitField0_ & 0x00000080) != 0);
+      }
+      /**
+       * <pre>
+       * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+       * </pre>
+       *
+       * <code>optional string description = 8;</code>
+       * @return The description.
+       */
+      public java.lang.String getDescription() {
+        java.lang.Object ref = description_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          description_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+       * </pre>
+       *
+       * <code>optional string description = 8;</code>
+       * @return The bytes for description.
+       */
+      public com.google.protobuf.ByteString
+          getDescriptionBytes() {
+        java.lang.Object ref = description_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          description_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+       * </pre>
+       *
+       * <code>optional string description = 8;</code>
+       * @param value The description to set.
+       * @return This builder for chaining.
+       */
+      public Builder setDescription(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        description_ = value;
+        bitField0_ |= 0x00000080;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+       * </pre>
+       *
+       * <code>optional string description = 8;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearDescription() {
+        description_ = getDefaultInstance().getDescription();
+        bitField0_ = (bitField0_ & ~0x00000080);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * INFO_UPDATED 且本次改了公告时为修改后的公告（空串表示已清空）
+       * </pre>
+       *
+       * <code>optional string description = 8;</code>
+       * @param value The bytes for description to set.
+       * @return This builder for chaining.
+       */
+      public Builder setDescriptionBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        description_ = value;
+        bitField0_ |= 0x00000080;
+        onChanged();
+        return this;
+      }
       @java.lang.Override
       public final Builder setUnknownFields(
           final com.google.protobuf.UnknownFieldSet unknownFields) {
@@ -11940,28 +12162,66 @@ public final class GroupMgmtProto {
 
     /**
      * <pre>
-     * 新群名（非空）
+     * 新群名（不修改则不设置；设置时不得为空串）
      * </pre>
      *
-     * <code>string name = 2;</code>
+     * <code>optional string name = 2;</code>
+     * @return Whether the name field is set.
+     */
+    boolean hasName();
+    /**
+     * <pre>
+     * 新群名（不修改则不设置；设置时不得为空串）
+     * </pre>
+     *
+     * <code>optional string name = 2;</code>
      * @return The name.
      */
     java.lang.String getName();
     /**
      * <pre>
-     * 新群名（非空）
+     * 新群名（不修改则不设置；设置时不得为空串）
      * </pre>
      *
-     * <code>string name = 2;</code>
+     * <code>optional string name = 2;</code>
      * @return The bytes for name.
      */
     com.google.protobuf.ByteString
         getNameBytes();
+
+    /**
+     * <pre>
+     * 新群公告（不修改则不设置；显式置空串表示清空公告）
+     * </pre>
+     *
+     * <code>optional string description = 3;</code>
+     * @return Whether the description field is set.
+     */
+    boolean hasDescription();
+    /**
+     * <pre>
+     * 新群公告（不修改则不设置；显式置空串表示清空公告）
+     * </pre>
+     *
+     * <code>optional string description = 3;</code>
+     * @return The description.
+     */
+    java.lang.String getDescription();
+    /**
+     * <pre>
+     * 新群公告（不修改则不设置；显式置空串表示清空公告）
+     * </pre>
+     *
+     * <code>optional string description = 3;</code>
+     * @return The bytes for description.
+     */
+    com.google.protobuf.ByteString
+        getDescriptionBytes();
   }
   /**
    * <pre>
    * ============================================================================
-   * 修改群信息（群名等；仅群主/管理员）
+   * 修改群信息（群名 / 群公告；仅群主/管理员）
    * ============================================================================
    * </pre>
    *
@@ -11978,6 +12238,7 @@ public final class GroupMgmtProto {
     }
     private UpdateGroupReq() {
       name_ = "";
+      description_ = "";
     }
 
     @java.lang.Override
@@ -12000,6 +12261,7 @@ public final class GroupMgmtProto {
               com.github.moxib.pomelo.proto.group.GroupMgmtProto.UpdateGroupReq.class, com.github.moxib.pomelo.proto.group.GroupMgmtProto.UpdateGroupReq.Builder.class);
     }
 
+    private int bitField0_;
     public static final int GROUP_ID_FIELD_NUMBER = 1;
     private long groupId_ = 0L;
     /**
@@ -12020,10 +12282,22 @@ public final class GroupMgmtProto {
     private volatile java.lang.Object name_ = "";
     /**
      * <pre>
-     * 新群名（非空）
+     * 新群名（不修改则不设置；设置时不得为空串）
      * </pre>
      *
-     * <code>string name = 2;</code>
+     * <code>optional string name = 2;</code>
+     * @return Whether the name field is set.
+     */
+    @java.lang.Override
+    public boolean hasName() {
+      return ((bitField0_ & 0x00000001) != 0);
+    }
+    /**
+     * <pre>
+     * 新群名（不修改则不设置；设置时不得为空串）
+     * </pre>
+     *
+     * <code>optional string name = 2;</code>
      * @return The name.
      */
     @java.lang.Override
@@ -12041,10 +12315,10 @@ public final class GroupMgmtProto {
     }
     /**
      * <pre>
-     * 新群名（非空）
+     * 新群名（不修改则不设置；设置时不得为空串）
      * </pre>
      *
-     * <code>string name = 2;</code>
+     * <code>optional string name = 2;</code>
      * @return The bytes for name.
      */
     @java.lang.Override
@@ -12056,6 +12330,65 @@ public final class GroupMgmtProto {
             com.google.protobuf.ByteString.copyFromUtf8(
                 (java.lang.String) ref);
         name_ = b;
+        return b;
+      } else {
+        return (com.google.protobuf.ByteString) ref;
+      }
+    }
+
+    public static final int DESCRIPTION_FIELD_NUMBER = 3;
+    @SuppressWarnings("serial")
+    private volatile java.lang.Object description_ = "";
+    /**
+     * <pre>
+     * 新群公告（不修改则不设置；显式置空串表示清空公告）
+     * </pre>
+     *
+     * <code>optional string description = 3;</code>
+     * @return Whether the description field is set.
+     */
+    @java.lang.Override
+    public boolean hasDescription() {
+      return ((bitField0_ & 0x00000002) != 0);
+    }
+    /**
+     * <pre>
+     * 新群公告（不修改则不设置；显式置空串表示清空公告）
+     * </pre>
+     *
+     * <code>optional string description = 3;</code>
+     * @return The description.
+     */
+    @java.lang.Override
+    public java.lang.String getDescription() {
+      java.lang.Object ref = description_;
+      if (ref instanceof java.lang.String) {
+        return (java.lang.String) ref;
+      } else {
+        com.google.protobuf.ByteString bs = 
+            (com.google.protobuf.ByteString) ref;
+        java.lang.String s = bs.toStringUtf8();
+        description_ = s;
+        return s;
+      }
+    }
+    /**
+     * <pre>
+     * 新群公告（不修改则不设置；显式置空串表示清空公告）
+     * </pre>
+     *
+     * <code>optional string description = 3;</code>
+     * @return The bytes for description.
+     */
+    @java.lang.Override
+    public com.google.protobuf.ByteString
+        getDescriptionBytes() {
+      java.lang.Object ref = description_;
+      if (ref instanceof java.lang.String) {
+        com.google.protobuf.ByteString b = 
+            com.google.protobuf.ByteString.copyFromUtf8(
+                (java.lang.String) ref);
+        description_ = b;
         return b;
       } else {
         return (com.google.protobuf.ByteString) ref;
@@ -12079,8 +12412,11 @@ public final class GroupMgmtProto {
       if (groupId_ != 0L) {
         output.writeInt64(1, groupId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(name_)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         com.google.protobuf.GeneratedMessageV3.writeString(output, 2, name_);
+      }
+      if (((bitField0_ & 0x00000002) != 0)) {
+        com.google.protobuf.GeneratedMessageV3.writeString(output, 3, description_);
       }
       getUnknownFields().writeTo(output);
     }
@@ -12095,8 +12431,11 @@ public final class GroupMgmtProto {
         size += com.google.protobuf.CodedOutputStream
           .computeInt64Size(1, groupId_);
       }
-      if (!com.google.protobuf.GeneratedMessageV3.isStringEmpty(name_)) {
+      if (((bitField0_ & 0x00000001) != 0)) {
         size += com.google.protobuf.GeneratedMessageV3.computeStringSize(2, name_);
+      }
+      if (((bitField0_ & 0x00000002) != 0)) {
+        size += com.google.protobuf.GeneratedMessageV3.computeStringSize(3, description_);
       }
       size += getUnknownFields().getSerializedSize();
       memoizedSize = size;
@@ -12115,8 +12454,16 @@ public final class GroupMgmtProto {
 
       if (getGroupId()
           != other.getGroupId()) return false;
-      if (!getName()
-          .equals(other.getName())) return false;
+      if (hasName() != other.hasName()) return false;
+      if (hasName()) {
+        if (!getName()
+            .equals(other.getName())) return false;
+      }
+      if (hasDescription() != other.hasDescription()) return false;
+      if (hasDescription()) {
+        if (!getDescription()
+            .equals(other.getDescription())) return false;
+      }
       if (!getUnknownFields().equals(other.getUnknownFields())) return false;
       return true;
     }
@@ -12131,8 +12478,14 @@ public final class GroupMgmtProto {
       hash = (37 * hash) + GROUP_ID_FIELD_NUMBER;
       hash = (53 * hash) + com.google.protobuf.Internal.hashLong(
           getGroupId());
-      hash = (37 * hash) + NAME_FIELD_NUMBER;
-      hash = (53 * hash) + getName().hashCode();
+      if (hasName()) {
+        hash = (37 * hash) + NAME_FIELD_NUMBER;
+        hash = (53 * hash) + getName().hashCode();
+      }
+      if (hasDescription()) {
+        hash = (37 * hash) + DESCRIPTION_FIELD_NUMBER;
+        hash = (53 * hash) + getDescription().hashCode();
+      }
       hash = (29 * hash) + getUnknownFields().hashCode();
       memoizedHashCode = hash;
       return hash;
@@ -12233,7 +12586,7 @@ public final class GroupMgmtProto {
     /**
      * <pre>
      * ============================================================================
-     * 修改群信息（群名等；仅群主/管理员）
+     * 修改群信息（群名 / 群公告；仅群主/管理员）
      * ============================================================================
      * </pre>
      *
@@ -12272,6 +12625,7 @@ public final class GroupMgmtProto {
         bitField0_ = 0;
         groupId_ = 0L;
         name_ = "";
+        description_ = "";
         return this;
       }
 
@@ -12308,9 +12662,16 @@ public final class GroupMgmtProto {
         if (((from_bitField0_ & 0x00000001) != 0)) {
           result.groupId_ = groupId_;
         }
+        int to_bitField0_ = 0;
         if (((from_bitField0_ & 0x00000002) != 0)) {
           result.name_ = name_;
+          to_bitField0_ |= 0x00000001;
         }
+        if (((from_bitField0_ & 0x00000004) != 0)) {
+          result.description_ = description_;
+          to_bitField0_ |= 0x00000002;
+        }
+        result.bitField0_ |= to_bitField0_;
       }
 
       @java.lang.Override
@@ -12360,9 +12721,14 @@ public final class GroupMgmtProto {
         if (other.getGroupId() != 0L) {
           setGroupId(other.getGroupId());
         }
-        if (!other.getName().isEmpty()) {
+        if (other.hasName()) {
           name_ = other.name_;
           bitField0_ |= 0x00000002;
+          onChanged();
+        }
+        if (other.hasDescription()) {
+          description_ = other.description_;
+          bitField0_ |= 0x00000004;
           onChanged();
         }
         this.mergeUnknownFields(other.getUnknownFields());
@@ -12401,6 +12767,11 @@ public final class GroupMgmtProto {
                 bitField0_ |= 0x00000002;
                 break;
               } // case 18
+              case 26: {
+                description_ = input.readStringRequireUtf8();
+                bitField0_ |= 0x00000004;
+                break;
+              } // case 26
               default: {
                 if (!super.parseUnknownField(input, extensionRegistry, tag)) {
                   done = true; // was an endgroup tag
@@ -12465,10 +12836,21 @@ public final class GroupMgmtProto {
       private java.lang.Object name_ = "";
       /**
        * <pre>
-       * 新群名（非空）
+       * 新群名（不修改则不设置；设置时不得为空串）
        * </pre>
        *
-       * <code>string name = 2;</code>
+       * <code>optional string name = 2;</code>
+       * @return Whether the name field is set.
+       */
+      public boolean hasName() {
+        return ((bitField0_ & 0x00000002) != 0);
+      }
+      /**
+       * <pre>
+       * 新群名（不修改则不设置；设置时不得为空串）
+       * </pre>
+       *
+       * <code>optional string name = 2;</code>
        * @return The name.
        */
       public java.lang.String getName() {
@@ -12485,10 +12867,10 @@ public final class GroupMgmtProto {
       }
       /**
        * <pre>
-       * 新群名（非空）
+       * 新群名（不修改则不设置；设置时不得为空串）
        * </pre>
        *
-       * <code>string name = 2;</code>
+       * <code>optional string name = 2;</code>
        * @return The bytes for name.
        */
       public com.google.protobuf.ByteString
@@ -12506,10 +12888,10 @@ public final class GroupMgmtProto {
       }
       /**
        * <pre>
-       * 新群名（非空）
+       * 新群名（不修改则不设置；设置时不得为空串）
        * </pre>
        *
-       * <code>string name = 2;</code>
+       * <code>optional string name = 2;</code>
        * @param value The name to set.
        * @return This builder for chaining.
        */
@@ -12523,10 +12905,10 @@ public final class GroupMgmtProto {
       }
       /**
        * <pre>
-       * 新群名（非空）
+       * 新群名（不修改则不设置；设置时不得为空串）
        * </pre>
        *
-       * <code>string name = 2;</code>
+       * <code>optional string name = 2;</code>
        * @return This builder for chaining.
        */
       public Builder clearName() {
@@ -12537,10 +12919,10 @@ public final class GroupMgmtProto {
       }
       /**
        * <pre>
-       * 新群名（非空）
+       * 新群名（不修改则不设置；设置时不得为空串）
        * </pre>
        *
-       * <code>string name = 2;</code>
+       * <code>optional string name = 2;</code>
        * @param value The bytes for name to set.
        * @return This builder for chaining.
        */
@@ -12550,6 +12932,109 @@ public final class GroupMgmtProto {
         checkByteStringIsUtf8(value);
         name_ = value;
         bitField0_ |= 0x00000002;
+        onChanged();
+        return this;
+      }
+
+      private java.lang.Object description_ = "";
+      /**
+       * <pre>
+       * 新群公告（不修改则不设置；显式置空串表示清空公告）
+       * </pre>
+       *
+       * <code>optional string description = 3;</code>
+       * @return Whether the description field is set.
+       */
+      public boolean hasDescription() {
+        return ((bitField0_ & 0x00000004) != 0);
+      }
+      /**
+       * <pre>
+       * 新群公告（不修改则不设置；显式置空串表示清空公告）
+       * </pre>
+       *
+       * <code>optional string description = 3;</code>
+       * @return The description.
+       */
+      public java.lang.String getDescription() {
+        java.lang.Object ref = description_;
+        if (!(ref instanceof java.lang.String)) {
+          com.google.protobuf.ByteString bs =
+              (com.google.protobuf.ByteString) ref;
+          java.lang.String s = bs.toStringUtf8();
+          description_ = s;
+          return s;
+        } else {
+          return (java.lang.String) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 新群公告（不修改则不设置；显式置空串表示清空公告）
+       * </pre>
+       *
+       * <code>optional string description = 3;</code>
+       * @return The bytes for description.
+       */
+      public com.google.protobuf.ByteString
+          getDescriptionBytes() {
+        java.lang.Object ref = description_;
+        if (ref instanceof String) {
+          com.google.protobuf.ByteString b = 
+              com.google.protobuf.ByteString.copyFromUtf8(
+                  (java.lang.String) ref);
+          description_ = b;
+          return b;
+        } else {
+          return (com.google.protobuf.ByteString) ref;
+        }
+      }
+      /**
+       * <pre>
+       * 新群公告（不修改则不设置；显式置空串表示清空公告）
+       * </pre>
+       *
+       * <code>optional string description = 3;</code>
+       * @param value The description to set.
+       * @return This builder for chaining.
+       */
+      public Builder setDescription(
+          java.lang.String value) {
+        if (value == null) { throw new NullPointerException(); }
+        description_ = value;
+        bitField0_ |= 0x00000004;
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 新群公告（不修改则不设置；显式置空串表示清空公告）
+       * </pre>
+       *
+       * <code>optional string description = 3;</code>
+       * @return This builder for chaining.
+       */
+      public Builder clearDescription() {
+        description_ = getDefaultInstance().getDescription();
+        bitField0_ = (bitField0_ & ~0x00000004);
+        onChanged();
+        return this;
+      }
+      /**
+       * <pre>
+       * 新群公告（不修改则不设置；显式置空串表示清空公告）
+       * </pre>
+       *
+       * <code>optional string description = 3;</code>
+       * @param value The bytes for description to set.
+       * @return This builder for chaining.
+       */
+      public Builder setDescriptionBytes(
+          com.google.protobuf.ByteString value) {
+        if (value == null) { throw new NullPointerException(); }
+        checkByteStringIsUtf8(value);
+        description_ = value;
+        bitField0_ |= 0x00000004;
         onChanged();
         return this;
       }
@@ -21552,38 +22037,40 @@ public final class GroupMgmtProto {
       "group.GroupMember\"\020\n\016GetMyGroupsReq\"U\n\017G" +
       "etMyGroupsResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030" +
       "\002 \001(\t\022#\n\006groups\030\003 \003(\0132\023.im.group.GroupIn" +
-      "fo\"\323\002\n\027GroupMemberChangeNotify\022\020\n\010group_" +
+      "fo\"\375\002\n\027GroupMemberChangeNotify\022\020\n\010group_" +
       "id\030\001 \001(\003\022:\n\004type\030\002 \001(\0162,.im.group.GroupM" +
       "emberChangeNotify.ChangeType\022\017\n\007user_id\030" +
       "\003 \001(\003\022\023\n\013operator_id\030\004 \001(\003\022\021\n\tuser_name\030" +
       "\005 \001(\t\022\020\n\010nickname\030\006 \001(\t\022\021\n\004name\030\007 \001(\tH\000\210" +
-      "\001\001\"\202\001\n\nChangeType\022\013\n\007INVITED\020\000\022\n\n\006JOINED" +
-      "\020\001\022\010\n\004LEFT\020\002\022\n\n\006KICKED\020\003\022\r\n\tADMIN_SET\020\004\022" +
-      "\025\n\021OWNER_TRANSFERRED\020\005\022\r\n\tDISSOLVED\020\006\022\020\n" +
-      "\014INFO_UPDATED\020\007B\007\n\005_name\"0\n\016UpdateGroupR" +
-      "eq\022\020\n\010group_id\030\001 \001(\003\022\014\n\004name\030\002 \001(\t\"0\n\017Up" +
-      "dateGroupResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002" +
-      " \001(\t\"<\n\020TransferGroupReq\022\020\n\010group_id\030\001 \001" +
-      "(\003\022\026\n\016target_user_id\030\002 \001(\003\"2\n\021TransferGr" +
-      "oupResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\"$" +
-      "\n\020DissolveGroupReq\022\020\n\010group_id\030\001 \001(\003\"2\n\021" +
-      "DissolveGroupResp\022\014\n\004code\030\001 \001(\005\022\017\n\007messa" +
-      "ge\030\002 \001(\t\"6\n\013GroupAckReq\022\020\n\010group_id\030\001 \001(" +
-      "\003\022\025\n\rlast_read_seq\030\002 \001(\003\"-\n\014GroupAckResp" +
-      "\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\"9\n\030GetGr" +
-      "oupMsgReadStatusReq\022\020\n\010group_id\030\001 \001(\003\022\013\n" +
-      "\003seq\030\002 \001(\003\"C\n\016GroupMsgReader\022\017\n\007user_id\030" +
-      "\001 \001(\003\022\020\n\010nickname\030\002 \001(\t\022\016\n\006avatar\030\003 \001(\t\"" +
-      "e\n\031GetGroupMsgReadStatusResp\022\014\n\004code\030\001 \001" +
-      "(\005\022\017\n\007message\030\002 \001(\t\022)\n\007readers\030\003 \003(\0132\030.i" +
-      "m.group.GroupMsgReader\"(\n\024GetGroupReadSt" +
-      "ateReq\022\020\n\010group_id\030\001 \001(\003\"9\n\017MemberReadSt" +
-      "ate\022\017\n\007user_id\030\001 \001(\003\022\025\n\rlast_read_seq\030\002 " +
-      "\001(\003\"b\n\025GetGroupReadStateResp\022\014\n\004code\030\001 \001" +
-      "(\005\022\017\n\007message\030\002 \001(\t\022*\n\007members\030\003 \003(\0132\031.i" +
-      "m.group.MemberReadStateB5\n#com.github.mo" +
-      "xib.pomelo.proto.groupB\016GroupMgmtProtob\006" +
-      "proto3"
+      "\001\001\022\030\n\013description\030\010 \001(\tH\001\210\001\001\"\202\001\n\nChangeT" +
+      "ype\022\013\n\007INVITED\020\000\022\n\n\006JOINED\020\001\022\010\n\004LEFT\020\002\022\n" +
+      "\n\006KICKED\020\003\022\r\n\tADMIN_SET\020\004\022\025\n\021OWNER_TRANS" +
+      "FERRED\020\005\022\r\n\tDISSOLVED\020\006\022\020\n\014INFO_UPDATED\020" +
+      "\007B\007\n\005_nameB\016\n\014_description\"h\n\016UpdateGrou" +
+      "pReq\022\020\n\010group_id\030\001 \001(\003\022\021\n\004name\030\002 \001(\tH\000\210\001" +
+      "\001\022\030\n\013description\030\003 \001(\tH\001\210\001\001B\007\n\005_nameB\016\n\014" +
+      "_description\"0\n\017UpdateGroupResp\022\014\n\004code\030" +
+      "\001 \001(\005\022\017\n\007message\030\002 \001(\t\"<\n\020TransferGroupR" +
+      "eq\022\020\n\010group_id\030\001 \001(\003\022\026\n\016target_user_id\030\002" +
+      " \001(\003\"2\n\021TransferGroupResp\022\014\n\004code\030\001 \001(\005\022" +
+      "\017\n\007message\030\002 \001(\t\"$\n\020DissolveGroupReq\022\020\n\010" +
+      "group_id\030\001 \001(\003\"2\n\021DissolveGroupResp\022\014\n\004c" +
+      "ode\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\"6\n\013GroupAckRe" +
+      "q\022\020\n\010group_id\030\001 \001(\003\022\025\n\rlast_read_seq\030\002 \001" +
+      "(\003\"-\n\014GroupAckResp\022\014\n\004code\030\001 \001(\005\022\017\n\007mess" +
+      "age\030\002 \001(\t\"9\n\030GetGroupMsgReadStatusReq\022\020\n" +
+      "\010group_id\030\001 \001(\003\022\013\n\003seq\030\002 \001(\003\"C\n\016GroupMsg" +
+      "Reader\022\017\n\007user_id\030\001 \001(\003\022\020\n\010nickname\030\002 \001(" +
+      "\t\022\016\n\006avatar\030\003 \001(\t\"e\n\031GetGroupMsgReadStat" +
+      "usResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022)\n" +
+      "\007readers\030\003 \003(\0132\030.im.group.GroupMsgReader" +
+      "\"(\n\024GetGroupReadStateReq\022\020\n\010group_id\030\001 \001" +
+      "(\003\"9\n\017MemberReadState\022\017\n\007user_id\030\001 \001(\003\022\025" +
+      "\n\rlast_read_seq\030\002 \001(\003\"b\n\025GetGroupReadSta" +
+      "teResp\022\014\n\004code\030\001 \001(\005\022\017\n\007message\030\002 \001(\t\022*\n" +
+      "\007members\030\003 \003(\0132\031.im.group.MemberReadStat" +
+      "eB5\n#com.github.moxib.pomelo.proto.group" +
+      "B\016GroupMgmtProtob\006proto3"
     };
     descriptor = com.google.protobuf.Descriptors.FileDescriptor
       .internalBuildGeneratedFileFrom(descriptorData,
@@ -21679,13 +22166,13 @@ public final class GroupMgmtProto {
     internal_static_im_group_GroupMemberChangeNotify_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_GroupMemberChangeNotify_descriptor,
-        new java.lang.String[] { "GroupId", "Type", "UserId", "OperatorId", "UserName", "Nickname", "Name", });
+        new java.lang.String[] { "GroupId", "Type", "UserId", "OperatorId", "UserName", "Nickname", "Name", "Description", });
     internal_static_im_group_UpdateGroupReq_descriptor =
       getDescriptor().getMessageTypes().get(15);
     internal_static_im_group_UpdateGroupReq_fieldAccessorTable = new
       com.google.protobuf.GeneratedMessageV3.FieldAccessorTable(
         internal_static_im_group_UpdateGroupReq_descriptor,
-        new java.lang.String[] { "GroupId", "Name", });
+        new java.lang.String[] { "GroupId", "Name", "Description", });
     internal_static_im_group_UpdateGroupResp_descriptor =
       getDescriptor().getMessageTypes().get(16);
     internal_static_im_group_UpdateGroupResp_fieldAccessorTable = new

@@ -9,8 +9,10 @@ import com.github.moxib.pomelo.logic.infrastructure.PgPoolFactory;
 import com.github.moxib.pomelo.logic.infrastructure.RedisFactory;
 import com.github.moxib.pomelo.logic.infrastructure.TokenService;
 import com.github.moxib.pomelo.logic.id.SnowflakeIdGenerator;
+import com.github.moxib.pomelo.logic.service.MailService;
 import com.github.moxib.pomelo.logic.service.MediaUrlSigner;
 import com.github.moxib.pomelo.logic.service.MinioMediaUrlSigner;
+import com.github.moxib.pomelo.logic.service.TermsOfService;
 import com.github.moxib.pomelo.metrics.PomeloMetrics;
 import io.vertx.core.Future;
 import io.vertx.core.VerticleBase;
@@ -23,6 +25,9 @@ import io.vertx.ext.auth.hashing.HashingStrategy;
 import io.vertx.ext.web.Router;
 import io.vertx.ext.web.RoutingContext;
 import io.vertx.ext.web.handler.BodyHandler;
+import io.vertx.redis.client.Command;
+import io.vertx.redis.client.RedisConnection;
+import io.vertx.redis.client.Request;
 import io.vertx.sqlclient.Pool;
 import io.vertx.sqlclient.Row;
 import io.vertx.sqlclient.Tuple;
@@ -33,6 +38,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.regex.Pattern;
 
 /**
  * HTTP API Verticle — 短连接业务接口。
@@ -44,8 +50,8 @@ public class ApiVerticle extends VerticleBase {
   private static final Logger LOG = LoggerFactory.getLogger(ApiVerticle.class);
 
   private static final String INSERT_USER_SQL = """
-    INSERT INTO im_user (id, user_name, nickname, avatar, password, status, created_at, updated_at)
-    VALUES ($1, $2, $3, $4, $5, 0, $6, $6) ON CONFLICT (user_name) DO NOTHING
+    INSERT INTO im_user (id, user_name, nickname, avatar, email, password, status, created_at, updated_at)
+    VALUES ($1, $2, $3, $4, $5, $6, 0, $7, $7) ON CONFLICT (user_name) DO NOTHING
     """;
   private static final String FIND_USER_SQL = """
     SELECT id, user_name, nickname, avatar, signature, status, created_at FROM im_user WHERE id = $1
@@ -56,8 +62,14 @@ public class ApiVerticle extends VerticleBase {
   private static final String UPDATE_PASSWORD_SQL = """
     UPDATE im_user SET password = $1, updated_at = $2 WHERE id = $3
     """;
+  private static final String UPDATE_EMAIL_SQL = """
+    UPDATE im_user SET email = $1, updated_at = $2 WHERE id = $3
+    """;
+  private static final String FIND_RESET_TARGET_SQL = """
+    SELECT id, email FROM im_user WHERE user_name = $1
+    """;
   private static final String FIND_BY_USERNAME_SQL = """
-    SELECT id, user_name, nickname, avatar, signature, password, status, created_at
+    SELECT id, user_name, nickname, avatar, signature, email, password, status, created_at
     FROM im_user WHERE user_name = $1
     """;
   private static final String LIST_FRIENDS_SQL = """
@@ -87,6 +99,13 @@ public class ApiVerticle extends VerticleBase {
   private SessionRouteTable routeTable;
   // 头像列存对象 key，出囗统一换 presigned GET URL（与消息媒体同一套签名器）
   private MediaUrlSigner mediaUrlSigner;
+  // 找回密码验证码邮件（未配置 SMTP 时相关接口返回 503，不影响其他功能）
+  private MailService mailService;
+
+  /** 邮箱格式（不追求 RFC 完备，挡住明显非法输入即可） */
+  private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
+  /** 找回密码：验证码尝试次数上限 */
+  private static final int RESET_MAX_ATTEMPTS = 5;
 
   public ApiVerticle(SnowflakeIdGenerator snowflake) {
     this.snowflake = snowflake;
@@ -99,6 +118,10 @@ public class ApiVerticle extends VerticleBase {
     routeTable = new SessionRouteTable(vertx);
     mediaUrlSigner = new MinioMediaUrlSigner(new MinioObjectPresigner());
     jwtParser = new JwtTokenParser(vertx);
+    mailService = new MailService(vertx);
+    if (!mailService.configured()) {
+      LOG.warn("邮件服务未配置（mail.host/mail.from 为空）：找回密码接口将返回 503");
+    }
 
     return RedisFactory.get(vertx).connect()
       .compose(v -> {
@@ -110,6 +133,12 @@ public class ApiVerticle extends VerticleBase {
         router.post("/api/user/register").handler(this::register);
         router.post("/api/user/login").handler(this::login);
         router.post("/api/user/change-password").handler(this::changePassword);
+        router.post("/api/user/bind-email").handler(this::bindEmail);
+        // 找回密码：request 发验证码邮件（Redis 存码 + 冷却），confirm 校验后改密
+        router.post("/api/user/password-reset/request").handler(this::passwordResetRequest);
+        router.post("/api/user/password-reset/confirm").handler(this::passwordResetConfirm);
+        // 服务条款（公开；三端共用一份文案，避免各自维护漂移）
+        router.get("/api/legal/terms").handler(this::terms);
         router.get("/api/user/:userId/profile").handler(this::profile);
         router.get("/api/friends/:userId").handler(this::friends);
         router.get("/api/friends/:userId/pending").handler(this::pending);
@@ -158,26 +187,28 @@ public class ApiVerticle extends VerticleBase {
       .onFailure(e -> ctx.response().setStatusCode(503).end());
   }
 
-  /** POST /api/user/register — userName + password，返回 Snowflake userId */
+  /** POST /api/user/register — userName + password（可选 email，用于找回密码），返回 Snowflake userId */
   private void register(RoutingContext ctx) {
     JsonObject body = ctx.body().asJsonObject();
     String userName = body.getString("userName");
     String nickname = body.getString("nickname", userName);
     String password = body.getString("password");
     String avatar = body.getString("avatar", "");
+    String email = trimToEmpty(body.getString("email"));
 
     if (isBlank(userName) || isBlank(password)) { fail(ctx, 400, "userName 和 password 不能为空"); return; }
+    if (!email.isEmpty() && !EMAIL_PATTERN.matcher(email).matches()) { fail(ctx, 400, "邮箱格式不正确"); return; }
 
     long id = snowflake.nextId();
     String userId = String.valueOf(id);
     String hash = hashPassword(password);
     long now = System.currentTimeMillis();
 
-    pgPool.preparedQuery(INSERT_USER_SQL).execute(Tuple.of(id, userName, nickname, avatar, hash, now))
+    pgPool.preparedQuery(INSERT_USER_SQL).execute(Tuple.of(id, userName, nickname, avatar, email, hash, now))
       .onSuccess(r -> {
         if (r.rowCount() > 0) {
           String token = TokenService.get(vertx).generate(userId, userName, nickname, "");
-          LOG.info("注册成功: userId={} userName={}", userId, userName);
+          LOG.info("注册成功: userId={} userName={} hasEmail={}", userId, userName, !email.isEmpty());
           ok(ctx, 201, new JsonObject().put("userId", userId).put("userName", userName).put("token", token));
         } else {
           fail(ctx, 409, "用户名已存在");
@@ -214,6 +245,7 @@ public class ApiVerticle extends VerticleBase {
           .put("nickname", r.getString("nickname"))
           .put("avatar", mediaUrlSigner.signAvatar(r.getString("avatar")))
           .put("signature", r.getString("signature"))
+          .put("email", r.getString("email") == null ? "" : r.getString("email"))
           .put("token", token));
       })
       .onFailure(e -> fail(ctx, 500, "登录失败"));
@@ -288,6 +320,198 @@ public class ApiVerticle extends VerticleBase {
           .onFailure(e -> fail(ctx, 500, "修改失败"));
       })
       .onFailure(e -> fail(ctx, 401, "登录已过期"));
+  }
+
+  /** GET /api/legal/terms — 服务条款（公开接口，登录页也要能看） */
+  private void terms(RoutingContext ctx) {
+    ok(ctx, 200, new JsonObject()
+      .put("title", TermsOfService.TITLE)
+      .put("version", TermsOfService.VERSION)
+      .put("content", TermsOfService.CONTENT));
+  }
+
+  /**
+   * POST /api/user/bind-email — 绑定/更换邮箱（Authorization: Bearer JWT）。
+   * 邮箱用于找回密码；暂不做邮件验证（测试项目取舍，见服务条款）。
+   */
+  private void bindEmail(RoutingContext ctx) {
+    String auth = ctx.request().getHeader("Authorization");
+    if (auth == null || !auth.startsWith("Bearer ")) {
+      fail(ctx, 401, "请先登录");
+      return;
+    }
+    JsonObject body = ctx.body().asJsonObject();
+    String email = body == null ? null : trimToEmpty(body.getString("email"));
+    if (email.isEmpty() || !EMAIL_PATTERN.matcher(email).matches()) {
+      fail(ctx, 400, "邮箱格式不正确");
+      return;
+    }
+    jwtParser.validate(auth.substring(7).trim())
+      .onSuccess(claims -> {
+        long id = claims != null ? claims.getLong("id", 0L) : 0L;
+        if (id == 0) {
+          fail(ctx, 401, "登录已过期");
+          return;
+        }
+        pgPool.preparedQuery(UPDATE_EMAIL_SQL)
+          .execute(Tuple.of(email, System.currentTimeMillis(), id))
+          .onSuccess(r -> {
+            LOG.info("邮箱已绑定: userId={}", id);
+            ok(ctx, 200, new JsonObject().put("message", "邮箱已绑定").put("email", email));
+          })
+          .onFailure(e -> {
+            // 23505 = 唯一索引冲突（同一邮箱被其他账号占用）
+            if (e.getMessage() != null && e.getMessage().contains("idx_user_email")) {
+              fail(ctx, 409, "该邮箱已被其他账号绑定");
+            } else {
+              fail(ctx, 500, "绑定失败");
+            }
+          });
+      })
+      .onFailure(e -> fail(ctx, 401, "登录已过期"));
+  }
+
+  /**
+   * POST /api/user/password-reset/request — 发送找回密码验证码。
+   * 验证码存 Redis（TTL 见 mail.codeTtlSeconds），同账号发信有冷却（mail.sendCooldownSeconds）。
+   * 测试项目取舍：用户名不存在/未绑定邮箱时直接告知，便于自助排查（注册接口本就开放，谈不上用户枚举）。
+   */
+  private void passwordResetRequest(RoutingContext ctx) {
+    JsonObject body = ctx.body().asJsonObject();
+    String userName = body == null ? null : trimToEmpty(body.getString("userName"));
+    if (userName.isEmpty()) {
+      fail(ctx, 400, "userName 不能为空");
+      return;
+    }
+    if (!mailService.configured()) {
+      fail(ctx, 503, "邮件服务未配置，无法发送验证码（请联系管理员）");
+      return;
+    }
+    pgPool.preparedQuery(FIND_RESET_TARGET_SQL).execute(Tuple.of(userName))
+      .onSuccess(rows -> {
+        if (rows.size() == 0) {
+          fail(ctx, 404, "用户名不存在");
+          return;
+        }
+        Row r = rows.iterator().next();
+        long id = r.getLong("id");
+        String email = r.getString("email");
+        if (email == null || email.isBlank()) {
+          fail(ctx, 400, "该账号未绑定邮箱，请先登录后在设置中绑定");
+          return;
+        }
+        String cooldownKey = resetKey("cd", id);
+        redis().send(Request.cmd(Command.SET).arg(cooldownKey).arg("1")
+            .arg("EX").arg(mailService.sendCooldownSeconds()).arg("NX"))
+          .onSuccess(resp -> {
+            if (resp == null || resp.toString().equals("null")) {
+              fail(ctx, 429, "请求过于频繁，请稍后再试");
+              return;
+            }
+            String code = String.format("%06d", random.nextInt(1_000_000));
+            redis().send(Request.cmd(Command.SET).arg(resetKey("code", id)).arg(code)
+                .arg("EX").arg(mailService.codeTtlSeconds())).onFailure(e -> LOG.warn("验证码写入 Redis 失败", e));
+            redis().send(Request.cmd(Command.DEL).arg(resetKey("try", id))).onFailure(e -> { /* 尝试计数清理失败不阻断 */ });
+            long ttlMinutes = Math.max(1, mailService.codeTtlSeconds() / 60);
+            mailService.send(email, "Pomelo 找回密码验证码",
+                "你的验证码是：" + code + "\n\n" + ttlMinutes + " 分钟内有效，请勿转发给他人。\n"
+                  + "若非本人操作，请忽略本邮件。")
+              .onSuccess(v -> ok(ctx, 200, new JsonObject()
+                .put("message", "验证码已发送至 " + maskEmail(email) + "，请查收（含垃圾箱）")
+                .put("email", maskEmail(email))
+                .put("ttlSeconds", mailService.codeTtlSeconds())))
+              .onFailure(e -> {
+                LOG.warn("找回密码验证码发送失败: userId={} err={}", id, e.getMessage());
+                fail(ctx, 502, "验证码发送失败，请稍后重试");
+              });
+          })
+          .onFailure(e -> {
+            LOG.warn("冷却检查失败（Redis 异常）", e);
+            fail(ctx, 500, "服务暂不可用，请稍后重试");
+          });
+      })
+      .onFailure(e -> fail(ctx, 500, "服务暂不可用，请稍后重试"));
+  }
+
+  /**
+   * POST /api/user/password-reset/confirm — 校验验证码并重置密码。
+   * 连续输错 {@value #RESET_MAX_ATTEMPTS} 次作废验证码，需重新获取。
+   */
+  private void passwordResetConfirm(RoutingContext ctx) {
+    JsonObject body = ctx.body().asJsonObject();
+    String userName = body == null ? null : trimToEmpty(body.getString("userName"));
+    String code = body == null ? null : trimToEmpty(body.getString("code"));
+    String newPassword = body == null ? null : body.getString("newPassword");
+    if (userName.isEmpty() || code.isEmpty()) {
+      fail(ctx, 400, "userName 和 code 不能为空");
+      return;
+    }
+    if (newPassword == null || newPassword.length() < 6) {
+      fail(ctx, 400, "新密码至少 6 位");
+      return;
+    }
+    pgPool.preparedQuery(FIND_RESET_TARGET_SQL).execute(Tuple.of(userName))
+      .onSuccess(rows -> {
+        if (rows.size() == 0) {
+          fail(ctx, 404, "用户名不存在");
+          return;
+        }
+        long id = rows.iterator().next().getLong("id");
+        redis().send(Request.cmd(Command.GET).arg(resetKey("code", id)))
+          .onSuccess(resp -> {
+            String stored = resp == null ? null : resp.toString();
+            if (stored == null || stored.equals("null")) {
+              fail(ctx, 400, "验证码已过期，请重新获取");
+              return;
+            }
+            if (!stored.equals(code)) {
+              redis().send(Request.cmd(Command.INCR).arg(resetKey("try", id)))
+                .onSuccess(c -> {
+                  long attempts = c == null ? 1 : Long.parseLong(c.toString());
+                  if (attempts >= RESET_MAX_ATTEMPTS) {
+                    redis().send(Request.cmd(Command.DEL).arg(resetKey("code", id)));
+                    fail(ctx, 429, "错误次数过多，验证码已作废，请重新获取");
+                  } else {
+                    fail(ctx, 401, "验证码错误");
+                  }
+                })
+                .onFailure(e -> fail(ctx, 401, "验证码错误"));
+              return;
+            }
+            pgPool.preparedQuery(UPDATE_PASSWORD_SQL)
+              .execute(Tuple.of(hashPassword(newPassword), System.currentTimeMillis(), id))
+              .onSuccess(r -> {
+                redis().send(Request.cmd(Command.DEL).arg(resetKey("code", id)).arg(resetKey("try", id))
+                    .arg(resetKey("cd", id))).onFailure(e -> { /* 清理失败仅影响冷却时间 */ });
+                LOG.info("找回密码成功: userId={}", id);
+                ok(ctx, 200, new JsonObject().put("message", "密码已重置，请用新密码登录"));
+              })
+              .onFailure(e -> fail(ctx, 500, "重置失败"));
+          })
+          .onFailure(e -> fail(ctx, 500, "服务暂不可用，请稍后重试"));
+      })
+      .onFailure(e -> fail(ctx, 500, "服务暂不可用，请稍后重试"));
+  }
+
+  private static String resetKey(String kind, long userId) {
+    return "pwdreset:" + kind + ":" + userId;
+  }
+
+  /** 日志与响应里不落完整邮箱 */
+  static String maskEmail(String email) {
+    if (email == null || email.isEmpty()) {
+      return "";
+    }
+    int at = email.indexOf('@');
+    if (at <= 1) {
+      return "*" + (at >= 0 ? email.substring(at) : "");
+    }
+    return email.charAt(0) + "***" + email.substring(at);
+  }
+
+  /** Redis 连接（start 阶段已 connect；此处只取句柄，命令失败由各调用点 recover） */
+  private RedisConnection redis() {
+    return RedisFactory.get(vertx).getConnection();
   }
 
   /** GET /api/friends/:userId */
@@ -411,6 +635,9 @@ public class ApiVerticle extends VerticleBase {
   }
 
   private boolean isBlank(String s) { return s == null || s.isBlank(); }
+
+  /** null 安全 trim（避免各处重复判空） */
+  private static String trimToEmpty(String s) { return s == null ? "" : s.trim(); }
 
   /** 用 Vert.x HashingStrategy（PBKDF2）哈希密码，返回自包含哈希串（含算法/参数/salt） */
   private String hashPassword(String password) {
