@@ -2,15 +2,19 @@
 # 演示/公网部署 overlay（在仓库根目录与 docker-compose.yml 叠加使用）：
 #   docker compose -f docker-compose.yml -f docker-compose.demo.yml up -d
 #
-# 域名写在仓库根 .env（compose 自动读取，模板见 .env.demo.example）：
-#   DEMO_DOMAIN=pomelo.host            # 主站（前端 + /api + /ws + /lk）
+# 域名与凭据写在仓库根 .env（compose 自动读取，模板见 .env.demo.example）：
+#   DEMO_DOMAIN=pomelo.host            # 主站（前端 + /api + /ws + /lk + /grafana 子域）
 #   DEMO_MEDIA_DOMAIN=oss.pomelo.host  # 对象存储（presigned URL 直连 MinIO）
+#   GRAFANA_ADMIN_USER / GRAFANA_ADMIN_PASSWORD  # Grafana 登录凭据（必填）
+#   POMELO_TCP_BIND=0.0.0.0            # TCP 网关公网直连（原生客户端 tcps://host:9000）
+#   POMELO_API_BIND / POMELO_WS_BIND=127.0.0.1   # 仅反代可达，宿主端口不对公网开放
 #
 # 与基线 compose 的差异：
-#   1. 新增 caddy：80/443 反代 + Let's Encrypt 自动签发（两个域名各一张证书）
+#   1. 新增 caddy：80/443 反代 + Let's Encrypt 自动签发（三个域名各一张证书）
 #   2. livekit：换用 conf/livekit.demo.yaml（use_external_ip: true + webhook 兜底），
 #      去掉 --node-ip
 #   3. pomelo：经 POMELO_* 环境覆盖注入浏览器可达地址（ConfigHolder 支持，免重打镜像）
+#   4. grafana：关闭匿名只读强制登录，入口 https://grafana.{$SITE_DOMAIN}
 # =====================================================================
 services:
   pomelo:
@@ -46,8 +50,22 @@ services:
     depends_on:
       - pomelo
       - livekit
+      - grafana
     restart: unless-stopped
     networks: [pomelo-net]
+
+  # 公网形态的 Grafana：关闭匿名只读，强制登录；账号密码经仓库根 .env 注入
+  # （GRAFANA_ADMIN_USER / GRAFANA_ADMIN_PASSWORD，密码缺失时 compose 直接报错拒启）。
+  # 注意 GF_SECURITY_ADMIN_PASSWORD 只在 grafana-data 卷首启时生效：
+  # 已初始化过的旧部署需在 UI 里改密，或 docker compose down 后删除该卷重建（看板由
+  # provisioning 只读挂载，重建不丢）。
+  grafana:
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?需在仓库根 .env 设置 GRAFANA_ADMIN_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_SERVER_ROOT_URL: https://grafana.${DEMO_DOMAIN}/
 
 volumes:
   caddy-data:

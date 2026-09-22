@@ -21,6 +21,9 @@
 	}
 
 	# 网关 WebSocket（同源 /ws，与前端 useIMClient 的地址派生一致）
+	# 注：原始 TCP 网关（tcps://host:9000，原生客户端接入）不经 Caddy——官方 caddy 镜像
+	# 无 layer4 模块，无法代理非 HTTP 流量；公网形态由 .env 设 POMELO_TCP_BIND=0.0.0.0
+	# 直接发布宿主 9000（见 docker-compose.demo.yml 与 docs/2026-09-14-demo-deploy.md §2）。
 	handle /ws {
 		reverse_proxy https://pomelo-gateway:9001 {
 			transport http {
@@ -59,4 +62,15 @@
 # POMELO_MEDIA_PUBLIC_ENDPOINT=https://{$MEDIA_DOMAIN} 注入（docker-compose.demo.yml）。
 {$MEDIA_DOMAIN} {
 	reverse_proxy silo:9000
+}
+
+# 监控子域：Grafana（需 grafana.{$SITE_DOMAIN} 的 A 记录指向服务器公网 IP）。
+# 认证由 Grafana 自身负责：demo overlay 已关闭匿名只读并强制登录，凭据在服务器
+# .env 注入（GRAFANA_ADMIN_USER / GRAFANA_ADMIN_PASSWORD）。如需再加一层网关
+# 口令（先于 Grafana 拦截扫描器），取消下面注释并 `caddy hash-password` 生成哈希：
+#	basic_auth {
+#		admin <JDJhJDEwJEFS...>
+#	}
+grafana.{$SITE_DOMAIN} {
+	reverse_proxy grafana:3000
 }
