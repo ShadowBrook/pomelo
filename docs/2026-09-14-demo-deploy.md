@@ -93,10 +93,17 @@ cp .env.demo.example .env     # 含 COMPOSE_FILE（自动合并 demo overlay）
 vim .env
 ./deploy.sh                   # 构建 5 个业务镜像 + 生成 conf/jwt.env、conf/livekit.env（随机密钥）
                               # 末尾自动 docker compose up -d
-# Grafana 入口：https://grafana.pomelo.host（凭据即 .env 的 GRAFANA_ADMIN_USER/PASSWORD）。
-# ⚠️ 首启前就要定好密码：GF_SECURITY_ADMIN_PASSWORD 只在 grafana-data 卷首次初始化时生效，
-#    已初始化过的旧部署需在 UI 里改密，或 docker compose down && docker volume rm
-#    pomelo_grafana-data 后重建（看板由 provisioning 只读挂载，不会丢）
+# Grafana 入口：https://grafana.pomelo.host（用户名 = .env 的 GRAFANA_ADMIN_USER）。
+# ⚠️ 密码的真相源是 grafana-data 卷，不是 .env：GF_SECURITY_ADMIN_PASSWORD 只在卷
+#    首次初始化时写入，之后改 .env 不会生效（登录 401，旧默认密码同样可能不对）。
+#    已有卷上要让 .env 的值生效，二选一：
+#      a) 原地重置（推荐，不丢数据）：
+#         docker exec pomelo-grafana grafana cli admin reset-admin-password \
+#           "$(grep '^GRAFANA_ADMIN_PASSWORD=' .env | cut -d= -f2-)"
+#         （报权限错时加 -u grafana，仍不行用 -u root）
+#      b) 重建卷（清用户名/API key/标注；看板由 provisioning 只读挂载不会丢）：
+#         docker compose stop grafana && docker volume rm pomelo_grafana-data \
+#           && docker compose up -d grafana
 # 需在 DNS 加一条 A 记录：grafana.pomelo.host → 服务器公网 IP（与 oss 子域同法）
 # 3) 前端构建（dist 即 Caddy 挂载路径，即时生效）
 cd ~/pomelo-web && npm ci
