@@ -81,6 +81,11 @@ public class PgGroupRepository implements GroupRepository {
     DELETE FROM im_group_member WHERE group_id = $1 AND EXISTS (SELECT 1 FROM g)
     """;
 
+  // rowCount 为 1 表示群存在且已改名，0 表示群不存在。
+  private static final String UPDATE_GROUP_NAME_SQL = """
+    UPDATE im_group SET name = $2, updated_at = $3 WHERE id = $1
+    """;
+
   private static final String IS_MEMBER_SQL = """
     SELECT 1 FROM im_group_member WHERE group_id = $1 AND user_id = $2
     """;
@@ -238,6 +243,15 @@ public class PgGroupRepository implements GroupRepository {
       .map(rows -> rows.rowCount())
       .onSuccess(count -> LOG.info("群聊解散: groupId={} owner={} membersRemoved={}", groupId, ownerId, count))
       .onFailure(e -> LOG.error("群聊解散失败: groupId={} {}", groupId, e.getMessage()));
+  }
+
+  @Override
+  public Future<Integer> updateGroupName(long groupId, String name) {
+    return pool.preparedQuery(UPDATE_GROUP_NAME_SQL)
+      .execute(Tuple.of(groupId, name, System.currentTimeMillis()))
+      .map(rows -> rows.rowCount())
+      .onSuccess(count -> LOG.info("群名已修改: groupId={} name={} rows={}", groupId, name, count))
+      .onFailure(e -> LOG.error("群名修改失败: groupId={} {}", groupId, e.getMessage()));
   }
 
   @Override

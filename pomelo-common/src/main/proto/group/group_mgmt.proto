@@ -120,6 +120,8 @@ message GroupMemberChangeNotify {
     int64 operator_id   = 4;
     string user_name    = 5;
     string nickname     = 6;
+    // INFO_UPDATED 时为修改后的群名，客户端据此就地刷新，无需回源查询
+    optional string name = 7;
 
     enum ChangeType {
         INVITED = 0;
@@ -130,7 +132,27 @@ message GroupMemberChangeNotify {
         OWNER_TRANSFERRED = 5;
         // 群被解散：user_id/operator_id 为解散操作者（群主），客户端清本地群与会话
         DISSOLVED = 6;
+        // 群信息（群名等）被修改：user_id 为 0，operator_id 为修改者，
+        // name 携带修改后的群名；推送扇出到全部成员的各端（含操作者自己的其他端）
+        INFO_UPDATED = 7;
     }
+}
+
+// ============================================================================
+// 修改群信息（群名等；仅群主/管理员）
+// ============================================================================
+message UpdateGroupReq {
+    // 群 ID
+    int64 group_id = 1;
+    // 新群名（非空）
+    string name    = 2;
+}
+
+message UpdateGroupResp {
+    // 响应码 0=成功
+    int32 code     = 1;
+    // 响应消息
+    string message = 2;
 }
 
 // ============================================================================

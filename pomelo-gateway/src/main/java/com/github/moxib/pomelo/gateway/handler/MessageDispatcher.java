@@ -347,7 +347,7 @@ public class MessageDispatcher {
     if (cmd == CMD_C2G_REQ_VALUE)          return "logic.c2g";
     if (cmd == CMD_GROUP_PULL_MSG_REQ_VALUE)  return "logic.gpull";
     if (cmd == CMD_GROUP_ACK_REQ_VALUE)       return "logic.gack";
-    if (cmd >= 0x0070 && cmd <= 0x009B)       return "logic.group";
+    if (cmd >= 0x0070 && cmd <= 0x009D)       return "logic.group";
     if (cmd == CMD_AUTH_REQ_VALUE)         return "logic.auth";
     if (cmd == CMD_LOGOUT_REQ_VALUE)       return "logic.auth";
     if (cmd == CMD_CTRL_REQ_VALUE)         return "logic.ctrl";
@@ -355,7 +355,7 @@ public class MessageDispatcher {
     if (cmd == CMD_UPLOAD_REQ_VALUE)       return "logic.upload";
     if (cmd == CMD_PROFILE_UPDATE_REQ_VALUE) return "logic.profile";
     if (cmd == CMD_PULL_REQ_VALUE)         return "logic.pull";
-    // 音视频通话（0xB0~0xB8 段；群命令 0x0070~0x009B 的硬编码区间勿复用）
+    // 音视频通话（0xB0~0xB8 段；群命令 0x0070~0x009D 的硬编码区间勿复用）
     if (cmd >= CMD_CALL_INVITE_REQ_VALUE && cmd <= CMD_CALL_TOKEN_REQ_VALUE) return "logic.call";
     if (cmd == CMD_FRIEND_SEARCH_REQ_VALUE) return "logic.friend";
     if (cmd == CMD_FRIEND_ADD_REQ_VALUE)    return "logic.friend";
