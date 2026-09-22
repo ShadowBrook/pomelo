@@ -112,3 +112,19 @@ media:
   maxSizeBytes: 104857600
   # 允许上传的扩展名（小写逗号分隔，校验不区分大小写）：图片/音视频 + 常见文档与压缩包
   allowedExtensions: "jpg,jpeg,png,gif,webp,mp4,mov,mp3,m4a,aac,amr,pdf,zip,webm,ogg,txt,md,csv,json,doc,docx,xls,xlsx,ppt,pptx,rar,7z,tar,gz"
+
+# 邮件（找回密码验证码）：全部留空时不启用，相关接口返回 503 且不影响其他功能。
+# 服务器经 conf/mail.env（0600，gitignore）注入 POMELO_MAIL_* 环境变量覆盖此处
+mail:
+  host: ""
+  # 465=直连 TLS（ssl: true）；587=STARTTLS（ssl: false, starttls: true）；25=明文（都不建议公网用）
+  port: 465
+  username: ""
+  password: ""
+  # 发件人地址（多数 SMTP 要求与 username 一致）
+  from: ""
+  ssl: true
+  starttls: false
+  # 找回密码验证码有效期（秒）与同账号发送冷却（秒）
+  codeTtlSeconds: 600
+  sendCooldownSeconds: 60

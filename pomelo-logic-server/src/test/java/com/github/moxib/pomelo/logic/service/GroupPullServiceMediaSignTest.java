@@ -51,7 +51,7 @@ class GroupPullServiceMediaSignTest {
   }
 
   @Override
-  public Future<Integer> updateGroupName(long groupId, String name) {
+  public Future<Integer> updateGroupInfo(long groupId, String name, String description) {
     return Future.succeededFuture(0);
   }
 

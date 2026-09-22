@@ -298,6 +298,23 @@ curl -s https://pomelo.host/api/user/register -H 'Content-Type: application/json
 - Grafana 公网入口已关匿名只读并强制登录（demo overlay `GF_AUTH_ANONYMOUS_ENABLED=false`，
   凭据经服务器 `.env` 注入，`.env` 已 gitignore 不入库）。
 
+## 8.1 邮件与找回密码（SMTP 配置）
+
+找回密码验证码经 **vertx-mail-client** 发送，SMTP 参数来自 `conf/mail.env`（gitignore，含授权码）：
+
+```bash
+cd ~/pomelo
+cp conf/mail.env.example conf/mail.env && chmod 600 conf/mail.env
+vim conf/mail.env     # 填 POMELO_MAIL_HOST/PORT/USERNAME/PASSWORD/FROM（多数邮箱用「授权码」而非登录密码）
+docker compose up -d --force-recreate pomelo   # env_file 改动需重建容器
+docker exec pomelo printenv | grep MAIL        # 自检：host/from 有值
+docker logs pomelo | grep 邮件                  # 未配置时会打 WARN「邮件服务未配置」
+```
+
+- 未配置时 `/api/user/password-reset/*` 返回 503，**其他功能不受影响**；配置后登录页「忘记密码」可用
+- 邮箱绑定：注册页可填；已有账号在「设置 → 绑定邮箱」补全（**没绑定邮箱的账号无法自助找回**）
+- 端口约定：465 用 `POMELO_MAIL_SSL=true`；587 用 `POMELO_MAIL_SSL=false` + `POMELO_MAIL_STARTTLS=true`
+
 ## 9. 备选：开发机构建 + 镜像传输（服务器不构建时）
 
 服务器不配置 JDK/Node 时，回退为开发机构建、镜像与产物传输：

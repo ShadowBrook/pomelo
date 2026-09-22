@@ -81,9 +81,14 @@ public class PgGroupRepository implements GroupRepository {
     DELETE FROM im_group_member WHERE group_id = $1 AND EXISTS (SELECT 1 FROM g)
     """;
 
-  // rowCount 为 1 表示群存在且已改名，0 表示群不存在。
-  private static final String UPDATE_GROUP_NAME_SQL = """
-    UPDATE im_group SET name = $2, updated_at = $3 WHERE id = $1
+  // rowCount 为 1 表示群存在且已更新，0 表示群不存在。
+  // COALESCE：参数为 null 表示该字段不改（空串是合法值，表示清空公告）
+  private static final String UPDATE_GROUP_INFO_SQL = """
+    UPDATE im_group
+    SET name = COALESCE($2, name),
+        description = COALESCE($3, description),
+        updated_at = $4
+    WHERE id = $1
     """;
 
   private static final String IS_MEMBER_SQL = """
@@ -246,12 +251,13 @@ public class PgGroupRepository implements GroupRepository {
   }
 
   @Override
-  public Future<Integer> updateGroupName(long groupId, String name) {
-    return pool.preparedQuery(UPDATE_GROUP_NAME_SQL)
-      .execute(Tuple.of(groupId, name, System.currentTimeMillis()))
+  public Future<Integer> updateGroupInfo(long groupId, String name, String description) {
+    return pool.preparedQuery(UPDATE_GROUP_INFO_SQL)
+      .execute(Tuple.of(groupId, name, description, System.currentTimeMillis()))
       .map(rows -> rows.rowCount())
-      .onSuccess(count -> LOG.info("群名已修改: groupId={} name={} rows={}", groupId, name, count))
-      .onFailure(e -> LOG.error("群名修改失败: groupId={} {}", groupId, e.getMessage()));
+      .onSuccess(count -> LOG.info("群信息已修改: groupId={} name={} descChanged={} rows={}",
+        groupId, name, description != null, count))
+      .onFailure(e -> LOG.error("群信息修改失败: groupId={} {}", groupId, e.getMessage()));
   }
 
   @Override

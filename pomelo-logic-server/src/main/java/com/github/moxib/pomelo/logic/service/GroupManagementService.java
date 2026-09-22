@@ -39,6 +39,11 @@ public class GroupManagementService extends ServiceBase {
   private static final int ROLE_ADMIN = 1;
   private static final int ROLE_OWNER = 2;
 
+  /** 群名长度上限（对齐 im_group.name VARCHAR(128)，按字符数留余量给中文） */
+  private static final int MAX_GROUP_NAME_LEN = 64;
+  /** 群公告长度上限（列是 TEXT，这里限业务上界防滥用） */
+  private static final int MAX_GROUP_DESC_LEN = 500;
+
   private final GroupRepository groupRepo;
   private final SnowflakeIdGenerator snowflake;
   private final PushRouter pushRouter;
@@ -300,10 +305,27 @@ public class GroupManagementService extends ServiceBase {
         ErrorCode.UNAUTHORIZED, "未认证用户"));
     }
     UpdateGroupRequest req = decode(message, UpdateGroupRequest.class);
-    if (req == null || req.groupId() == null || req.groupId().isEmpty()
-      || req.name() == null || req.name().trim().isEmpty()) {
+    if (req == null || req.groupId() == null || req.groupId().isEmpty()) {
       return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
-        ErrorCode.BAD_REQUEST, "groupId 和 name 不能为空"));
+        ErrorCode.BAD_REQUEST, "groupId 不能为空"));
+    }
+    String name = req.name() == null ? null : req.name().trim();
+    String description = req.description() == null ? null : req.description().trim();
+    if (name == null && description == null) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "name 和 description 至少要提供一个"));
+    }
+    if (name != null && name.isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "群名不能为空"));
+    }
+    if (name != null && name.length() > MAX_GROUP_NAME_LEN) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "群名过长（上限 " + MAX_GROUP_NAME_LEN + " 字）"));
+    }
+    if (description != null && description.length() > MAX_GROUP_DESC_LEN) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "群公告过长（上限 " + MAX_GROUP_DESC_LEN + " 字）"));
     }
     long operatorNumericId = Long.parseLong(operatorId);
     long groupId;
@@ -313,7 +335,6 @@ public class GroupManagementService extends ServiceBase {
       return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
         ErrorCode.BAD_REQUEST, "无效的 groupId"));
     }
-    String name = req.name().trim();
     return groupRepo.findMembers(groupId).compose(members -> {
       GroupMemberRecord operator = findMember(members, operatorNumericId);
       if (operator == null) {
@@ -322,16 +343,17 @@ public class GroupManagementService extends ServiceBase {
       }
       if (operator.getRole() < ROLE_ADMIN) {
         return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
-          ErrorCode.UNAUTHORIZED, "仅群主/管理员可以修改群名"));
+          ErrorCode.UNAUTHORIZED, "仅群主/管理员可以修改群信息"));
       }
-      return groupRepo.updateGroupName(groupId, name).map(rows -> {
+      return groupRepo.updateGroupInfo(groupId, name, description).map(rows -> {
         if (rows <= 0) {
           return buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
             ErrorCode.NOT_FOUND, "群不存在");
         }
         pushMemberChangeNotify(groupId, 0, operatorNumericId,
-          GroupMgmtProto.GroupMemberChangeNotify.ChangeType.INFO_UPDATED, members, name);
-        LOG.info("群信息已修改: groupId={} name={} operator={}", groupId, name, operatorId);
+          GroupMgmtProto.GroupMemberChangeNotify.ChangeType.INFO_UPDATED, members, name, description);
+        LOG.info("群信息已修改: groupId={} name={} descChanged={} operator={}",
+          groupId, name, description != null, operatorId);
         return buildResponse(message, CMD_GROUP_UPDATE_RESP_VALUE,
           GroupMgmtProto.UpdateGroupResp.newBuilder().setCode(0).setMessage("success").build());
       });
@@ -347,12 +369,12 @@ public class GroupManagementService extends ServiceBase {
   private void pushMemberChangeNotify(long groupId, long userId, long operatorId,
                                       GroupMgmtProto.GroupMemberChangeNotify.ChangeType type,
                                       List<GroupMemberRecord> members) {
-    pushMemberChangeNotify(groupId, userId, operatorId, type, members, null);
+    pushMemberChangeNotify(groupId, userId, operatorId, type, members, null, null);
   }
 
   private void pushMemberChangeNotify(long groupId, long userId, long operatorId,
                                       GroupMgmtProto.GroupMemberChangeNotify.ChangeType type,
-                                      List<GroupMemberRecord> members, String name) {
+                                      List<GroupMemberRecord> members, String name, String description) {
     GroupMgmtProto.GroupMemberChangeNotify.Builder builder = GroupMgmtProto.GroupMemberChangeNotify.newBuilder()
       .setGroupId(groupId)
       .setType(type)
@@ -360,6 +382,9 @@ public class GroupManagementService extends ServiceBase {
       .setOperatorId(operatorId);
     if (name != null) {
       builder.setName(name);
+    }
+    if (description != null) {
+      builder.setDescription(description);
     }
     byte[] body = builder.build().toByteArray();
     for (GroupMemberRecord member : members) {
