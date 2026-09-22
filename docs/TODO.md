@@ -1,6 +1,6 @@
 # Pomelo 待办清单
 
-> 2026-09-20 盘点。完成一项就把 `- [ ]` 改 `- [x]` 并注明提交号。
+> 2026-09-22 盘点。完成一项就把 `- [ ]` 改 `- [x]` 并注明提交号。
 
 ## 一、部署/运维（影响线上，最优先）
 
@@ -15,22 +15,45 @@
       每次投递抛 ClassCastException；② `verifyWebhook` 与 livekit-server v1.13.6 实际行为不符——
       Authorization 是**裸 token**（我们要求 `Bearer ` 前缀）、sha256 声明是**标准 base64**
       （我们按 hex 比对）。已用探针容器抓真实报文定位，并把它固化成 golden 用例
-- [ ] 媒体面端口放行（用户侧，腾讯云安全组）：`3478/udp`、`30000-30100/udp`、`7881/tcp`；
-      未放行时通话「能接通但两端黑屏/无声」（信令走 443 所以看起来一切正常）。
-      自检：`python3 scripts/probe-media-ports.py pomelo.host`（当前线上五项全不通）
-- [ ] 备案通过后 IP → 域名切换（用户侧）
-- [ ] 备案号上站（用户侧）：服务器 `~/pomelo-web/.env.local` 写 `VITE_ICP_BEIAN=<备案号>`
-      后重新 `npm run build`（构建期注入，不入库；未配置则登录页不显示该行）
+- [x] 端口暴露面收紧：8888/9001 宿主绑定参数化（`POMELO_API_BIND`/`POMELO_WS_BIND`，demo 形态绑
+      127.0.0.1 只经 Caddy 反代出公网）；修正文档此前"已全绑回环"的误述（基线实为 0.0.0.0 全开）
+- [x] TCP 网关接入改造（Caddy layer4）：自定义镜像 `pomelo/caddy-l4:2`（xcaddy + mholt/caddy-l4，
+      builder 阶段 `GOPROXY=https://goproxy.cn`，fa468b4），SNI 校验 + ACME 证书终结 → 明文转发网关。
+      原生客户端 `tcps://pomelo.host:9000` 拿到正规 Let's Encrypt 证书（不再依赖 mkcert 自签）；
+      宿主 9000 让给 caddy（网关宿主绑定挪 `POMELO_TCP_HOST_PORT=8999`，避开 silo 的 9002）
+      （f8c5e13 + 端口冲突修复 1ed9fe8/ebd1fa2/4f7c1f2）
+- [x] Grafana 公网入口：`grafana.<域名>` 子域（DNS A 记录 + Caddy 站点）+ 关闭匿名只读强制登录，
+      凭据经服务器 `.env` 注入（`GRAFANA_ADMIN_PASSWORD` 缺失时 compose 拒启）。
+      密码真相源在 grafana-data 卷而非 .env，重置法见部署文档 §3（4e187d6）
+- [x] 备案号上站 + 域名形态切换：实测生产 Login chunk 含 `beian.miit.gov.cn` 与备案号（构建期
+      `VITE_ICP_BEIAN` 注入，不入库）；`https://pomelo.host` 由 Let's Encrypt 正常签发服务
+- [ ] 媒体面端口放行（用户侧，腾讯云安全组）：**3478/udp、7881/tcp 已通；`30000-30100/udp` 仍不通**
+      （未放行时通话「能接通但两端黑屏/无声」，信令走 443 所以看起来一切正常）。
+      自检：`python3 scripts/probe-media-ports.py pomelo.host`——注意 UDP 探针对媒体段存在假阴性
+      （LiveKit 未必对空闲端口回 STUN），放行后仍以双端真实通话为最终判据
 
-## 二、通话（livekit-calling-plan Phase 4，另行评估）
+## 二、多端与消息（2026-09-21~22 实施）
+
+- [x] 多端登录策略：同端型互踢（CTRL_TYPE_KICK_OFFLINE 通知后断开，客户端停止重连回登录页）+
+      跨端共存（web/android/ios/unknown 平台槽位）；推送按端型扇出、发送者自己的其他端一并回推
+      （f7d2e4d + bd53881，含 `PushCodec` v3 平台字段与 `client_msg_id` 合并去重）
+- [x] 群名修改（群主/管理员）+ INFO_UPDATED 全端型扇出多端回显：后端 `45658a7`（proto 0x9C/0x9D +
+      `GroupMemberChangeNotify.INFO_UPDATED` 携带新群名）、web `2ad311d`（详情面板铅笔入口）、
+      安卓 `55f3a76`（点标题改名）
+- [x] 安卓 SDK：`tcps://` 通道改用复合信任锚（系统 CA + 捆绑开发证书）——此前只信捆绑自签证书，
+      连生产正规证书握手失败，表现为一直"连接中"（fea52d5）
+- [x] 安卓：重连补拉的群消息入库 + 水位自愈 + 事件接线顺序（先刷新群列表再补拉）——修复
+      **离线期间群消息永久丢失**（水位被推进而消息被丢弃；真机隔离测试验证，f5a8eb1）
+
+## 三、通话（livekit-calling-plan Phase 4，另行评估）
 
 - [ ] 屏幕共享
 - [ ] Egress 录制
 - [ ] 独立通话记录页（im_call 表已建，未接查询接口；目前仅会话流系统消息）
-- [ ] 多设备同振（依赖多设备登录口径 P2-2）
+- [ ] 多设备同振（多端登录口径已实施，依赖已解除，可排期）
 - [ ] 测试遗留：双浏览器/双账号真实接听场景；异常矩阵（Phase 3 联调矩阵）
 
-## 三、设计文档已定稿未实施
+## 四、设计文档已定稿未实施
 
 - [ ] `2026-08-20-scale-readiness-plan.md`：整体尚未实施
 - [ ] `2026-09-17-seqsvr-optimization-plan.md`：仅第一档可观测性已实施，其余待排期
@@ -39,7 +62,7 @@
       设计中「reply_json 列 + 服务端反查覆盖」未落库，当前引用快照由客户端构建、服务端原样存储）
 - [ ] `AGENTS.md` 设计文档列表更新（引用/转发已实施；补头像/签名功能说明）
 
-## 四、本期实施（2026-09-20）
+## 五、本期实施（2026-09-20）
 
 - [x] 设置菜单：修改密码（HTTP + JWT 校验）、关于我们、帮助中心（静态弹窗）
 - [x] 个性签名：im_user.signature 列 + ProfileUpdateReq optional signature + 读侧出口 + web 编辑/展示
@@ -50,14 +73,16 @@
       mentioned_user_ids，服务端 im_message_group.ext 列持久化并随拉取/通知回传；
       web 会话列表「[有人@我]」标记（清零未读消除）；安卓接收侧 + Room v4 迁移
 
-## 五、UI 占位（功能开发中，未排期）
+## 六、UI 占位（功能开发中，未排期）
 
 - [ ] 登录页：服务条款、发送邮件（找回密码）
-- [ ] @ 提及元数据化：content 携带 mentioned_user_ids，气泡精确高亮 + 「有人@我」提示
-- [ ] 安卓：个性签名编辑/展示、修改密码界面、群转让/解散界面
+- [ ] web 群公告编辑（当前点按 toast「功能开发中」，需后端列 + 读写接口）
+- [ ] 安卓群设置页：成员列表 / 邀请入群 / 踢人 / 群转让 / 群解散（本轮只做了点标题改名）
+- [ ] 安卓：个性签名编辑/展示、修改密码界面
 - [ ] 安卓裁剪页 Compose 自绘（当前为库自带 Activity 风格）
 
-## 六、杂项
+## 七、杂项
 
 - [ ] `docs/diagrams/` 是否入库（后端仓库，未跟踪）
 - [ ] 安卓仓库分支命名统一（现 main，另两仓 feat/*）
+- [ ] 安卓 release 签名与分发（当前仅本地 `installDebug` 安装包）
