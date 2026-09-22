@@ -100,6 +100,11 @@ class ClientMsgIdFallbackTest {
     return Future.succeededFuture(0);
   }
 
+  @Override
+  public Future<Integer> updateGroupName(long groupId, String name) {
+    return Future.succeededFuture(0);
+  }
+
 public Future<Boolean> isMember(long groupId, long userId) { return Future.succeededFuture(true); }
     @Override public Future<Map<Long, Long>> findMemberReadStates(long groupId) { return Future.succeededFuture(Map.of()); }
     @Override public Future<Boolean> isMuted(long groupId, long userId) { return Future.failedFuture(new UnsupportedOperationException()); }

@@ -138,6 +138,11 @@ class CallServiceTest {
     return Future.succeededFuture(0);
   }
 
+  @Override
+  public Future<Integer> updateGroupName(long groupId, String name) {
+    return Future.succeededFuture(0);
+  }
+
 public Future<Boolean> isMember(long groupId, long userId) {
       return Future.succeededFuture(groupId == TEST_GROUP && userId == CALLER && callerMember);
     }

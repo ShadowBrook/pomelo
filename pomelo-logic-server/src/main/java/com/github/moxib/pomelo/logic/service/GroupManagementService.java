@@ -17,6 +17,7 @@ import com.github.moxib.pomelo.logic.model.requests.GroupReadStateRequest;
 import com.github.moxib.pomelo.logic.model.requests.InviteToGroupRequest;
 import com.github.moxib.pomelo.logic.model.requests.KickMemberRequest;
 import com.github.moxib.pomelo.logic.model.requests.TransferGroupRequest;
+import com.github.moxib.pomelo.logic.model.requests.UpdateGroupRequest;
 import com.github.moxib.pomelo.model.PushEnvelope;
 import com.github.moxib.pomelo.proto.group.GroupMgmtProto;
 import io.vertx.core.Future;
@@ -52,17 +53,18 @@ public class GroupManagementService extends ServiceBase {
     this.snowflake = snowflake;
     this.pushRouter = pushRouter;
     this.mediaUrlSigner = mediaUrlSigner;
-    this.dispatchMap = Map.of(
-      CMD_GROUP_CREATE_REQ_VALUE, this::handleCreateGroup,
-      CMD_GROUP_INVITE_REQ_VALUE, this::handleInviteToGroup,
-      CMD_GROUP_KICK_REQ_VALUE, this::handleKickMember,
-      CMD_GROUP_TRANSFER_REQ_VALUE, this::handleTransferGroup,
-      CMD_GROUP_DISSOLVE_REQ_VALUE, this::handleDissolveGroup,
-      CMD_GROUP_GET_INFO_REQ_VALUE, this::handleGetGroupInfo,
-      CMD_GROUP_GET_MEMBERS_REQ_VALUE, this::handleGetMembers,
-      CMD_GROUP_GET_MY_GROUPS_REQ_VALUE, this::handleGetMyGroups,
-      CMD_GROUP_MSG_READ_REQ_VALUE, this::handleGetMsgReadStatus,
-      CMD_GROUP_READ_STATE_REQ_VALUE, this::handleGetGroupReadState
+    this.dispatchMap = Map.ofEntries(
+      Map.entry(CMD_GROUP_CREATE_REQ_VALUE, this::handleCreateGroup),
+      Map.entry(CMD_GROUP_INVITE_REQ_VALUE, this::handleInviteToGroup),
+      Map.entry(CMD_GROUP_KICK_REQ_VALUE, this::handleKickMember),
+      Map.entry(CMD_GROUP_TRANSFER_REQ_VALUE, this::handleTransferGroup),
+      Map.entry(CMD_GROUP_DISSOLVE_REQ_VALUE, this::handleDissolveGroup),
+      Map.entry(CMD_GROUP_UPDATE_REQ_VALUE, this::handleUpdateGroup),
+      Map.entry(CMD_GROUP_GET_INFO_REQ_VALUE, this::handleGetGroupInfo),
+      Map.entry(CMD_GROUP_GET_MEMBERS_REQ_VALUE, this::handleGetMembers),
+      Map.entry(CMD_GROUP_GET_MY_GROUPS_REQ_VALUE, this::handleGetMyGroups),
+      Map.entry(CMD_GROUP_MSG_READ_REQ_VALUE, this::handleGetMsgReadStatus),
+      Map.entry(CMD_GROUP_READ_STATE_REQ_VALUE, this::handleGetGroupReadState)
     );
   }
 
@@ -287,19 +289,79 @@ public class GroupManagementService extends ServiceBase {
   }
 
   /**
+   * 修改群信息（群名）：仅群主/管理员。成功后向全体成员推送 INFO_UPDATED
+   * （name=新群名），扇出到每个成员的全部在线端型——含操作者自己的其他端，
+   * 实现「一端改名、多端回显」。
+   */
+  private Future<ImMessage> handleUpdateGroup(ImMessage message) {
+    String operatorId = getUserIdFromHeaders(message);
+    if (operatorId == null || operatorId.isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
+        ErrorCode.UNAUTHORIZED, "未认证用户"));
+    }
+    UpdateGroupRequest req = decode(message, UpdateGroupRequest.class);
+    if (req == null || req.groupId() == null || req.groupId().isEmpty()
+      || req.name() == null || req.name().trim().isEmpty()) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "groupId 和 name 不能为空"));
+    }
+    long operatorNumericId = Long.parseLong(operatorId);
+    long groupId;
+    try {
+      groupId = Long.parseLong(req.groupId());
+    } catch (NumberFormatException e) {
+      return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
+        ErrorCode.BAD_REQUEST, "无效的 groupId"));
+    }
+    String name = req.name().trim();
+    return groupRepo.findMembers(groupId).compose(members -> {
+      GroupMemberRecord operator = findMember(members, operatorNumericId);
+      if (operator == null) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
+          ErrorCode.UNAUTHORIZED, "你不是该群成员，无权修改"));
+      }
+      if (operator.getRole() < ROLE_ADMIN) {
+        return Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
+          ErrorCode.UNAUTHORIZED, "仅群主/管理员可以修改群名"));
+      }
+      return groupRepo.updateGroupName(groupId, name).map(rows -> {
+        if (rows <= 0) {
+          return buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
+            ErrorCode.NOT_FOUND, "群不存在");
+        }
+        pushMemberChangeNotify(groupId, 0, operatorNumericId,
+          GroupMgmtProto.GroupMemberChangeNotify.ChangeType.INFO_UPDATED, members, name);
+        LOG.info("群信息已修改: groupId={} name={} operator={}", groupId, name, operatorId);
+        return buildResponse(message, CMD_GROUP_UPDATE_RESP_VALUE,
+          GroupMgmtProto.UpdateGroupResp.newBuilder().setCode(0).setMessage("success").build());
+      });
+    }).recover(e -> Future.succeededFuture(buildErrorResp(message, CMD_GROUP_UPDATE_RESP_VALUE,
+      ErrorCode.CONFLICT, "修改失败：" + e.getMessage())));
+  }
+
+  /**
    * 按给定的成员列表推送变更通知。
    * 移除成员时传入「移除前」的成员列表，让被移除者也收到通知（其客户端据此退群）。
+   * INFO_UPDATED 时 name 携带修改后的群名，客户端就地刷新。
    */
   private void pushMemberChangeNotify(long groupId, long userId, long operatorId,
                                       GroupMgmtProto.GroupMemberChangeNotify.ChangeType type,
                                       List<GroupMemberRecord> members) {
-    GroupMgmtProto.GroupMemberChangeNotify notify = GroupMgmtProto.GroupMemberChangeNotify.newBuilder()
+    pushMemberChangeNotify(groupId, userId, operatorId, type, members, null);
+  }
+
+  private void pushMemberChangeNotify(long groupId, long userId, long operatorId,
+                                      GroupMgmtProto.GroupMemberChangeNotify.ChangeType type,
+                                      List<GroupMemberRecord> members, String name) {
+    GroupMgmtProto.GroupMemberChangeNotify.Builder builder = GroupMgmtProto.GroupMemberChangeNotify.newBuilder()
       .setGroupId(groupId)
       .setType(type)
       .setUserId(userId)
-      .setOperatorId(operatorId)
-      .build();
-    byte[] body = notify.toByteArray();
+      .setOperatorId(operatorId);
+    if (name != null) {
+      builder.setName(name);
+    }
+    byte[] body = builder.build().toByteArray();
     for (GroupMemberRecord member : members) {
       String targetUserId = String.valueOf(member.getUserId());
       PushEnvelope env = new PushEnvelope(targetUserId, CMD_GROUP_MEMBER_CHANGE_NOTIFY_VALUE, body);

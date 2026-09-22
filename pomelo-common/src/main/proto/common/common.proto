@@ -140,6 +140,11 @@ enum Cmd {
 
     CMD_GROUP_READ_STATE_RESP = 0x009B;
 
+    // C→S 修改群信息（群名等，群主/管理员）
+    CMD_GROUP_UPDATE_REQ  = 0x009C;
+    // S→C 修改群信息响应
+    CMD_GROUP_UPDATE_RESP = 0x009D;
+
     // 媒体上传
     // C→S 申请上传预签名
     CMD_UPLOAD_REQ    = 0x00A0;
